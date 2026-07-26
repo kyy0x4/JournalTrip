@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'motion/react';
+import { supabase } from '../lib/supabase';
 import { 
   Shield, Activity, Calendar, MapPin, Map as MapIcon, Leaf, ChevronDown, ChevronUp,
-  ChevronLeft, ChevronRight, BarChart3, AlertTriangle, AlertCircle, Filter, FilterX, Route, Clock, RefreshCw
+  ChevronLeft, ChevronRight, BarChart3, AlertTriangle, AlertCircle, Filter, FilterX, Route, Clock, RefreshCw, X, Upload, Camera, Loader2
 } from 'lucide-react';
 import { 
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -117,6 +118,73 @@ export default function EcoDrivingPage({ isTAM = false }: { isTAM?: boolean }) {
   const [violations, setViolations] = useState<EcoViolation[]>([]);
   const [prevViolations, setPrevViolations] = useState<EcoViolation[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  
+  const [selectedCoachingDriver, setSelectedCoachingDriver] = useState<string | null>(null);
+  
+  const [isUploading, setIsUploading] = useState(false);
+  const [coachingPhotoUrl, setCoachingPhotoUrl] = useState<string | null>(null);
+  const [isLoadingPhoto, setIsLoadingPhoto] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (selectedCoachingDriver) {
+      const fetchPhoto = async () => {
+        setIsLoadingPhoto(true);
+        try {
+          const { data } = await supabase.from('drivers').select('coaching_photo_url').eq('name', selectedCoachingDriver).single();
+          if (data?.coaching_photo_url) {
+             setCoachingPhotoUrl(data.coaching_photo_url);
+          } else {
+             setCoachingPhotoUrl(null);
+          }
+        } catch (e) {
+          console.error(e);
+          setCoachingPhotoUrl(null);
+        }
+        setIsLoadingPhoto(false);
+      };
+      fetchPhoto();
+    } else {
+      setCoachingPhotoUrl(null);
+    }
+  }, [selectedCoachingDriver]);
+
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file || !selectedCoachingDriver) return;
+
+    setIsUploading(true);
+    try {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`;
+      const filePath = `coaching/${selectedCoachingDriver.replace(/\s+/g, '_')}/${fileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('coaching-photos')
+        .upload(filePath, file);
+
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('coaching-photos')
+        .getPublicUrl(filePath);
+
+      const { error: updateError } = await supabase
+        .from('drivers')
+        .update({ coaching_photo_url: publicUrl })
+        .eq('name', selectedCoachingDriver);
+
+      if (updateError) throw updateError;
+
+      setCoachingPhotoUrl(publicUrl);
+    } catch (error) {
+      console.error('Error uploading coaching photo:', error);
+      alert('Gagal upload foto coaching!');
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
   
   // Custom Dropdown State
   const [areaDropdownOpen, setAreaDropdownOpen] = useState(false);
@@ -997,7 +1065,12 @@ export default function EcoDrivingPage({ isTAM = false }: { isTAM?: boolean }) {
                                 </span>
                               </td>
                               <td className="px-4 py-3">
-                                <p className={`font-black truncate max-w-30 ${cfDriver === r.driver ? 'text-emerald-700 dark:text-emerald-400' : 'text-slate-900 dark:text-white'}`}>{r.driver}</p>
+                                <p 
+                                  className={`font-black truncate max-w-30 cursor-pointer hover:underline ${cfDriver === r.driver ? 'text-emerald-700 dark:text-emerald-400' : 'text-slate-900 dark:text-white'}`}
+                                  onClick={(e) => { e.stopPropagation(); setSelectedCoachingDriver(r.driver); }}
+                                >
+                                  {r.driver}
+                                </p>
                                 <p className="text-[10px] text-slate-400 font-bold uppercase">{r.plat}</p>
                               </td>
                               <td className="px-4 py-3 text-right">
@@ -1112,8 +1185,9 @@ export default function EcoDrivingPage({ isTAM = false }: { isTAM?: boolean }) {
               </div>
             </div>
 
-            {/* ── TOP 10 VIOLATORS (FULL WIDTH) ── */}
-            <div className="bg-white dark:bg-slate-900 p-6 md:p-8 rounded-4xl shadow-sm border border-slate-100 dark:border-slate-800 mt-6">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-6">
+            {/* ── TOP 10 VIOLATORS ── */}
+            <div className="bg-white dark:bg-slate-900 p-6 md:p-8 rounded-4xl shadow-sm border border-slate-100 dark:border-slate-800 lg:col-span-2">
               <div className="flex items-center gap-4 mb-8">
                 <div className="w-10 h-10 rounded-xl bg-emerald-50 dark:bg-emerald-900/20 flex items-center justify-center">
                   <Activity className="w-5 h-5 text-emerald-600" />
@@ -1180,9 +1254,88 @@ export default function EcoDrivingPage({ isTAM = false }: { isTAM?: boolean }) {
               </div>
             </div>
 
+
+            {/* ── COACHING PHOTO COMPONENT ── */}
+            <div className="bg-white dark:bg-slate-900 p-6 md:p-8 rounded-4xl shadow-sm border border-slate-100 dark:border-slate-800 flex flex-col h-full">
+              <div className="flex items-center gap-4 mb-6">
+                <div className="w-10 h-10 rounded-xl bg-purple-50 dark:bg-purple-900/20 flex items-center justify-center">
+                  <Camera className="w-5 h-5 text-purple-600" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-widest">
+                    Dokumentasi Coaching
+                  </h3>
+                  <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                    {selectedCoachingDriver || "Pilih driver di ranking"}
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex-1 flex flex-col items-center justify-center bg-slate-50 dark:bg-slate-950/50 rounded-3xl p-4">
+                {!selectedCoachingDriver ? (
+                  <div className="flex flex-col items-center justify-center text-slate-400 opacity-50 py-12">
+                    <Camera className="w-12 h-12 mb-3" />
+                    <p className="text-xs font-bold uppercase tracking-widest text-center px-4">
+                      Klik nama driver pada tabel Ranking untuk melihat foto
+                    </p>
+                  </div>
+                ) : (
+                  <div className="h-[400px] w-full rounded-2xl overflow-hidden bg-slate-200 dark:bg-slate-800 relative group flex items-center justify-center border-2 border-dashed border-slate-300 dark:border-slate-700">
+                    {isLoadingPhoto ? (
+                      <div className="flex flex-col items-center justify-center text-slate-400">
+                        <Loader2 className="w-8 h-8 animate-spin mb-2" />
+                        <p className="text-xs font-medium">Memuat foto...</p>
+                      </div>
+                    ) : coachingPhotoUrl ? (
+                      <>
+                        <img 
+                          src={coachingPhotoUrl} 
+                          alt="Coaching Session"
+                          className="w-full h-full object-contain"
+                        />
+                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                          <button 
+                            onClick={() => fileInputRef.current?.click()}
+                            disabled={isUploading}
+                            className="flex items-center gap-2 px-4 py-2 bg-white/20 hover:bg-white/30 backdrop-blur-md text-white rounded-xl text-sm font-bold transition-all"
+                          >
+                            {isUploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
+                            {isUploading ? 'Uploading...' : 'Ganti Foto'}
+                          </button>
+                        </div>
+                      </>
+                    ) : (
+                      <div className="flex flex-col items-center justify-center text-slate-400">
+                        <Camera className="w-10 h-10 mb-3 opacity-50" />
+                        <p className="text-sm font-medium mb-4">Belum ada foto coaching</p>
+                        <button 
+                          onClick={() => fileInputRef.current?.click()}
+                          disabled={isUploading}
+                          className="flex items-center gap-2 px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl text-sm font-bold shadow-lg shadow-emerald-500/20 transition-all disabled:opacity-70"
+                        >
+                          {isUploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
+                          {isUploading ? 'Uploading...' : 'Upload Foto'}
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )}
+                <input 
+                  type="file" 
+                  ref={fileInputRef} 
+                  className="hidden" 
+                  accept="image/*" 
+                  onChange={handleFileUpload} 
+                />
+              </div>
+            </div>
+          </div>
+
           </motion.div>
         </AnimatePresence>
       )}
+
+
     </div>
   );
 }

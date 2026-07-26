@@ -15,6 +15,7 @@ export interface Driver {
   alamat?: string;
   totalViolations?: number;
   totalRitaseMonth?: number;
+  coaching_photo_url?: string;
 }
 
 export type DriverDetails = Driver;

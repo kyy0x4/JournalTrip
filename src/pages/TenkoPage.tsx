@@ -484,10 +484,11 @@ export default function TenkoPage({ isTAM = false }: { isTAM?: boolean }) {
                       dataKey={chartView === 'date' ? 'period' : 'driver'}
                       axisLine={false}
                       tickLine={false}
-                      interval={0}
-                      angle={chartView === 'driver' ? -35 : 0}
-                      textAnchor={chartView === 'driver' ? 'end' : 'middle'}
-                      height={chartView === 'driver' ? 70 : 30}
+                      interval={chartView === 'driver' ? 0 : 'preserveStartEnd'}
+                      minTickGap={10}
+                      angle={chartView === 'driver' ? -35 : -35}
+                      textAnchor="end"
+                      height={chartView === 'driver' ? 70 : 60}
                       tick={{ fontSize: chartView === 'driver' ? 8 : 10, fontWeight: 900, fill: '#94a3b8' }}
                       tickFormatter={(val: string) =>
                         chartView === 'date'
