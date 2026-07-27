@@ -764,13 +764,6 @@ export default function RouteAnalyticsPage({ isTAM = false }: { isTAM?: boolean 
                     <AlertTriangle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
                     <div>
                       <p className="text-sm font-black text-red-700 dark:text-red-400 mb-1">{ngoroViolations} Trip dengan Pelanggaran Rute</p>
-                      <div className="flex flex-wrap gap-1.5">
-                        {ngoroData.filter(d => d.pelanggaranRute).map((d, i) => (
-                          <span key={i} className="text-[10px] font-black bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 px-2 py-0.5 rounded-lg">
-                            {d.driver?.split(' ')[0]} {new Date(d.tanggal).getDate()}/{new Date(d.tanggal).getMonth() + 1}
-                          </span>
-                        ))}
-                      </div>
                     </div>
                   </div>
                 )}
