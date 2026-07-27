@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { useEscapeKey } from '../hooks/useEscapeKey';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
@@ -405,6 +406,10 @@ export default function DriverDetailPage() {
   }, {} as Record<string, (Ritase & { tanggal: string })[]>);
 
   if (isLoading && !driver) {
+  useEscapeKey(() => setShowEcoModal(false), !!showEcoModal);
+  useEscapeKey(() => setShowTenkoModal(false), !!showTenkoModal);
+  useEscapeKey(() => setIsAuthModalOpen(false), !!isAuthModalOpen);
+
     return (
       <div className="space-y-8 animate-pulse">
         {/* Back button skeleton */}

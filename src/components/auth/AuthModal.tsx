@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useEscapeKey } from '../../hooks/useEscapeKey';
 import { supabase } from '../../lib/supabase';
 import { motion, AnimatePresence } from 'motion/react';
 import { X } from 'lucide-react';
@@ -38,6 +39,8 @@ export default function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps
       setLoading(false);
     }
   };
+  useEscapeKey(onClose, isOpen);
+
 
   return (
     <AnimatePresence>

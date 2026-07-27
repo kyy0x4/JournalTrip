@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
+import { useEscapeKey } from '../hooks/useEscapeKey';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   Ticket, Activity, CheckCircle2, XCircle, AlertCircle, 
@@ -328,6 +329,8 @@ export default function GatepassPage() {
       setIsExportingPDF(false);
     }
   };
+  useEscapeKey(() => setIsAuthModalOpen(false), !!isAuthModalOpen);
+
 
   return (
     <div className="space-y-6 pb-20">

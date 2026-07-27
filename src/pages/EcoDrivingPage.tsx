@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
+import { useEscapeKey } from '../hooks/useEscapeKey';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import { supabase } from '../lib/supabase';
@@ -258,6 +259,11 @@ export default function EcoDrivingPage({ isTAM = false }: { isTAM?: boolean }) {
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
+  useEscapeKey(() => {
+    if (selectedCoachingDriver) setSelectedCoachingDriver(null);
+    if (cfDriver) setCfDriver(null);
+  }, !!selectedCoachingDriver || !!cfDriver);
+
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [areaDropdownOpen, customerDropdownOpen, cabangDropdownOpen]);
 

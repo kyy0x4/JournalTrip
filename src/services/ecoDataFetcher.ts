@@ -63,8 +63,14 @@ export async function fetchEcoViolations(options?: {
 }): Promise<EcoViolation[]> {
   // 1. Get Exact Count First
   let countQuery = supabase.from('eco_driving_violations').select('*', { count: 'exact', head: true });
-  if (options?.driverId) countQuery = countQuery.eq('driver_id', options.driverId);
-  else if (options?.driverName) countQuery = countQuery.eq('Pengemudi', options.driverName);
+  if (options?.driverId && options?.driverName) {
+    const prefix = options.driverName.split(' ')[0] + '%';
+    countQuery = countQuery.or(`driver_id.eq.${options.driverId},Pengemudi.ilike.${prefix}`);
+  } else if (options?.driverId) {
+    countQuery = countQuery.eq('driver_id', options.driverId);
+  } else if (options?.driverName) {
+    countQuery = countQuery.ilike('Pengemudi', options.driverName.split(' ')[0] + '%');
+  }
   if (options?.area && options.area !== 'ALL') countQuery = countQuery.eq('Area', options.area);
   if (options?.customer && options.customer !== 'ALL') countQuery = countQuery.eq('Customer', options.customer);
   if (options?.monthFilter) countQuery = countQuery.ilike('Tanggal', options.monthFilter);
@@ -75,7 +81,7 @@ export async function fetchEcoViolations(options?: {
   }
 
   const { count, error: countError } = await countQuery;
-  if (countError || count === null || count === 0) return [];
+    if (countError || count === null || count === 0) return [];
 
   // 2. Fetch in Parallel
   const pageSize = 1000;
@@ -91,8 +97,14 @@ export async function fetchEcoViolations(options?: {
       .order('id', { ascending: false })
       .range(from, from + pageSize - 1);
 
-    if (options?.driverId) query = query.eq('driver_id', options.driverId);
-    else if (options?.driverName) query = query.eq('Pengemudi', options.driverName);
+    if (options?.driverId && options?.driverName) {
+      const prefix = options.driverName.split(' ')[0] + '%';
+      query = query.or(`driver_id.eq.${options.driverId},Pengemudi.ilike.${prefix}`);
+    } else if (options?.driverId) {
+      query = query.eq('driver_id', options.driverId);
+    } else if (options?.driverName) {
+      query = query.ilike('Pengemudi', options.driverName.split(' ')[0] + '%');
+    }
     if (options?.area && options.area !== 'ALL') query = query.eq('Area', options.area);
     if (options?.customer && options.customer !== 'ALL') query = query.eq('Customer', options.customer);
     if (options?.monthFilter) query = query.ilike('Tanggal', options.monthFilter);
@@ -106,7 +118,7 @@ export async function fetchEcoViolations(options?: {
   }
 
   const results = await Promise.all(promises);
-  let allData: EcoViolation[] = [];
+    let allData: EcoViolation[] = [];
 
   for (const { data, error } of results) {
     if (error || !data) continue;

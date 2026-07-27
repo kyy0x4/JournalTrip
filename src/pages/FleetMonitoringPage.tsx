@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect, useCallback, useRef } from 'react';
+import { useEscapeKey } from '../hooks/useEscapeKey';
 import { 
   Truck, 
   MapPin, 
@@ -80,6 +81,8 @@ export default function FleetMonitoringPage({ isTAM = false }: { isTAM?: boolean
       if (e.key === 'Escape') setSelectedDriver(null);
     };
     window.addEventListener('keydown', handleEsc);
+  useEscapeKey(() => setSelectedDriver(null), !!selectedDriver);
+
     return () => window.removeEventListener('keydown', handleEsc);
   }, []);
 

@@ -1,4 +1,5 @@
 import { useRef, useState } from 'react';
+import { useEscapeKey } from '../../hooks/useEscapeKey';
 import { Link, useLocation } from 'react-router-dom';
 import {
   Calendar as CalendarIcon, Menu, X, Sun, Moon,
@@ -175,6 +176,10 @@ export default function Navbar({
       setIsExporting(false);
     }
   };
+  useEscapeKey(() => setIsShiftOpen(false), !!isShiftOpen);
+  useEscapeKey(() => setIsProfileOpen(false), !!isProfileOpen);
+  useEscapeKey(() => setIsLauncherOpen(false), !!isLauncherOpen);
+
 
   return (
     <nav className={`

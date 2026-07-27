@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
+import { useEscapeKey } from '../hooks/useEscapeKey';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
@@ -108,6 +109,11 @@ export default function LeadTimePage({ isTAM = false }: { isTAM?: boolean }) {
       }
     };
     window.addEventListener('keydown', handleEsc);
+  useEscapeKey(() => {
+    if (selectedReason) setSelectedReason(null);
+    if (delayPopup) setDelayPopup(null);
+  }, !!selectedReason || !!delayPopup);
+
     return () => window.removeEventListener('keydown', handleEsc);
   }, []);
 

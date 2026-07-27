@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
+import { useEscapeKey } from '../hooks/useEscapeKey';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import {
@@ -209,6 +210,8 @@ export default function TenkoPage({ isTAM = false }: { isTAM?: boolean }) {
       setIsLoggedIn(!!session);
       setUserEmail(session?.user?.email ?? null);
     });
+  useEscapeKey(() => setIsAuthModalOpen(false), !!isAuthModalOpen);
+
     return () => subscription.unsubscribe();
   }, []);
 
