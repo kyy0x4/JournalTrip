@@ -259,13 +259,13 @@ export default function EcoDrivingPage({ isTAM = false }: { isTAM?: boolean }) {
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [areaDropdownOpen, customerDropdownOpen, cabangDropdownOpen]);
+
   useEscapeKey(() => {
     if (selectedCoachingDriver) setSelectedCoachingDriver(null);
     if (cfDriver) setCfDriver(null);
   }, !!selectedCoachingDriver || !!cfDriver);
-
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [areaDropdownOpen, customerDropdownOpen, cabangDropdownOpen]);
 
   // Clear cross-filters when main data changes
   useEffect(() => {
