@@ -76,15 +76,7 @@ export default function FleetMonitoringPage({ isTAM = false }: { isTAM?: boolean
     setIsLoading(false);
   }, [selectedDate, isTAM]);
 
-  useEffect(() => {
-    const handleEsc = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setSelectedDriver(null);
-    };
-    window.addEventListener('keydown', handleEsc);
   useEscapeKey(() => setSelectedDriver(null), !!selectedDriver);
-
-    return () => window.removeEventListener('keydown', handleEsc);
-  }, []);
 
   useEffect(() => {
     loadData();

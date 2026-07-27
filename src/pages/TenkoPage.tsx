@@ -210,10 +210,11 @@ export default function TenkoPage({ isTAM = false }: { isTAM?: boolean }) {
       setIsLoggedIn(!!session);
       setUserEmail(session?.user?.email ?? null);
     });
-  useEscapeKey(() => setIsAuthModalOpen(false), !!isAuthModalOpen);
 
     return () => subscription.unsubscribe();
   }, []);
+
+  useEscapeKey(() => setIsAuthModalOpen(false), !!isAuthModalOpen);
 
   const promptLogin = (action?: () => void) => {
     if (action) setPendingAction(() => action);
