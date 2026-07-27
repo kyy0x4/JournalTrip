@@ -405,11 +405,11 @@ export default function DriverDetailPage() {
     return acc;
   }, {} as Record<string, (Ritase & { tanggal: string })[]>);
 
-  if (isLoading && !driver) {
   useEscapeKey(() => setShowEcoModal(false), !!showEcoModal);
   useEscapeKey(() => setShowTenkoModal(false), !!showTenkoModal);
   useEscapeKey(() => setIsAuthModalOpen(false), !!isAuthModalOpen);
 
+  if (isLoading && !driver) {
     return (
       <div className="space-y-8 animate-pulse">
         {/* Back button skeleton */}

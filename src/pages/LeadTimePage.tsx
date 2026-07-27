@@ -101,21 +101,10 @@ export default function LeadTimePage({ isTAM = false }: { isTAM?: boolean }) {
     ? ['ALL', 'JBK', 'NGORO', 'TMMIN', 'SUMATERA', 'PADANG', 'SULAWESI', 'KALIMANTAN'].filter(a => TAM_AREAS.includes(a))
     : ['ALL', 'JBK', 'NGORO', 'TMMIN', 'SUMATERA', 'PADANG', 'SULAWESI', 'KALIMANTAN'];
 
-  useEffect(() => {
-    const handleEsc = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        setSelectedReason(null);
-        setDelayPopup(null);
-      }
-    };
-    window.addEventListener('keydown', handleEsc);
   useEscapeKey(() => {
     if (selectedReason) setSelectedReason(null);
     if (delayPopup) setDelayPopup(null);
   }, !!selectedReason || !!delayPopup);
-
-    return () => window.removeEventListener('keydown', handleEsc);
-  }, []);
 
   useEffect(() => {
     loadData();
