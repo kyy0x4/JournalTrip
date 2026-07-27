@@ -1,14 +1,30 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Ship, MapPin, Calendar, ChevronDown, ArrowRight } from 'lucide-react';
+import { Ship, MapPin, Calendar, ChevronDown, ArrowRight, TrendingUp, Filter, AlertTriangle } from 'lucide-react';
 import { 
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, 
   ResponsiveContainer, Cell, ReferenceLine
 } from 'recharts';
 import { leadtimeService, LeadTimeData } from '../services/leadtimeService';
 
-const TABS = ['SUMATERA', 'NGORO', 'JBK', 'TMMIN'] as const;
+const TABS = ['SUMATERA', 'NGORO'] as const;
 type Tab = typeof TABS[number];
+
+type Tujuan = 'ALL' | 'PALEMBANG' | 'LAMPUNG' | 'PEKANBARU';
+const TUJUAN_OPTIONS: Tujuan[] = ['ALL', 'PALEMBANG', 'LAMPUNG', 'PEKANBARU'];
+
+const TUJUAN_COLOR: Record<Tujuan, string> = {
+  ALL: 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200',
+  PALEMBANG: 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300',
+  LAMPUNG: 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300',
+  PEKANBARU: 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purpleald-300',
+};
+const TUJUAN_ACTIVE: Record<Tujuan, string> = {
+  ALL: 'bg-slate-800 dark:bg-slate-100 text-white dark:text-slate-900',
+  PALEMBANG: 'bg-amber-500 text-white',
+  LAMPUNG: 'bg-emerald-500 text-white',
+  PEKANBARU: 'bg-purple-500 text-white',
+};
 
 export default function RouteAnalyticsPage({ isTAM = false }: { isTAM?: boolean }) {
   const [activeTab, setActiveTab] = useState<Tab>('SUMATERA');
@@ -16,6 +32,7 @@ export default function RouteAnalyticsPage({ isTAM = false }: { isTAM?: boolean 
     const d = new Date(new Date().getTime() - (new Date().getTimezoneOffset() * 60000));
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
   });
+  const [activeTujuan, setActiveTujuan] = useState<Tujuan>('ALL');
   const [isLoading, setIsLoading] = useState(false);
   const [data, setData] = useState<LeadTimeData[]>([]);
   const monthInputRef = useRef<HTMLInputElement>(null);
@@ -36,9 +53,8 @@ export default function RouteAnalyticsPage({ isTAM = false }: { isTAM?: boolean 
   }, [selectedMonth, activeTab]);
 
   useEffect(() => {
-    if (activeTab === 'SUMATERA') loadData();
-    else setData([]);
-  }, [loadData, activeTab]);
+    loadData();
+  }, [loadData]);
 
   const timeToMin = (s?: string): number | null => {
     if (!s || typeof s !== 'string') return null;
@@ -47,47 +63,180 @@ export default function RouteAnalyticsPage({ isTAM = false }: { isTAM?: boolean 
     return p[0] * 60 + (p[1] || 0);
   };
 
-  const diffH = (a?: string, b?: string): number => {
+  // For segments that might cross midnight (long haul), compute delta carefully
+  const diffH = (a?: string, b?: string, allowCrossDay = true): number => {
     const fa = timeToMin(a), fb = timeToMin(b);
     if (fa === null || fb === null) return 0;
     let d = fb - fa;
-    if (d < 0) d += 24 * 60;
+    if (allowCrossDay && d < 0) d += 24 * 60;
     return parseFloat((d / 60).toFixed(1));
   };
 
+  // Normalize tujuan casing
+  const normalizeTujuan = (t: string | undefined): Tujuan => {
+    if (!t) return 'PALEMBANG';
+    const upper = t.trim().toUpperCase();
+    if (upper === 'LAMPUNG' || upper === 'LAMPUNG') return 'LAMPUNG';
+    if (upper === 'PEKANBARU') return 'PEKANBARU';
+    return 'PALEMBANG';
+  };
+
+  const filteredData = data.filter(d => {
+    const tujuan = normalizeTujuan(d.checkpoints?.['TUJUAN']);
+    return activeTujuan === 'ALL' || tujuan === activeTujuan;
+  });
+
   const chartData = (() => {
     if (activeTab !== 'SUMATERA') return [];
-    return data
+    return filteredData
       .filter(d => d.checkpoints?.['PELABUHAN MERAK'] && d.checkpoints?.['PELABUHAN BAKAUHENI'])
-      .map(d => ({
-        ...d,
-        ferryHours: diffH(d.checkpoints?.['PELABUHAN MERAK'], d.checkpoints?.['PELABUHAN BAKAUHENI']),
-        destHours: d.checkpoints?.['UNLOADING PDC POLYGON']
-          ? diffH(d.checkpoints?.['PELABUHAN BAKAUHENI'], d.checkpoints?.['UNLOADING PDC POLYGON'])
-          : 0,
-        label: `${(d.driver || '?').split(' ')[0]} ${new Date(d.tanggal).getDate()}/${new Date(d.tanggal).getMonth() + 1}`
-      }))
+      .map(d => {
+        const cp = d.checkpoints || {};
+        const tujuan = normalizeTujuan(cp['TUJUAN']);
+
+        // Segment 1: Tiba di Merak → Masuk Kapal (Nunggu Kapal Berangkat)
+        const waitDepartHours = cp['MASUK KAPAL']
+          ? diffH(cp['PELABUHAN MERAK'], cp['MASUK KAPAL'])
+          : 0;
+
+        // Segment 2: Masuk Kapal → Bakauheni (Ferry Berangkat)
+        const ferryDepartHours = cp['MASUK KAPAL']
+          ? diffH(cp['MASUK KAPAL'], cp['PELABUHAN BAKAUHENI'])
+          : diffH(cp['PELABUHAN MERAK'], cp['PELABUHAN BAKAUHENI']);
+
+        // Segment 3: Bakauheni → Tujuan (Delivery)
+        const destHours = cp['UNLOADING PDC POLYGON']
+          ? diffH(cp['PELABUHAN BAKAUHENI'], cp['UNLOADING PDC POLYGON'])
+          : 0;
+
+        // Segment 4: Tujuan → Pel. Bakauheni (PULANG) (Return leg starts)
+        const returnToPortHours = cp['PELABUHAN BAKAUHENI (PULANG)'] && cp['UNLOADING PDC POLYGON']
+          ? diffH(cp['UNLOADING PDC POLYGON'], cp['PELABUHAN BAKAUHENI (PULANG)'])
+          : 0;
+
+        // Segment 5: Pel. Bakauheni (PULANG) → Masuk Kapal (PULANG) (Nunggu Kapal Pulang)
+        const waitReturnHours = cp['MASUK KAPAL (PULANG)'] && cp['PELABUHAN BAKAUHENI (PULANG)']
+          ? diffH(cp['PELABUHAN BAKAUHENI (PULANG)'], cp['MASUK KAPAL (PULANG)'])
+          : 0;
+
+        // Segment 6: Masuk Kapal (PULANG) → Pel. Merak (PULANG) (Ferry Pulang)
+        const ferryReturnHours = cp['PELABUHAN MERAK (PULANG)'] && (cp['MASUK KAPAL (PULANG)'] || cp['PELABUHAN BAKAUHENI (PULANG)'])
+          ? diffH(cp['MASUK KAPAL (PULANG)'] || cp['PELABUHAN BAKAUHENI (PULANG)'], cp['PELABUHAN MERAK (PULANG)'])
+          : 0;
+
+        // Segment 7: Merak (PULANG) → Back to Pool
+        const returnToPoolHours = cp['BACK TO POOL'] && cp['PELABUHAN MERAK (PULANG)']
+          ? diffH(cp['PELABUHAN MERAK (PULANG)'], cp['BACK TO POOL'])
+          : 0;
+
+        return {
+          ...d,
+          tujuan,
+          waitDepartHours,
+          ferryDepartHours,
+          destHours,
+          returnToPortHours,
+          waitReturnHours,
+          ferryReturnHours,
+          returnToPoolHours,
+          label: `${(d.driver || '?').split(' ')[0]} ${new Date(d.tanggal).getDate()}/${new Date(d.tanggal).getMonth() + 1}`
+        };
+      })
       .sort((a, b) => new Date(a.tanggal).getTime() - new Date(b.tanggal).getTime());
   })();
 
-  const avgOf = (key: 'ferryHours' | 'destHours') =>
+  const avgOf = (key: keyof (typeof chartData)[0]) =>
     chartData.length > 0
-      ? (chartData.reduce((s, d) => s + (d[key] || 0), 0) / chartData.length).toFixed(1)
+      ? (chartData.reduce((s, d) => s + ((d[key] as number) || 0), 0) / chartData.length).toFixed(1)
       : '0.0';
 
-  const avgFerry = avgOf('ferryHours');
+  const avgWaitDepart = avgOf('waitDepartHours');
+  const avgFerry = avgOf('ferryDepartHours');
   const avgDest = avgOf('destHours');
+  const avgReturnToPort = avgOf('returnToPortHours');
+  const avgWaitReturn = avgOf('waitReturnHours');
+  const avgFerryReturn = avgOf('ferryReturnHours');
+  const avgReturnPool = avgOf('returnToPoolHours');
+
+  // ── NGORO chart data ──
+  const ngoroData = useMemo(() => {
+    if (activeTab !== 'NGORO') return [];
+    return data
+      .filter(d => d.checkpoints?.['Out PDC'])
+      .map(d => {
+        const cp = d.checkpoints || {};
+        const diffNgoro = (a?: string, b?: string): number => {
+          if (!a || !b) return 0;
+          const fa = a.split(':').map(Number);
+          const fb = b.split(':').map(Number);
+          if (isNaN(fa[0]) || isNaN(fb[0])) return 0;
+          let diff = (fb[0] * 60 + fb[1]) - (fa[0] * 60 + fa[1]);
+          if (diff < 0) diff += 24 * 60; // cross midnight
+          // NGORO is long-haul ~20h, clamp unreasonably large diffs
+          if (diff > 20 * 60) diff -= 24 * 60;
+          if (diff < 0) diff = 0;
+          return parseFloat((diff / 60).toFixed(1));
+        };
+
+        // Segment A: Out PDC → KM 166 (Tol Cipularang/awal jalan)
+        const segA = diffNgoro(cp['Out PDC'], cp['Actual (KM 166)']);
+        // Segment B: KM 166 → KM 360B (Tengah Solo)
+        const segB = diffNgoro(cp['Actual (KM 166)'], cp['Actual (KM 360B)']);
+        // Segment C: KM 360B → KM 379A (Dekat Ngawi)
+        const segC = diffNgoro(cp['Actual (KM 360B)'], cp['Actual (KM 379A)']);
+        // Segment D: KM 379A → KM 575A (Menuju Surabaya)
+        const segD = diffNgoro(cp['Actual (KM 379A)'], cp['Actual (KM 575A)']);
+        // Segment E: KM 575A → Unloading (Masuk Ngoro)
+        const segE = diffNgoro(cp['Actual (KM 575A)'], cp['Actual (Unloading)']);
+        // Segment F (Pulang): Unloading → KM 575B
+        const segF = diffNgoro(cp['Actual (Unloading)'], cp['Actual (575B)']);
+        // Segment G (Pulang): KM 575B → KM 164B
+        const segG = diffNgoro(cp['Actual (575B)'], cp['Actual (KM 164B)']);
+        // Segment H (Pulang): KM 164B → Back To Pool
+        const segH = diffNgoro(cp['Actual (KM 164B)'], cp['Actual (Back To Pool)']);
+
+        const totalLT = [segA, segB, segC, segD, segE].reduce((s, x) => s + x, 0);
+
+        return {
+          ...d,
+          tujuan: cp['Tujuan'] || 'MJKT',
+          shift: (cp['Shift'] || '').toUpperCase().includes('DAY') ? 'DAY' : 'NIGHT',
+          pelanggaranRute: (cp['PELANGGARAN RUTE'] || '').toUpperCase() === 'YA',
+          segA, segB, segC, segD, segE, segF, segG, segH,
+          totalLT,
+          label: `${(d.driver || '?').split(' ')[0]} ${new Date(d.tanggal).getDate()}/${new Date(d.tanggal).getMonth() + 1}`
+        };
+      })
+      .filter(d => d.segA > 0 || d.segD > 0)
+      .sort((a, b) => new Date(a.tanggal).getTime() - new Date(b.tanggal).getTime());
+  }, [data, activeTab]);
+
+  const ngoroAvgOf = (key: keyof (typeof ngoroData)[0]) =>
+    ngoroData.length > 0
+      ? (ngoroData.reduce((s, d) => s + ((d[key] as number) || 0), 0) / ngoroData.length).toFixed(1)
+      : '0.0';
+
+  const ngoroViolations = ngoroData.filter(d => d.pelanggaranRute).length;
 
   const monthLabel = new Date(selectedMonth + '-01').toLocaleDateString('id-ID', { month: 'long', year: 'numeric' });
 
   const CustomTooltip = ({ active, payload, label }: any) => {
     if (!active || !payload?.length) return null;
+    const nameMap: Record<string, string> = {
+      waitDepartHours: 'Nunggu Kapal (Berangkat)',
+      ferryDepartHours: 'Ferry Berangkat',
+      destHours: 'Bakauheni → Tujuan',
+      returnToPortHours: 'Tujuan → Bakauheni',
+      waitReturnHours: 'Nunggu Kapal (Pulang)',
+      ferryReturnHours: 'Ferry Pulang',
+      returnToPoolHours: 'Merak → Pool',
+    };
     return (
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl p-4 shadow-xl text-sm">
         <p className="font-black text-slate-800 dark:text-white mb-2">{label}</p>
         {payload.map((p: any) => (
           <p key={p.dataKey} className="font-semibold" style={{ color: p.fill }}>
-            {p.value} jam
+            {nameMap[p.dataKey] || p.dataKey}: {p.value} jam
           </p>
         ))}
       </div>
@@ -95,17 +244,87 @@ export default function RouteAnalyticsPage({ isTAM = false }: { isTAM?: boolean 
   };
 
   const EmptyChart = () => (
-    <div className="h-[420px] flex flex-col items-center justify-center text-slate-300 dark:text-slate-700 gap-3">
+    <div className="h-[360px] flex flex-col items-center justify-center text-slate-300 dark:text-slate-700 gap-3">
       <Ship className="w-8 h-8" />
       <p className="text-sm font-semibold">Belum ada data</p>
     </div>
   );
 
   const LoadingChart = () => (
-    <div className="h-[420px] flex items-center justify-center">
+    <div className="h-[360px] flex items-center justify-center">
       <div className="w-8 h-8 border-2 border-slate-200 border-t-slate-600 rounded-full animate-spin" />
     </div>
   );
+
+  // Chart card template
+  const ChartCard = ({
+    segmenLabel,
+    title,
+    subtitle,
+    icon,
+    iconColor,
+    dataKey,
+    avg,
+    avgColor,
+    thresholds,
+    colorFn,
+    tooltipCursor,
+  }: {
+    segmenLabel: string;
+    title: string;
+    subtitle: string;
+    icon: React.ReactNode;
+    iconColor: string;
+    dataKey: string;
+    avg: string;
+    avgColor: string;
+    thresholds: [number, string, string, string]; // [t1, t2, colorNormal, colorSlow, colorLate]
+    colorFn: (val: number) => string;
+    tooltipCursor: string;
+  }) => {
+    const filtered = chartData.filter(d => (d as any)[dataKey] > 0);
+    return (
+      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 p-6">
+        <div className="flex items-baseline justify-between mb-6">
+          <div>
+            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">{segmenLabel}</p>
+            <h3 className={`font-black text-base text-slate-900 dark:text-white flex items-center gap-2`}>
+              <span className={iconColor}>{icon}</span>
+              {title}
+              <span className="text-slate-400 font-normal text-sm">{subtitle}</span>
+            </h3>
+          </div>
+          <div className="text-right">
+            <p className="text-[10px] text-slate-400 font-semibold uppercase tracking-widest">Rata-rata</p>
+            <p className={`text-2xl font-black ${avgColor}`}>{avg}<span className="text-sm font-semibold text-slate-400 ml-1">jam</span></p>
+          </div>
+        </div>
+        {isLoading ? <LoadingChart /> : filtered.length > 0 ? (
+          <div className="h-[340px] overflow-visible">
+            <ResponsiveContainer width="100%" height="100%" style={{ overflow: 'visible' }}>
+              <BarChart data={filtered} margin={{ top: 5, right: 30, left: -20, bottom: 5 }} barCategoryGap="30%">
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                <XAxis dataKey="label" axisLine={false} tickLine={false}
+                  tick={{ fontSize: 8.5, fill: '#94a3b8', fontWeight: 600 }}
+                  angle={-45} textAnchor="end" interval={0} height={85} dy={8} />
+                <YAxis axisLine={false} tickLine={false}
+                  tick={{ fontSize: 9, fill: '#94a3b8', fontWeight: 600 }}
+                  tickFormatter={v => `${v}j`} width={28} />
+                <Tooltip content={<CustomTooltip />} cursor={{ fill: tooltipCursor }} />
+                <ReferenceLine y={Number(avg)} stroke="#e2e8f0" strokeDasharray="4 3"
+                  label={{ position: 'right', value: `${avg}j`, fill: '#94a3b8', fontSize: 9, fontWeight: 700 }} />
+                <Bar dataKey={dataKey} radius={[4, 4, 0, 0]} maxBarSize={28}>
+                  {filtered.map((e, i) => (
+                    <Cell key={i} fill={colorFn((e as any)[dataKey])} />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        ) : <EmptyChart />}
+      </div>
+    );
+  };
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white">
@@ -137,7 +356,7 @@ export default function RouteAnalyticsPage({ isTAM = false }: { isTAM?: boolean 
       <div className="max-w-6xl mx-auto px-6 py-8 space-y-8">
         {/* ── Tabs ── */}
         <div className="flex gap-1 bg-slate-100 dark:bg-slate-800/50 p-1 rounded-2xl w-fit">
-          {TABS.filter(t => !(isTAM && t === 'TMMIN')).map(tab => (
+          {TABS.map(tab => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
@@ -157,7 +376,7 @@ export default function RouteAnalyticsPage({ isTAM = false }: { isTAM?: boolean 
             {activeTab === 'SUMATERA' ? (
               <div className="space-y-6">
                 {/* ── Route Path ── */}
-                <div className="flex items-center gap-3 text-sm font-semibold text-slate-500">
+                <div className="flex items-center flex-wrap gap-2 text-sm font-semibold text-slate-500">
                   <span className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 px-3 py-1.5 rounded-xl text-slate-700 dark:text-slate-300 font-black">Karawang</span>
                   <ArrowRight className="w-4 h-4 text-slate-300" />
                   <span className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 px-3 py-1.5 rounded-xl text-blue-600 dark:text-blue-400 font-black flex items-center gap-1.5">
@@ -166,16 +385,41 @@ export default function RouteAnalyticsPage({ isTAM = false }: { isTAM?: boolean 
                   <ArrowRight className="w-4 h-4 text-slate-300" />
                   <span className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 px-3 py-1.5 rounded-xl text-blue-600 dark:text-blue-400 font-black">Bakauheni</span>
                   <ArrowRight className="w-4 h-4 text-slate-300" />
-                  <span className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 px-3 py-1.5 rounded-xl text-slate-700 dark:text-slate-300 font-black">PDC Tujuan</span>
+                  <span className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 px-3 py-1.5 rounded-xl text-amber-700 dark:text-amber-400 font-black">Tujuan</span>
+                  <ArrowRight className="w-4 h-4 text-slate-300" />
+                  <span className="bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800 px-3 py-1.5 rounded-xl text-purple-600 dark:text-purple-400 font-black flex items-center gap-1.5">
+                    <Ship className="w-3.5 h-3.5" /> Bakauheni
+                  </span>
+                  <ArrowRight className="w-4 h-4 text-slate-300" />
+                  <span className="bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-3 py-1.5 rounded-xl text-slate-600 dark:text-slate-400 font-black">Merak → Pool</span>
                   <span className="ml-2 text-slate-400 text-xs font-semibold">· {chartData.length} ritase</span>
                 </div>
 
+                {/* ── Filter Tujuan ── */}
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="flex items-center gap-1.5 text-xs font-black text-slate-500 uppercase tracking-widest">
+                    <Filter className="w-3 h-3" /> Tujuan
+                  </span>
+                  {TUJUAN_OPTIONS.map(t => (
+                    <button
+                      key={t}
+                      onClick={() => setActiveTujuan(t)}
+                      className={`px-3 py-1.5 rounded-xl text-[11px] font-black uppercase tracking-wide transition-all ${
+                        activeTujuan === t ? TUJUAN_ACTIVE[t] : TUJUAN_COLOR[t]
+                      }`}
+                    >
+                      {t === 'ALL' ? 'Semua Tujuan' : t}
+                    </button>
+                  ))}
+                </div>
+
                 {/* ── KPI Cards ── */}
-                <div className="grid grid-cols-3 gap-4">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                   {[
                     { label: 'Total Ritase', value: chartData.length.toString(), unit: '', color: 'text-slate-900 dark:text-white' },
-                    { label: 'Avg. Ferry Crossing', value: avgFerry, unit: 'jam', color: 'text-blue-600 dark:text-blue-400' },
-                    { label: 'Avg. Bakau → Tujuan', value: avgDest, unit: 'jam', color: 'text-emerald-600 dark:text-emerald-400' },
+                    { label: 'Avg. Nunggu Kapal ↑', value: avgWaitDepart, unit: 'jam', color: 'text-orange-600 dark:text-orange-400' },
+                    { label: 'Avg. Ferry Berangkat', value: avgFerry, unit: 'jam', color: 'text-blue-600 dark:text-blue-400' },
+                    { label: 'Avg. Bakauheni → Tujuan', value: avgDest, unit: 'jam', color: 'text-emerald-600 dark:text-emerald-400' },
                   ].map(c => (
                     <div key={c.label} className="bg-white dark:bg-slate-900 rounded-2xl p-5 border border-slate-100 dark:border-slate-800">
                       <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">{c.label}</p>
@@ -187,14 +431,67 @@ export default function RouteAnalyticsPage({ isTAM = false }: { isTAM?: boolean 
                   ))}
                 </div>
 
-                {/* ── Chart 1: Ferry Crossing ── */}
+                {/* ── BERANGKAT SECTION HEADER ── */}
+                <div className="flex items-center gap-3">
+                  <div className="flex-1 h-px bg-blue-100 dark:bg-blue-900/30" />
+                  <span className="text-[11px] font-black text-blue-500 uppercase tracking-widest flex items-center gap-1.5 px-3 py-1 bg-blue-50 dark:bg-blue-900/20 rounded-full border border-blue-200 dark:border-blue-800">
+                    <Ship className="w-3 h-3" /> Arah Berangkat
+                  </span>
+                  <div className="flex-1 h-px bg-blue-100 dark:bg-blue-900/30" />
+                </div>
+
+                {/* ── Chart A: Nunggu Kapal Berangkat ── */}
+                {chartData.some(d => d.waitDepartHours > 0) && (
+                  <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 p-6">
+                    <div className="flex items-baseline justify-between mb-6">
+                      <div>
+                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Segmen A</p>
+                        <h3 className="font-black text-base text-slate-900 dark:text-white flex items-center gap-2">
+                          <span className="text-orange-500">⏳</span>
+                          Nunggu Kapal Berangkat
+                          <span className="text-slate-400 font-normal text-sm">Tiba Merak → Masuk Kapal</span>
+                        </h3>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-[10px] text-slate-400 font-semibold uppercase tracking-widest">Rata-rata</p>
+                        <p className="text-2xl font-black text-orange-600 dark:text-orange-400">{avgWaitDepart}<span className="text-sm font-semibold text-slate-400 ml-1">jam</span></p>
+                      </div>
+                    </div>
+                    {isLoading ? <LoadingChart /> : (() => {
+                      const d = chartData.filter(x => x.waitDepartHours > 0);
+                      return d.length > 0 ? (
+                        <div className="h-[320px] overflow-visible">
+                          <ResponsiveContainer width="100%" height="100%" style={{ overflow: 'visible' }}>
+                            <BarChart data={d} margin={{ top: 5, right: 30, left: -20, bottom: 5 }} barCategoryGap="30%">
+                              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                              <XAxis dataKey="label" axisLine={false} tickLine={false} tick={{ fontSize: 8.5, fill: '#94a3b8', fontWeight: 600 }} angle={-45} textAnchor="end" interval={0} height={85} dy={8} />
+                              <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 9, fill: '#94a3b8', fontWeight: 600 }} tickFormatter={v => `${v}j`} width={28} />
+                              <Tooltip content={<CustomTooltip />} cursor={{ fill: '#fff7ed' }} />
+                              <ReferenceLine y={Number(avgWaitDepart)} stroke="#e2e8f0" strokeDasharray="4 3" label={{ position: 'right', value: `${avgWaitDepart}j`, fill: '#94a3b8', fontSize: 9, fontWeight: 700 }} />
+                              <Bar dataKey="waitDepartHours" radius={[4, 4, 0, 0]} maxBarSize={28}>
+                                {d.map((e, i) => <Cell key={i} fill={e.waitDepartHours > 4 ? '#f87171' : e.waitDepartHours > 2 ? '#fb923c' : '#fdba74'} />)}
+                              </Bar>
+                            </BarChart>
+                          </ResponsiveContainer>
+                        </div>
+                      ) : <EmptyChart />;
+                    })()}
+                    <div className="flex items-center gap-4 mt-4 text-[10px] font-semibold text-slate-500">
+                      <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-orange-200 inline-block" /> Cepat (&lt;2j)</span>
+                      <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-orange-400 inline-block" /> Lama (2–4j)</span>
+                      <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-red-400 inline-block" /> Sangat Lama (&gt;4j)</span>
+                    </div>
+                  </div>
+                )}
+
+                {/* ── Chart B: Ferry Crossing Berangkat ── */}
                 <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 p-6">
                   <div className="flex items-baseline justify-between mb-6">
                     <div>
-                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Segmen 1</p>
+                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Segmen B</p>
                       <h3 className="font-black text-base text-slate-900 dark:text-white flex items-center gap-2">
                         <Ship className="w-4 h-4 text-blue-500" />
-                        Penyeberangan Ferry
+                        Penyeberangan Ferry Berangkat
                         <span className="text-slate-400 font-normal text-sm">Merak → Bakauheni</span>
                       </h3>
                     </div>
@@ -205,22 +502,17 @@ export default function RouteAnalyticsPage({ isTAM = false }: { isTAM?: boolean 
                   </div>
 
                   {isLoading ? <LoadingChart /> : chartData.length > 0 ? (
-                    <div className="h-[380px] overflow-visible">
+                    <div className="h-[320px] overflow-visible">
                       <ResponsiveContainer width="100%" height="100%" style={{ overflow: 'visible' }}>
                         <BarChart data={chartData} margin={{ top: 5, right: 30, left: -20, bottom: 5 }} barCategoryGap="30%">
                           <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                          <XAxis dataKey="label" axisLine={false} tickLine={false}
-                            tick={{ fontSize: 8.5, fill: '#94a3b8', fontWeight: 600 }}
-                            angle={-45} textAnchor="end" interval={0} height={85} dy={8} />
-                          <YAxis axisLine={false} tickLine={false}
-                            tick={{ fontSize: 9, fill: '#94a3b8', fontWeight: 600 }}
-                            tickFormatter={v => `${v}j`} width={28} />
+                          <XAxis dataKey="label" axisLine={false} tickLine={false} tick={{ fontSize: 8.5, fill: '#94a3b8', fontWeight: 600 }} angle={-45} textAnchor="end" interval={0} height={85} dy={8} />
+                          <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 9, fill: '#94a3b8', fontWeight: 600 }} tickFormatter={v => `${v}j`} width={28} />
                           <Tooltip content={<CustomTooltip />} cursor={{ fill: '#f8fafc' }} />
-                          <ReferenceLine y={Number(avgFerry)} stroke="#e2e8f0" strokeDasharray="4 3"
-                            label={{ position: 'right', value: `${avgFerry}j`, fill: '#94a3b8', fontSize: 9, fontWeight: 700 }} />
-                          <Bar dataKey="ferryHours" radius={[4, 4, 0, 0]} maxBarSize={28}>
+                          <ReferenceLine y={Number(avgFerry)} stroke="#e2e8f0" strokeDasharray="4 3" label={{ position: 'right', value: `${avgFerry}j`, fill: '#94a3b8', fontSize: 9, fontWeight: 700 }} />
+                          <Bar dataKey="ferryDepartHours" radius={[4, 4, 0, 0]} maxBarSize={28}>
                             {chartData.map((e, i) => (
-                              <Cell key={i} fill={e.ferryHours > 8 ? '#f87171' : e.ferryHours > 5 ? '#fbbf24' : '#60a5fa'} />
+                              <Cell key={i} fill={e.ferryDepartHours > 8 ? '#f87171' : e.ferryDepartHours > 5 ? '#fbbf24' : '#60a5fa'} />
                             ))}
                           </Bar>
                         </BarChart>
@@ -228,7 +520,6 @@ export default function RouteAnalyticsPage({ isTAM = false }: { isTAM?: boolean 
                     </div>
                   ) : <EmptyChart />}
 
-                  {/* Legend */}
                   <div className="flex items-center gap-4 mt-4 text-[10px] font-semibold text-slate-500">
                     <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-blue-400 inline-block" /> Normal (&lt;5j)</span>
                     <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-amber-400 inline-block" /> Lambat (5–8j)</span>
@@ -236,11 +527,11 @@ export default function RouteAnalyticsPage({ isTAM = false }: { isTAM?: boolean 
                   </div>
                 </div>
 
-                {/* ── Chart 2: Bakauheni → Tujuan ── */}
+                {/* ── Chart C: Bakauheni → Tujuan ── */}
                 <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 p-6">
                   <div className="flex items-baseline justify-between mb-6">
                     <div>
-                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Segmen 2</p>
+                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Segmen C</p>
                       <h3 className="font-black text-base text-slate-900 dark:text-white flex items-center gap-2">
                         <MapPin className="w-4 h-4 text-emerald-500" />
                         Bakauheni ke Tujuan
@@ -256,19 +547,14 @@ export default function RouteAnalyticsPage({ isTAM = false }: { isTAM?: boolean 
                   {(() => {
                     const d2 = chartData.filter(d => d.destHours > 0);
                     return isLoading ? <LoadingChart /> : d2.length > 0 ? (
-                      <div className="h-[380px] overflow-visible">
+                      <div className="h-[320px] overflow-visible">
                         <ResponsiveContainer width="100%" height="100%" style={{ overflow: 'visible' }}>
                           <BarChart data={d2} margin={{ top: 5, right: 30, left: -20, bottom: 5 }} barCategoryGap="30%">
                             <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                            <XAxis dataKey="label" axisLine={false} tickLine={false}
-                              tick={{ fontSize: 8.5, fill: '#94a3b8', fontWeight: 600 }}
-                              angle={-45} textAnchor="end" interval={0} height={85} dy={8} />
-                            <YAxis axisLine={false} tickLine={false}
-                              tick={{ fontSize: 9, fill: '#94a3b8', fontWeight: 600 }}
-                              tickFormatter={v => `${v}j`} width={28} />
+                            <XAxis dataKey="label" axisLine={false} tickLine={false} tick={{ fontSize: 8.5, fill: '#94a3b8', fontWeight: 600 }} angle={-45} textAnchor="end" interval={0} height={85} dy={8} />
+                            <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 9, fill: '#94a3b8', fontWeight: 600 }} tickFormatter={v => `${v}j`} width={28} />
                             <Tooltip content={<CustomTooltip />} cursor={{ fill: '#f0fdf4' }} />
-                            <ReferenceLine y={Number(avgDest)} stroke="#e2e8f0" strokeDasharray="4 3"
-                              label={{ position: 'right', value: `${avgDest}j`, fill: '#94a3b8', fontSize: 9, fontWeight: 700 }} />
+                            <ReferenceLine y={Number(avgDest)} stroke="#e2e8f0" strokeDasharray="4 3" label={{ position: 'right', value: `${avgDest}j`, fill: '#94a3b8', fontSize: 9, fontWeight: 700 }} />
                             <Bar dataKey="destHours" radius={[4, 4, 0, 0]} maxBarSize={28}>
                               {d2.map((e, i) => (
                                 <Cell key={i} fill={e.destHours > 10 ? '#f87171' : e.destHours > 6 ? '#fbbf24' : '#34d399'} />
@@ -286,16 +572,343 @@ export default function RouteAnalyticsPage({ isTAM = false }: { isTAM?: boolean 
                     <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-red-400 inline-block" /> Lama (&gt;10j)</span>
                   </div>
                 </div>
-              </div>
-            ) : (
-              <div className="flex flex-col items-center justify-center py-28 text-center">
-                <div className="w-14 h-14 bg-slate-100 dark:bg-slate-800 rounded-2xl flex items-center justify-center mb-5">
-                  <MapPin className="w-6 h-6 text-slate-400" />
+
+                {/* ── PULANG SECTION HEADER ── */}
+                <div className="flex items-center gap-3">
+                  <div className="flex-1 h-px bg-purple-100 dark:bg-purple-900/30" />
+                  <span className="text-[11px] font-black text-purple-500 uppercase tracking-widest flex items-center gap-1.5 px-3 py-1 bg-purple-50 dark:bg-purple-900/20 rounded-full border border-purple-200 dark:border-purple-800">
+                    <Ship className="w-3 h-3" /> Arah Pulang
+                  </span>
+                  <div className="flex-1 h-px bg-purple-100 dark:bg-purple-900/30" />
                 </div>
-                <h3 className="font-black text-lg mb-2">Rute {activeTab}</h3>
-                <p className="text-sm text-slate-500 max-w-xs">Analitik untuk rute ini sedang dalam pengembangan.</p>
+
+                {/* ── KPI Pulang ── */}
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                  {[
+                    { label: 'Avg. Tujuan → Bakauheni', value: avgReturnToPort, unit: 'jam', color: 'text-purple-600 dark:text-purple-400' },
+                    { label: 'Avg. Nunggu Kapal ↓', value: avgWaitReturn, unit: 'jam', color: 'text-rose-600 dark:text-rose-400' },
+                    { label: 'Avg. Ferry Pulang', value: avgFerryReturn, unit: 'jam', color: 'text-indigo-600 dark:text-indigo-400' },
+                  ].map(c => (
+                    <div key={c.label} className="bg-white dark:bg-slate-900 rounded-2xl p-5 border border-slate-100 dark:border-slate-800">
+                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">{c.label}</p>
+                      <p className={`text-3xl font-black ${c.color}`}>
+                        {c.value}
+                        {c.unit && <span className="text-sm font-semibold text-slate-400 ml-1">{c.unit}</span>}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+
+                {/* ── Chart D: Tujuan → Pel. Bakauheni (Pulang) ── */}
+                {chartData.some(d => d.returnToPortHours > 0) && (
+                  <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 p-6">
+                    <div className="flex items-baseline justify-between mb-6">
+                      <div>
+                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Segmen D</p>
+                        <h3 className="font-black text-base text-slate-900 dark:text-white flex items-center gap-2">
+                          <TrendingUp className="w-4 h-4 text-purple-500" />
+                          Tujuan ke Pelabuhan Bakauheni
+                          <span className="text-slate-400 font-normal text-sm">PDC Polygon → Bakauheni</span>
+                        </h3>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-[10px] text-slate-400 font-semibold uppercase tracking-widest">Rata-rata</p>
+                        <p className="text-2xl font-black text-purple-600 dark:text-purple-400">{avgReturnToPort}<span className="text-sm font-semibold text-slate-400 ml-1">jam</span></p>
+                      </div>
+                    </div>
+                    {isLoading ? <LoadingChart /> : (() => {
+                      const d = chartData.filter(x => x.returnToPortHours > 0);
+                      return d.length > 0 ? (
+                        <div className="h-[320px] overflow-visible">
+                          <ResponsiveContainer width="100%" height="100%" style={{ overflow: 'visible' }}>
+                            <BarChart data={d} margin={{ top: 5, right: 30, left: -20, bottom: 5 }} barCategoryGap="30%">
+                              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                              <XAxis dataKey="label" axisLine={false} tickLine={false} tick={{ fontSize: 8.5, fill: '#94a3b8', fontWeight: 600 }} angle={-45} textAnchor="end" interval={0} height={85} dy={8} />
+                              <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 9, fill: '#94a3b8', fontWeight: 600 }} tickFormatter={v => `${v}j`} width={28} />
+                              <Tooltip content={<CustomTooltip />} cursor={{ fill: '#fdf4ff' }} />
+                              <ReferenceLine y={Number(avgReturnToPort)} stroke="#e2e8f0" strokeDasharray="4 3" label={{ position: 'right', value: `${avgReturnToPort}j`, fill: '#94a3b8', fontSize: 9, fontWeight: 700 }} />
+                              <Bar dataKey="returnToPortHours" radius={[4, 4, 0, 0]} maxBarSize={28}>
+                                {d.map((e, i) => <Cell key={i} fill={e.returnToPortHours > 10 ? '#f87171' : e.returnToPortHours > 6 ? '#c084fc' : '#a855f7'} />)}
+                              </Bar>
+                            </BarChart>
+                          </ResponsiveContainer>
+                        </div>
+                      ) : <EmptyChart />;
+                    })()}
+                  </div>
+                )}
+
+                {/* ── Chart E: Nunggu Kapal Pulang ── */}
+                {chartData.some(d => d.waitReturnHours > 0) && (
+                  <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 p-6">
+                    <div className="flex items-baseline justify-between mb-6">
+                      <div>
+                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Segmen E</p>
+                        <h3 className="font-black text-base text-slate-900 dark:text-white flex items-center gap-2">
+                          <span className="text-rose-500">⏳</span>
+                          Nunggu Kapal Pulang
+                          <span className="text-slate-400 font-normal text-sm">Tiba Bakauheni → Masuk Kapal Pulang</span>
+                        </h3>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-[10px] text-slate-400 font-semibold uppercase tracking-widest">Rata-rata</p>
+                        <p className="text-2xl font-black text-rose-600 dark:text-rose-400">{avgWaitReturn}<span className="text-sm font-semibold text-slate-400 ml-1">jam</span></p>
+                      </div>
+                    </div>
+                    {isLoading ? <LoadingChart /> : (() => {
+                      const d = chartData.filter(x => x.waitReturnHours > 0);
+                      return d.length > 0 ? (
+                        <div className="h-[320px] overflow-visible">
+                          <ResponsiveContainer width="100%" height="100%" style={{ overflow: 'visible' }}>
+                            <BarChart data={d} margin={{ top: 5, right: 30, left: -20, bottom: 5 }} barCategoryGap="30%">
+                              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                              <XAxis dataKey="label" axisLine={false} tickLine={false} tick={{ fontSize: 8.5, fill: '#94a3b8', fontWeight: 600 }} angle={-45} textAnchor="end" interval={0} height={85} dy={8} />
+                              <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 9, fill: '#94a3b8', fontWeight: 600 }} tickFormatter={v => `${v}j`} width={28} />
+                              <Tooltip content={<CustomTooltip />} cursor={{ fill: '#fff1f2' }} />
+                              <ReferenceLine y={Number(avgWaitReturn)} stroke="#e2e8f0" strokeDasharray="4 3" label={{ position: 'right', value: `${avgWaitReturn}j`, fill: '#94a3b8', fontSize: 9, fontWeight: 700 }} />
+                              <Bar dataKey="waitReturnHours" radius={[4, 4, 0, 0]} maxBarSize={28}>
+                                {d.map((e, i) => <Cell key={i} fill={e.waitReturnHours > 4 ? '#f87171' : e.waitReturnHours > 2 ? '#fb7185' : '#fda4af'} />)}
+                              </Bar>
+                            </BarChart>
+                          </ResponsiveContainer>
+                        </div>
+                      ) : <EmptyChart />;
+                    })()}
+                  </div>
+                )}
+
+                {/* ── Chart F: Ferry Pulang ── */}
+                {chartData.some(d => d.ferryReturnHours > 0) && (
+                  <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 p-6">
+                    <div className="flex items-baseline justify-between mb-6">
+                      <div>
+                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Segmen F</p>
+                        <h3 className="font-black text-base text-slate-900 dark:text-white flex items-center gap-2">
+                          <Ship className="w-4 h-4 text-indigo-500" />
+                          Penyeberangan Ferry Pulang
+                          <span className="text-slate-400 font-normal text-sm">Bakauheni → Merak</span>
+                        </h3>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-[10px] text-slate-400 font-semibold uppercase tracking-widest">Rata-rata</p>
+                        <p className="text-2xl font-black text-indigo-600 dark:text-indigo-400">{avgFerryReturn}<span className="text-sm font-semibold text-slate-400 ml-1">jam</span></p>
+                      </div>
+                    </div>
+                    {isLoading ? <LoadingChart /> : (() => {
+                      const d = chartData.filter(x => x.ferryReturnHours > 0);
+                      return d.length > 0 ? (
+                        <div className="h-[320px] overflow-visible">
+                          <ResponsiveContainer width="100%" height="100%" style={{ overflow: 'visible' }}>
+                            <BarChart data={d} margin={{ top: 5, right: 30, left: -20, bottom: 5 }} barCategoryGap="30%">
+                              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                              <XAxis dataKey="label" axisLine={false} tickLine={false} tick={{ fontSize: 8.5, fill: '#94a3b8', fontWeight: 600 }} angle={-45} textAnchor="end" interval={0} height={85} dy={8} />
+                              <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 9, fill: '#94a3b8', fontWeight: 600 }} tickFormatter={v => `${v}j`} width={28} />
+                              <Tooltip content={<CustomTooltip />} cursor={{ fill: '#eef2ff' }} />
+                              <ReferenceLine y={Number(avgFerryReturn)} stroke="#e2e8f0" strokeDasharray="4 3" label={{ position: 'right', value: `${avgFerryReturn}j`, fill: '#94a3b8', fontSize: 9, fontWeight: 700 }} />
+                              <Bar dataKey="ferryReturnHours" radius={[4, 4, 0, 0]} maxBarSize={28}>
+                                {d.map((e, i) => <Cell key={i} fill={e.ferryReturnHours > 8 ? '#f87171' : e.ferryReturnHours > 5 ? '#fbbf24' : '#818cf8'} />)}
+                              </Bar>
+                            </BarChart>
+                          </ResponsiveContainer>
+                        </div>
+                      ) : <EmptyChart />;
+                    })()}
+                    <div className="flex items-center gap-4 mt-4 text-[10px] font-semibold text-slate-500">
+                      <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-indigo-400 inline-block" /> Normal (&lt;5j)</span>
+                      <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-amber-400 inline-block" /> Lambat (5–8j)</span>
+                      <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-red-400 inline-block" /> Lama (&gt;8j)</span>
+                    </div>
+                  </div>
+                )}
+
               </div>
-            )}
+            ) : activeTab === 'NGORO' ? (
+              <div className="space-y-6">
+                {/* ── NGORO Route Path ── */}
+                <div className="flex items-center flex-wrap gap-2 text-sm font-semibold text-slate-500">
+                  <span className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 px-3 py-1.5 rounded-xl text-slate-700 dark:text-slate-300 font-black">Karawang</span>
+                  <ArrowRight className="w-4 h-4 text-slate-300" />
+                  <span className="bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 px-3 py-1.5 rounded-xl text-slate-600 dark:text-slate-400 font-black">KM 166</span>
+                  <ArrowRight className="w-4 h-4 text-slate-300" />
+                  <span className="bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 px-3 py-1.5 rounded-xl text-slate-600 dark:text-slate-400 font-black">KM 360B</span>
+                  <ArrowRight className="w-4 h-4 text-slate-300" />
+                  <span className="bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 px-3 py-1.5 rounded-xl text-slate-600 dark:text-slate-400 font-black">KM 379A</span>
+                  <ArrowRight className="w-4 h-4 text-slate-300" />
+                  <span className="bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 px-3 py-1.5 rounded-xl text-slate-600 dark:text-slate-400 font-black">KM 575A</span>
+                  <ArrowRight className="w-4 h-4 text-slate-300" />
+                  <span className="bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 px-3 py-1.5 rounded-xl text-emerald-700 dark:text-emerald-400 font-black">MJKT / MKJT</span>
+                  <span className="ml-2 text-slate-400 text-xs font-semibold">· {ngoroData.length} ritase</span>
+                </div>
+
+                {/* ── NGORO KPI Cards ── */}
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                  {[
+                    { label: 'Total Ritase', value: ngoroData.length.toString(), unit: '', color: 'text-slate-900 dark:text-white' },
+                    { label: 'Pelanggaran Rute', value: ngoroViolations.toString(), unit: 'trip', color: ngoroViolations > 0 ? 'text-red-600 dark:text-red-400' : 'text-emerald-600 dark:text-emerald-400' },
+                    { label: 'Avg. KM166 → KM575A', value: (() => { const d = ngoroData.filter(x => x.segB > 0 && x.segD > 0); return d.length > 0 ? (d.reduce((s, x) => s + x.segB + x.segC + x.segD, 0) / d.length).toFixed(1) : '0.0'; })(), unit: 'jam', color: 'text-blue-600 dark:text-blue-400' },
+                    { label: 'Avg. Total Lead Time', value: (() => { const d = ngoroData.filter(x => x.totalLT > 0); return d.length > 0 ? (d.reduce((s, x) => s + x.totalLT, 0) / d.length).toFixed(1) : '0.0'; })(), unit: 'jam', color: 'text-amber-600 dark:text-amber-400' },
+                  ].map(c => (
+                    <div key={c.label} className="bg-white dark:bg-slate-900 rounded-2xl p-5 border border-slate-100 dark:border-slate-800">
+                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">{c.label}</p>
+                      <p className={`text-3xl font-black ${c.color}`}>
+                        {c.value}
+                        {c.unit && <span className="text-sm font-semibold text-slate-400 ml-1">{c.unit}</span>}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+
+                {/* ── Pelanggaran Rute Alert ── */}
+                {ngoroViolations > 0 && (
+                  <div className="flex items-start gap-3 bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-900/50 rounded-2xl p-4">
+                    <AlertTriangle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
+                    <div>
+                      <p className="text-sm font-black text-red-700 dark:text-red-400 mb-1">{ngoroViolations} Trip dengan Pelanggaran Rute</p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {ngoroData.filter(d => d.pelanggaranRute).map((d, i) => (
+                          <span key={i} className="text-[10px] font-black bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 px-2 py-0.5 rounded-lg">
+                            {d.driver?.split(' ')[0]} {new Date(d.tanggal).getDate()}/{new Date(d.tanggal).getMonth() + 1}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* ── BERANGKAT HEADER ── */}
+                <div className="flex items-center gap-3">
+                  <div className="flex-1 h-px bg-emerald-100 dark:bg-emerald-900/30" />
+                  <span className="text-[11px] font-black text-emerald-600 uppercase tracking-widest flex items-center gap-1.5 px-3 py-1 bg-emerald-50 dark:bg-emerald-900/20 rounded-full border border-emerald-200 dark:border-emerald-800">
+                    <TrendingUp className="w-3 h-3" /> Arah Berangkat
+                  </span>
+                  <div className="flex-1 h-px bg-emerald-100 dark:bg-emerald-900/30" />
+                </div>
+
+                {/* ── Shared chart renderer for NGORO ── */}
+                {(['segA', 'segB', 'segC', 'segD', 'segE'] as const).map((seg, idx) => {
+                  const segInfo: Record<string, { label: string; subtitle: string; color: (v: number) => string; cursor: string; t1: number; t2: number; avgColor: string }> = {
+                    segA: { label: 'Segmen A', subtitle: 'Out PDC → KM 166', color: (v) => v > 3 ? '#f87171' : v > 1.5 ? '#fbbf24' : '#60a5fa', cursor: '#f8fafc', t1: 1.5, t2: 3, avgColor: 'text-blue-600 dark:text-blue-400' },
+                    segB: { label: 'Segmen B', subtitle: 'KM 166 → KM 360B', color: (v) => v > 5 ? '#f87171' : v > 3 ? '#fbbf24' : '#34d399', cursor: '#f0fdf4', t1: 3, t2: 5, avgColor: 'text-emerald-600 dark:text-emerald-400' },
+                    segC: { label: 'Segmen C', subtitle: 'KM 360B → KM 379A', color: (v) => v > 1.5 ? '#f87171' : v > 0.8 ? '#fbbf24' : '#34d399', cursor: '#f0fdf4', t1: 0.8, t2: 1.5, avgColor: 'text-emerald-600 dark:text-emerald-400' },
+                    segD: { label: 'Segmen D', subtitle: 'KM 379A → KM 575A', color: (v) => v > 6 ? '#f87171' : v > 4 ? '#fbbf24' : '#34d399', cursor: '#f0fdf4', t1: 4, t2: 6, avgColor: 'text-emerald-600 dark:text-emerald-400' },
+                    segE: { label: 'Segmen E', subtitle: 'KM 575A → Unloading', color: (v) => v > 2 ? '#f87171' : v > 1 ? '#fbbf24' : '#a78bfa', cursor: '#f5f3ff', t1: 1, t2: 2, avgColor: 'text-violet-600 dark:text-violet-400' },
+                  };
+                  const info = segInfo[seg];
+                  const filtered = ngoroData.filter(d => (d[seg] as number) > 0);
+                  const avg = filtered.length > 0
+                    ? (filtered.reduce((s, d) => s + (d[seg] as number), 0) / filtered.length).toFixed(1)
+                    : '0.0';
+                  if (filtered.length === 0) return null;
+                  return (
+                    <div key={seg} className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 p-6">
+                      <div className="flex items-baseline justify-between mb-6">
+                        <div>
+                          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">{info.label}</p>
+                          <h3 className="font-black text-base text-slate-900 dark:text-white flex items-center gap-2">
+                            <MapPin className="w-4 h-4 text-emerald-500" />
+                            {info.subtitle}
+                          </h3>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-[10px] text-slate-400 font-semibold uppercase tracking-widest">Rata-rata</p>
+                          <p className={`text-2xl font-black ${info.avgColor}`}>{avg}<span className="text-sm font-semibold text-slate-400 ml-1">jam</span></p>
+                        </div>
+                      </div>
+                      {isLoading ? <LoadingChart /> : (
+                        <div className="h-[300px] overflow-visible">
+                          <ResponsiveContainer width="100%" height="100%" style={{ overflow: 'visible' }}>
+                            <BarChart data={filtered} margin={{ top: 5, right: 30, left: -20, bottom: 5 }} barCategoryGap="30%">
+                              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                              <XAxis dataKey="label" axisLine={false} tickLine={false}
+                                tick={{ fontSize: 8.5, fill: '#94a3b8', fontWeight: 600 }}
+                                angle={-45} textAnchor="end" interval={0} height={85} dy={8} />
+                              <YAxis axisLine={false} tickLine={false}
+                                tick={{ fontSize: 9, fill: '#94a3b8', fontWeight: 600 }}
+                                tickFormatter={v => `${v}j`} width={28} />
+                              <Tooltip content={<CustomTooltip />} cursor={{ fill: info.cursor }} />
+                              <ReferenceLine y={Number(avg)} stroke="#e2e8f0" strokeDasharray="4 3"
+                                label={{ position: 'right', value: `${avg}j`, fill: '#94a3b8', fontSize: 9, fontWeight: 700 }} />
+                              <Bar dataKey={seg} radius={[4, 4, 0, 0]} maxBarSize={28}>
+                                {filtered.map((e, i) => (
+                                  <Cell key={i} fill={info.color(e[seg] as number)} />
+                                ))}
+                              </Bar>
+                            </BarChart>
+                          </ResponsiveContainer>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+
+                {/* ── PULANG HEADER ── */}
+                {ngoroData.some(d => d.segF > 0 || d.segG > 0) && (
+                  <>
+                    <div className="flex items-center gap-3">
+                      <div className="flex-1 h-px bg-purple-100 dark:bg-purple-900/30" />
+                      <span className="text-[11px] font-black text-purple-500 uppercase tracking-widest flex items-center gap-1.5 px-3 py-1 bg-purple-50 dark:bg-purple-900/20 rounded-full border border-purple-200 dark:border-purple-800">
+                        <TrendingUp className="w-3 h-3" /> Arah Pulang
+                      </span>
+                      <div className="flex-1 h-px bg-purple-100 dark:bg-purple-900/30" />
+                    </div>
+
+                    {(['segF', 'segG', 'segH'] as const).map((seg) => {
+                      const segInfo: Record<string, { label: string; subtitle: string; color: (v: number) => string; cursor: string; avgColor: string }> = {
+                        segF: { label: 'Segmen F', subtitle: 'Unloading → KM 575B', color: (v) => v > 2 ? '#f87171' : v > 1 ? '#c084fc' : '#a855f7', cursor: '#fdf4ff', avgColor: 'text-purple-600 dark:text-purple-400' },
+                        segG: { label: 'Segmen G', subtitle: 'KM 575B → KM 164B', color: (v) => v > 8 ? '#f87171' : v > 5 ? '#fbbf24' : '#818cf8', cursor: '#eef2ff', avgColor: 'text-indigo-600 dark:text-indigo-400' },
+                        segH: { label: 'Segmen H', subtitle: 'KM 164B → Back To Pool', color: (v) => v > 4 ? '#f87171' : v > 2 ? '#fbbf24' : '#34d399', cursor: '#f0fdf4', avgColor: 'text-emerald-600 dark:text-emerald-400' },
+                      };
+                      const info = segInfo[seg];
+                      const filtered = ngoroData.filter(d => (d[seg] as number) > 0);
+                      const avg = filtered.length > 0
+                        ? (filtered.reduce((s, d) => s + (d[seg] as number), 0) / filtered.length).toFixed(1)
+                        : '0.0';
+                      if (filtered.length === 0) return null;
+                      return (
+                        <div key={seg} className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 p-6">
+                          <div className="flex items-baseline justify-between mb-6">
+                            <div>
+                              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">{info.label}</p>
+                              <h3 className="font-black text-base text-slate-900 dark:text-white flex items-center gap-2">
+                                <MapPin className="w-4 h-4 text-purple-500" />
+                                {info.subtitle}
+                              </h3>
+                            </div>
+                            <div className="text-right">
+                              <p className="text-[10px] text-slate-400 font-semibold uppercase tracking-widest">Rata-rata</p>
+                              <p className={`text-2xl font-black ${info.avgColor}`}>{avg}<span className="text-sm font-semibold text-slate-400 ml-1">jam</span></p>
+                            </div>
+                          </div>
+                          {isLoading ? <LoadingChart /> : (
+                            <div className="h-[300px] overflow-visible">
+                              <ResponsiveContainer width="100%" height="100%" style={{ overflow: 'visible' }}>
+                                <BarChart data={filtered} margin={{ top: 5, right: 30, left: -20, bottom: 5 }} barCategoryGap="30%">
+                                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                                  <XAxis dataKey="label" axisLine={false} tickLine={false}
+                                    tick={{ fontSize: 8.5, fill: '#94a3b8', fontWeight: 600 }}
+                                    angle={-45} textAnchor="end" interval={0} height={85} dy={8} />
+                                  <YAxis axisLine={false} tickLine={false}
+                                    tick={{ fontSize: 9, fill: '#94a3b8', fontWeight: 600 }}
+                                    tickFormatter={v => `${v}j`} width={28} />
+                                  <Tooltip content={<CustomTooltip />} cursor={{ fill: info.cursor }} />
+                                  <ReferenceLine y={Number(avg)} stroke="#e2e8f0" strokeDasharray="4 3"
+                                    label={{ position: 'right', value: `${avg}j`, fill: '#94a3b8', fontSize: 9, fontWeight: 700 }} />
+                                  <Bar dataKey={seg} radius={[4, 4, 0, 0]} maxBarSize={28}>
+                                    {filtered.map((e, i) => (
+                                      <Cell key={i} fill={info.color(e[seg] as number)} />
+                                    ))}
+                                  </Bar>
+                                </BarChart>
+                              </ResponsiveContainer>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </>
+                )}
+              </div>
+            ) : null}
           </motion.div>
         </AnimatePresence>
       </div>
