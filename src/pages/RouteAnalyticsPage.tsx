@@ -330,12 +330,12 @@ export default function RouteAnalyticsPage({ isTAM = false }: { isTAM?: boolean 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white">
       {/* ── Top Bar ── */}
-      <div className="sticky top-0 z-40 bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl border-b border-slate-100 dark:border-slate-800">
-        <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between gap-4">
+      <div className="sticky top-4 z-40 px-4 md:px-6">
+        <div className="max-w-6xl mx-auto bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl shadow-lg shadow-slate-200/50 dark:shadow-none border border-white/60 dark:border-slate-800 px-6 h-16 rounded-2xl flex items-center justify-between gap-4 transition-all">
           <div className="flex items-center gap-3">
-            <MapPin className="w-4 h-4 text-slate-400" />
-            <span className="font-black text-base tracking-tight">Route Analytics</span>
-            <span className="text-[10px] font-black tracking-widest text-slate-400 uppercase border border-slate-200 dark:border-slate-700 px-2 py-0.5 rounded-full">Transit</span>
+            <MapPin className="w-5 h-5 text-slate-400" />
+            <span className="font-black text-lg tracking-tight">Route Analytics</span>
+            <span className="text-[10px] font-black tracking-widest text-slate-500 uppercase bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-lg">Transit</span>
           </div>
 
           <div className="relative">
@@ -828,6 +828,11 @@ export default function RouteAnalyticsPage({ isTAM = false }: { isTAM?: boolean 
                           </ResponsiveContainer>
                         </div>
                       )}
+                      <div className="flex items-center gap-4 mt-4 text-[10px] font-semibold text-slate-500">
+                        <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm inline-block" style={{ backgroundColor: info.color(info.t1 - 0.1) }} /> Normal (&lt;{info.t1}j)</span>
+                        <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm inline-block" style={{ backgroundColor: info.color(info.t2 - 0.1) }} /> Lambat ({info.t1}–{info.t2}j)</span>
+                        <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm inline-block" style={{ backgroundColor: info.color(info.t2 + 0.1) }} /> Lama (&gt;{info.t2}j)</span>
+                      </div>
                     </div>
                   );
                 })}
@@ -844,11 +849,11 @@ export default function RouteAnalyticsPage({ isTAM = false }: { isTAM?: boolean 
                     </div>
 
                     {(['segE', 'segF', 'segG', 'segH'] as const).map((seg) => {
-                      const segInfo: Record<string, { label: string; subtitle: string; color: (v: number) => string; cursor: string; avgColor: string }> = {
-                        segE: { label: 'Segmen E', subtitle: 'Unloading → KM 575B', color: (v) => v > 2 ? '#f87171' : v > 1 ? '#c084fc' : '#a855f7', cursor: '#fdf4ff', avgColor: 'text-purple-600 dark:text-purple-400' },
-                        segF: { label: 'Segmen F', subtitle: 'KM 575B → KM 360B', color: (v) => v > 5 ? '#f87171' : v > 3 ? '#fbbf24' : '#818cf8', cursor: '#eef2ff', avgColor: 'text-indigo-600 dark:text-indigo-400' },
-                        segG: { label: 'Segmen G', subtitle: 'KM 360B → KM 164B', color: (v) => v > 5 ? '#f87171' : v > 3 ? '#fbbf24' : '#818cf8', cursor: '#eef2ff', avgColor: 'text-indigo-600 dark:text-indigo-400' },
-                        segH: { label: 'Segmen H', subtitle: 'KM 164B → Back To Pool', color: (v) => v > 4 ? '#f87171' : v > 2 ? '#fbbf24' : '#34d399', cursor: '#f0fdf4', avgColor: 'text-emerald-600 dark:text-emerald-400' },
+                      const segInfo: Record<string, { label: string; subtitle: string; color: (v: number) => string; cursor: string; t1: number; t2: number; avgColor: string }> = {
+                        segE: { label: 'Segmen E', subtitle: 'Unloading → KM 575B', color: (v) => v > 2 ? '#f87171' : v > 1 ? '#c084fc' : '#a855f7', cursor: '#fdf4ff', t1: 1, t2: 2, avgColor: 'text-purple-600 dark:text-purple-400' },
+                        segF: { label: 'Segmen F', subtitle: 'KM 575B → KM 360B', color: (v) => v > 5 ? '#f87171' : v > 3 ? '#fbbf24' : '#818cf8', cursor: '#eef2ff', t1: 3, t2: 5, avgColor: 'text-indigo-600 dark:text-indigo-400' },
+                        segG: { label: 'Segmen G', subtitle: 'KM 360B → KM 164B', color: (v) => v > 5 ? '#f87171' : v > 3 ? '#fbbf24' : '#818cf8', cursor: '#eef2ff', t1: 3, t2: 5, avgColor: 'text-indigo-600 dark:text-indigo-400' },
+                        segH: { label: 'Segmen H', subtitle: 'KM 164B → Back To Pool', color: (v) => v > 4 ? '#f87171' : v > 2 ? '#fbbf24' : '#34d399', cursor: '#f0fdf4', t1: 2, t2: 4, avgColor: 'text-emerald-600 dark:text-emerald-400' },
                       };
                       const info = segInfo[seg];
                       const filtered = ngoroData.filter(d => (d[seg] as number) > 0);
@@ -894,6 +899,11 @@ export default function RouteAnalyticsPage({ isTAM = false }: { isTAM?: boolean 
                               </ResponsiveContainer>
                             </div>
                           )}
+                          <div className="flex items-center gap-4 mt-4 text-[10px] font-semibold text-slate-500">
+                            <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm inline-block" style={{ backgroundColor: info.color(info.t1 - 0.1) }} /> Normal (&lt;{info.t1}j)</span>
+                            <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm inline-block" style={{ backgroundColor: info.color(info.t2 - 0.1) }} /> Lambat ({info.t1}–{info.t2}j)</span>
+                            <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm inline-block" style={{ backgroundColor: info.color(info.t2 + 0.1) }} /> Lama (&gt;{info.t2}j)</span>
+                          </div>
                         </div>
                       );
                     })}
