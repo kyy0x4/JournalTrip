@@ -180,22 +180,23 @@ export default function RouteAnalyticsPage({ isTAM = false }: { isTAM?: boolean 
 
         // Segment A: Out PDC → KM 166 (Tol Cipularang/awal jalan)
         const segA = diffNgoro(cp['Out PDC'], cp['Actual (KM 166)']);
-        // Segment B: KM 166 → KM 360B (Tengah Solo)
-        const segB = diffNgoro(cp['Actual (KM 166)'], cp['Actual (KM 360B)']);
-        // Segment C: KM 360B → KM 379A (Dekat Ngawi)
-        const segC = diffNgoro(cp['Actual (KM 360B)'], cp['Actual (KM 379A)']);
-        // Segment D: KM 379A → KM 575A (Menuju Surabaya)
-        const segD = diffNgoro(cp['Actual (KM 379A)'], cp['Actual (KM 575A)']);
-        // Segment E: KM 575A → Unloading (Masuk Ngoro)
-        const segE = diffNgoro(cp['Actual (KM 575A)'], cp['Actual (Unloading)']);
-        // Segment F (Pulang): Unloading → KM 575B
-        const segF = diffNgoro(cp['Actual (Unloading)'], cp['Actual (575B)']);
-        // Segment G (Pulang): KM 575B → KM 164B
-        const segG = diffNgoro(cp['Actual (575B)'], cp['Actual (KM 164B)']);
+        // Segment B: KM 166 → KM 379A
+        const segB = diffNgoro(cp['Actual (KM 166)'], cp['Actual (KM 379A)']);
+        // Segment C: KM 379A → KM 575A (Menuju Surabaya)
+        const segC = diffNgoro(cp['Actual (KM 379A)'], cp['Actual (KM 575A)']);
+        // Segment D: KM 575A → Unloading (Masuk Ngoro)
+        const segD = diffNgoro(cp['Actual (KM 575A)'], cp['Actual (Unloading)']);
+
+        // Segment E (Pulang): Unloading → KM 575B
+        const segE = diffNgoro(cp['Actual (Unloading)'], cp['Actual (575B)']);
+        // Segment F (Pulang): KM 575B → KM 360B
+        const segF = diffNgoro(cp['Actual (575B)'], cp['Actual (KM 360B)']);
+        // Segment G (Pulang): KM 360B → KM 164B
+        const segG = diffNgoro(cp['Actual (KM 360B)'], cp['Actual (KM 164B)']);
         // Segment H (Pulang): KM 164B → Back To Pool
         const segH = diffNgoro(cp['Actual (KM 164B)'], cp['Actual (Back To Pool)']);
 
-        const totalLT = [segA, segB, segC, segD, segE].reduce((s, x) => s + x, 0);
+        const totalLT = [segA, segB, segC, segD].reduce((s, x) => s + x, 0);
 
         return {
           ...d,
@@ -728,15 +729,13 @@ export default function RouteAnalyticsPage({ isTAM = false }: { isTAM?: boolean 
                 <div className="flex items-center flex-wrap gap-2 text-sm font-semibold text-slate-500">
                   <span className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 px-3 py-1.5 rounded-xl text-slate-700 dark:text-slate-300 font-black">Karawang</span>
                   <ArrowRight className="w-4 h-4 text-slate-300" />
-                  <span className="bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 px-3 py-1.5 rounded-xl text-slate-600 dark:text-slate-400 font-black">KM 166</span>
-                  <ArrowRight className="w-4 h-4 text-slate-300" />
-                  <span className="bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 px-3 py-1.5 rounded-xl text-slate-600 dark:text-slate-400 font-black">KM 360B</span>
+                  <span className="bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 px-3 py-1.5 rounded-xl text-slate-600 dark:text-slate-400 font-black">KM 166A</span>
                   <ArrowRight className="w-4 h-4 text-slate-300" />
                   <span className="bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 px-3 py-1.5 rounded-xl text-slate-600 dark:text-slate-400 font-black">KM 379A</span>
                   <ArrowRight className="w-4 h-4 text-slate-300" />
                   <span className="bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 px-3 py-1.5 rounded-xl text-slate-600 dark:text-slate-400 font-black">KM 575A</span>
                   <ArrowRight className="w-4 h-4 text-slate-300" />
-                  <span className="bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 px-3 py-1.5 rounded-xl text-emerald-700 dark:text-emerald-400 font-black">MJKT / MKJT</span>
+                  <span className="bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 px-3 py-1.5 rounded-xl text-emerald-700 dark:text-emerald-400 font-black">Unloading (MJKT)</span>
                   <span className="ml-2 text-slate-400 text-xs font-semibold">· {ngoroData.length} ritase</span>
                 </div>
 
@@ -778,13 +777,12 @@ export default function RouteAnalyticsPage({ isTAM = false }: { isTAM?: boolean 
                 </div>
 
                 {/* ── Shared chart renderer for NGORO ── */}
-                {(['segA', 'segB', 'segC', 'segD', 'segE'] as const).map((seg, idx) => {
+                {(['segA', 'segB', 'segC', 'segD'] as const).map((seg, idx) => {
                   const segInfo: Record<string, { label: string; subtitle: string; color: (v: number) => string; cursor: string; t1: number; t2: number; avgColor: string }> = {
-                    segA: { label: 'Segmen A', subtitle: 'Out PDC → KM 166', color: (v) => v > 3 ? '#f87171' : v > 1.5 ? '#fbbf24' : '#60a5fa', cursor: '#f8fafc', t1: 1.5, t2: 3, avgColor: 'text-blue-600 dark:text-blue-400' },
-                    segB: { label: 'Segmen B', subtitle: 'KM 166 → KM 360B', color: (v) => v > 5 ? '#f87171' : v > 3 ? '#fbbf24' : '#34d399', cursor: '#f0fdf4', t1: 3, t2: 5, avgColor: 'text-emerald-600 dark:text-emerald-400' },
-                    segC: { label: 'Segmen C', subtitle: 'KM 360B → KM 379A', color: (v) => v > 1.5 ? '#f87171' : v > 0.8 ? '#fbbf24' : '#34d399', cursor: '#f0fdf4', t1: 0.8, t2: 1.5, avgColor: 'text-emerald-600 dark:text-emerald-400' },
-                    segD: { label: 'Segmen D', subtitle: 'KM 379A → KM 575A', color: (v) => v > 6 ? '#f87171' : v > 4 ? '#fbbf24' : '#34d399', cursor: '#f0fdf4', t1: 4, t2: 6, avgColor: 'text-emerald-600 dark:text-emerald-400' },
-                    segE: { label: 'Segmen E', subtitle: 'KM 575A → Unloading', color: (v) => v > 2 ? '#f87171' : v > 1 ? '#fbbf24' : '#a78bfa', cursor: '#f5f3ff', t1: 1, t2: 2, avgColor: 'text-violet-600 dark:text-violet-400' },
+                    segA: { label: 'Segmen A', subtitle: 'Out PDC → KM 166A', color: (v) => v > 3 ? '#f87171' : v > 1.5 ? '#fbbf24' : '#60a5fa', cursor: '#f8fafc', t1: 1.5, t2: 3, avgColor: 'text-blue-600 dark:text-blue-400' },
+                    segB: { label: 'Segmen B', subtitle: 'KM 166A → KM 379A', color: (v) => v > 5 ? '#f87171' : v > 3 ? '#fbbf24' : '#34d399', cursor: '#f0fdf4', t1: 3, t2: 5, avgColor: 'text-emerald-600 dark:text-emerald-400' },
+                    segC: { label: 'Segmen C', subtitle: 'KM 379A → KM 575A', color: (v) => v > 6 ? '#f87171' : v > 4 ? '#fbbf24' : '#34d399', cursor: '#f0fdf4', t1: 4, t2: 6, avgColor: 'text-emerald-600 dark:text-emerald-400' },
+                    segD: { label: 'Segmen D', subtitle: 'KM 575A → Unloading', color: (v) => v > 2 ? '#f87171' : v > 1 ? '#fbbf24' : '#a78bfa', cursor: '#f5f3ff', t1: 1, t2: 2, avgColor: 'text-violet-600 dark:text-violet-400' },
                   };
                   const info = segInfo[seg];
                   const filtered = ngoroData.filter(d => (d[seg] as number) > 0);
@@ -835,7 +833,7 @@ export default function RouteAnalyticsPage({ isTAM = false }: { isTAM?: boolean 
                 })}
 
                 {/* ── PULANG HEADER ── */}
-                {ngoroData.some(d => d.segF > 0 || d.segG > 0) && (
+                {ngoroData.some(d => d.segE > 0 || d.segF > 0 || d.segG > 0) && (
                   <>
                     <div className="flex items-center gap-3">
                       <div className="flex-1 h-px bg-purple-100 dark:bg-purple-900/30" />
@@ -845,10 +843,11 @@ export default function RouteAnalyticsPage({ isTAM = false }: { isTAM?: boolean 
                       <div className="flex-1 h-px bg-purple-100 dark:bg-purple-900/30" />
                     </div>
 
-                    {(['segF', 'segG', 'segH'] as const).map((seg) => {
+                    {(['segE', 'segF', 'segG', 'segH'] as const).map((seg) => {
                       const segInfo: Record<string, { label: string; subtitle: string; color: (v: number) => string; cursor: string; avgColor: string }> = {
-                        segF: { label: 'Segmen F', subtitle: 'Unloading → KM 575B', color: (v) => v > 2 ? '#f87171' : v > 1 ? '#c084fc' : '#a855f7', cursor: '#fdf4ff', avgColor: 'text-purple-600 dark:text-purple-400' },
-                        segG: { label: 'Segmen G', subtitle: 'KM 575B → KM 164B', color: (v) => v > 8 ? '#f87171' : v > 5 ? '#fbbf24' : '#818cf8', cursor: '#eef2ff', avgColor: 'text-indigo-600 dark:text-indigo-400' },
+                        segE: { label: 'Segmen E', subtitle: 'Unloading → KM 575B', color: (v) => v > 2 ? '#f87171' : v > 1 ? '#c084fc' : '#a855f7', cursor: '#fdf4ff', avgColor: 'text-purple-600 dark:text-purple-400' },
+                        segF: { label: 'Segmen F', subtitle: 'KM 575B → KM 360B', color: (v) => v > 5 ? '#f87171' : v > 3 ? '#fbbf24' : '#818cf8', cursor: '#eef2ff', avgColor: 'text-indigo-600 dark:text-indigo-400' },
+                        segG: { label: 'Segmen G', subtitle: 'KM 360B → KM 164B', color: (v) => v > 5 ? '#f87171' : v > 3 ? '#fbbf24' : '#818cf8', cursor: '#eef2ff', avgColor: 'text-indigo-600 dark:text-indigo-400' },
                         segH: { label: 'Segmen H', subtitle: 'KM 164B → Back To Pool', color: (v) => v > 4 ? '#f87171' : v > 2 ? '#fbbf24' : '#34d399', cursor: '#f0fdf4', avgColor: 'text-emerald-600 dark:text-emerald-400' },
                       };
                       const info = segInfo[seg];
