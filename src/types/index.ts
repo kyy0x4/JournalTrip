@@ -11,6 +11,7 @@ export interface Driver {
   simPhotoUrl?: string;
 
   nik?: string;
+  phone?: string;
   asisten?: string;
   alamat?: string;
   totalViolations?: number;

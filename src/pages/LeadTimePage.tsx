@@ -323,7 +323,7 @@ export default function LeadTimePage({ isTAM = false }: { isTAM?: boolean }) {
     return {
       outpool: getStageStats('outpool', ['Evaluasi Keluar Pool', 'Abnormalty', 'Reason Delay OutPool', 'Reason Delay Out Pool']),
       inpdc: getStageStats('inpdc', ['Evaluasi Kedatangan CC', 'delay inpdc', 'Reason Delay InPDC', 'Reason Delay In PDC', 'Reason Delay PDC']),
-      delivery: getStageStats('delivery', ['Leadtime delivery', 'status leadtime', 'delay delivery', 'Reason Delay Delivery']),
+      delivery: getStageStats('delivery', ['Reason Delay Delivery']),
       backtopool: getStageStats('backtopool', ['Reason Delay BackToPool', 'Reason Delay Back To Pool', 'Reason Delay BackToPool']),
       trend: getTrend(trendStage),
       totalRecords

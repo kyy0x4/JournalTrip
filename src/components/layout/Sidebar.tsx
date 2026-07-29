@@ -7,7 +7,7 @@ import {
   PanelLeftClose, PanelLeft,
   Route, ChevronRight, BarChart3,
   Activity, Ticket, ClipboardCheck,
-  Timer, LayoutDashboard
+  Timer, LayoutDashboard, GraduationCap, ShieldCheck
 } from 'lucide-react';
 import { Driver } from '../../types';
 import Logo from '../../image/Logo.png';
@@ -38,6 +38,8 @@ const NAV_ITEMS: { id: string; label: string; icon: ReactNode; sub?: string; pat
   { id: 'tenko', label: 'Tenko', icon: <Activity className="w-5 h-5" />, sub: 'Health Check', path: '/tenko' },
   { id: 'p2h', label: 'P2H', icon: <ClipboardCheck className="w-5 h-5" />, sub: 'Checklist', path: '/p2h' },
   { id: 'gatepass', label: 'Gatepass', icon: <Ticket className="w-5 h-5" />, sub: 'Control Room', path: '/gatepass' },
+  { id: 'training', label: 'Training Center', icon: <GraduationCap className="w-5 h-5" />, sub: 'Analytics', path: '/training' },
+  { id: 'kr-schedule', label: 'Jadwal KR', icon: <ShieldCheck className="w-5 h-5" />, sub: 'Operasional', path: '/kr-schedule' },
 ];
 
 

@@ -35,6 +35,8 @@ const PAGE_TITLES: Record<string, { title: string; sub: string }> = {
   '/drivers': { title: 'Drivers Registry', sub: 'Data Master Pengemudi' },
   '/eco': { title: 'Monitoring Driving Behavior', sub: 'Safety Analytics Dashboard' },
   '/carbon': { title: 'Carbon Neutral', sub: 'Carbon Footprint & Environmental Impact' },
+  '/training': { title: 'Training Center', sub: 'Analytics & Driver Development' },
+  '/kr-schedule': { title: 'Jadwal KR', sub: 'Schedule Keamanan & Ketertiban' },
 };
 
 // Analytics & Master Data items for the App Launcher
@@ -183,7 +185,7 @@ export default function Navbar({
 
   return (
     <nav className={`
-      fixed top-0 z-40 right-0
+      fixed top-0 z-50 right-0
       bg-white/90 dark:bg-[#0f172a]/95 backdrop-blur-md
       border-b border-slate-200/60 dark:border-slate-800/60
       h-16 flex items-center px-4 md:px-6 shadow-sm
@@ -394,7 +396,7 @@ export default function Navbar({
 
           {/* Backdrop */}
           {isLauncherOpen && (
-            <div className="fixed inset-0 z-150" onClick={() => setIsLauncherOpen(false)} />
+            <div className="fixed inset-0 z-[150]" onClick={() => setIsLauncherOpen(false)} />
           )}
 
           {/* Mega Menu Dropdown */}
@@ -405,7 +407,7 @@ export default function Navbar({
                 animate={{ opacity: 1, scale: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.93, y: -10 }}
                 transition={{ type: 'spring', stiffness: 420, damping: 30 }}
-                className="absolute top-full right-0 mt-3 w-[300px] sm:w-[320px] bg-white/95 dark:bg-slate-900/95 backdrop-blur-2xl border border-slate-200/60 dark:border-slate-700/60 rounded-3xl shadow-2xl shadow-slate-900/15 dark:shadow-black/50 z-200 overflow-hidden"
+                className="absolute top-full right-0 mt-3 w-[300px] sm:w-[320px] bg-white/95 dark:bg-slate-900/95 backdrop-blur-2xl border border-slate-200/60 dark:border-slate-700/60 rounded-3xl shadow-2xl shadow-slate-900/15 dark:shadow-black/50 z-[200] overflow-hidden"
               >
                 {/* Header */}
                 <div className="px-5 pt-4 pb-3 border-b border-slate-100 dark:border-slate-800">

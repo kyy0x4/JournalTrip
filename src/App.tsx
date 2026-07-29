@@ -19,6 +19,8 @@ const P2HPage = lazy(() => import('./pages/P2HPage'));
 const DashboardPage = lazy(() => import('./pages/DashboardPage'));
 const LoginPage = lazy(() => import('./pages/LoginPage'));
 const RouteAnalyticsPage = lazy(() => import('./pages/RouteAnalyticsPage'));
+const TrainingDashboardPage = lazy(() => import('./pages/TrainingDashboardPage'));
+const KRDashboardPage = lazy(() => import('./pages/KRDashboardPage'));
 
 import Footer from './components/layout/Footer';
 import { fetchDashboardData, fetchActiveDrivers, getDefaultOperationalShift } from './services/dataFetcher';
@@ -292,6 +294,8 @@ export default function App() {
                     <Route path="/gatepass" element={<GatepassPage />} />
                     <Route path="/drivers" element={<DriversPage />} />
                     <Route path="/drivers/:id" element={<DriverDetailPage />} />
+                    <Route path="/training" element={<TrainingDashboardPage />} />
+                    <Route path="/kr-schedule" element={<KRDashboardPage />} />
                     <Route path="*" element={<Navigate to="/" replace />} />
                   </Routes>
                   </Suspense>

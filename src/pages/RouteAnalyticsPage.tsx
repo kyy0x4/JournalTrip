@@ -63,13 +63,25 @@ export default function RouteAnalyticsPage({ isTAM = false }: { isTAM?: boolean 
     return p[0] * 60 + (p[1] || 0);
   };
 
+  // Format decimal hours → "X jam Y menit" (e.g. 2.5 → "2 jam 30 menit")
+  const fmtDur = (h: number | string): string => {
+    const val = typeof h === 'string' ? parseFloat(h) : h;
+    if (isNaN(val) || val <= 0) return '0 menit';
+    const totalMin = Math.round(val * 60);
+    const jam = Math.floor(totalMin / 60);
+    const menit = totalMin % 60;
+    if (jam === 0) return `${menit} menit`;
+    if (menit === 0) return `${jam} jam`;
+    return `${jam} jam ${menit} menit`;
+  };
+
   // For segments that might cross midnight (long haul), compute delta carefully
   const diffH = (a?: string, b?: string, allowCrossDay = true): number => {
     const fa = timeToMin(a), fb = timeToMin(b);
     if (fa === null || fb === null) return 0;
     let d = fb - fa;
     if (allowCrossDay && d < 0) d += 24 * 60;
-    return parseFloat((d / 60).toFixed(1));
+    return parseFloat((d / 60).toFixed(2));
   };
 
   // Normalize tujuan casing
@@ -105,8 +117,11 @@ export default function RouteAnalyticsPage({ isTAM = false }: { isTAM?: boolean 
           : diffH(cp['PELABUHAN MERAK'], cp['PELABUHAN BAKAUHENI']);
 
         // Segment 3: Bakauheni → Tujuan (Delivery)
-        const destHours = cp['UNLOADING PDC POLYGON']
-          ? diffH(cp['PELABUHAN BAKAUHENI'], cp['UNLOADING PDC POLYGON'])
+        // Try multiple checkpoint key names (data may vary)
+        const unloadingKey = ['UNLOADING PDC POLYGON', 'UNLOADING', 'PDC POLYGON', 'TIBA TUJUAN', 'SAMPAI TUJUAN', 'UNLOADING PDC (LAMPUNG,PALEMBANG,PEKANBARU)']
+          .find(k => cp[k]);
+        const destHours = unloadingKey
+          ? diffH(cp['PELABUHAN BAKAUHENI'], cp[unloadingKey])
           : 0;
 
         // Segment 4: Tujuan → Pel. Bakauheni (PULANG) (Return leg starts)
@@ -145,10 +160,11 @@ export default function RouteAnalyticsPage({ isTAM = false }: { isTAM?: boolean 
       .sort((a, b) => new Date(a.tanggal).getTime() - new Date(b.tanggal).getTime());
   })();
 
-  const avgOf = (key: keyof (typeof chartData)[0]) =>
-    chartData.length > 0
-      ? (chartData.reduce((s, d) => s + ((d[key] as number) || 0), 0) / chartData.length).toFixed(1)
-      : '0.0';
+  const avgOf = (key: keyof (typeof chartData)[0]) => {
+    const vals = chartData.filter(d => ((d[key] as number) || 0) > 0);
+    if (vals.length === 0) return 0;
+    return Number((vals.reduce((s, d) => s + ((d[key] as number) || 0), 0) / vals.length).toFixed(1));
+  };
 
   const avgWaitDepart = avgOf('waitDepartHours');
   const avgFerry = avgOf('ferryDepartHours');
@@ -212,10 +228,11 @@ export default function RouteAnalyticsPage({ isTAM = false }: { isTAM?: boolean 
       .sort((a, b) => new Date(a.tanggal).getTime() - new Date(b.tanggal).getTime());
   }, [data, activeTab]);
 
-  const ngoroAvgOf = (key: keyof (typeof ngoroData)[0]) =>
-    ngoroData.length > 0
-      ? (ngoroData.reduce((s, d) => s + ((d[key] as number) || 0), 0) / ngoroData.length).toFixed(1)
-      : '0.0';
+  const ngoroAvgOf = (key: keyof (typeof ngoroData)[0]) => {
+    const vals = ngoroData.filter(d => ((d[key] as number) || 0) > 0);
+    if (vals.length === 0) return 0;
+    return Number((vals.reduce((s, d) => s + ((d[key] as number) || 0), 0) / vals.length).toFixed(1));
+  };
 
   const ngoroViolations = ngoroData.filter(d => d.pelanggaranRute).length;
 
@@ -224,20 +241,22 @@ export default function RouteAnalyticsPage({ isTAM = false }: { isTAM?: boolean 
   const CustomTooltip = ({ active, payload, label }: any) => {
     if (!active || !payload?.length) return null;
     const nameMap: Record<string, string> = {
-      waitDepartHours: 'Nunggu Kapal (Berangkat)',
+      waitDepartHours: 'Menunggu Antrian Kapal',
       ferryDepartHours: 'Ferry Berangkat',
       destHours: 'Bakauheni → Tujuan',
       returnToPortHours: 'Tujuan → Bakauheni',
-      waitReturnHours: 'Nunggu Kapal (Pulang)',
+      waitReturnHours: 'Menunggu Antrian Kapal Pulang',
       ferryReturnHours: 'Ferry Pulang',
       returnToPoolHours: 'Merak → Pool',
+      segA: 'Segmen A', segB: 'Segmen B', segC: 'Segmen C', segD: 'Segmen D',
+      segE: 'Segmen E', segF: 'Segmen F', segG: 'Segmen G', segH: 'Segmen H',
     };
     return (
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl p-4 shadow-xl text-sm">
         <p className="font-black text-slate-800 dark:text-white mb-2">{label}</p>
         {payload.map((p: any) => (
           <p key={p.dataKey} className="font-semibold" style={{ color: p.fill }}>
-            {nameMap[p.dataKey] || p.dataKey}: {p.value} jam
+            {nameMap[p.dataKey] || p.dataKey}: {fmtDur(p.value)}
           </p>
         ))}
       </div>
@@ -297,17 +316,18 @@ export default function RouteAnalyticsPage({ isTAM = false }: { isTAM?: boolean 
           </div>
           <div className="text-right">
             <p className="text-[10px] text-slate-400 font-semibold uppercase tracking-widest">Rata-rata</p>
-            <p className={`text-2xl font-black ${avgColor}`}>{avg}<span className="text-sm font-semibold text-slate-400 ml-1">jam</span></p>
+            <p className={`text-xl font-black ${avgColor}`}>{fmtDur(avg)}</p>
           </div>
         </div>
         {isLoading ? <LoadingChart /> : filtered.length > 0 ? (
-          <div className="h-[340px] overflow-visible">
-            <ResponsiveContainer width="100%" height="100%" style={{ overflow: 'visible' }}>
-              <BarChart data={filtered} margin={{ top: 5, right: 30, left: -20, bottom: 5 }} barCategoryGap="30%">
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                <XAxis dataKey="label" axisLine={false} tickLine={false}
-                  tick={{ fontSize: 8.5, fill: '#94a3b8', fontWeight: 600 }}
-                  angle={-45} textAnchor="end" interval={0} height={85} dy={8} />
+          <div className="h-[340px] overflow-x-auto overflow-y-hidden custom-scrollbar">
+            <div style={{ minWidth: `${Math.max(100, filtered.length * 40)}px`, height: '100%' }}>
+              <ResponsiveContainer width="100%" height="100%" style={{ overflow: 'visible' }}>
+                <BarChart data={filtered} margin={{ top: 5, right: 30, left: -20, bottom: 5 }} barCategoryGap="30%">
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                  <XAxis dataKey="label" axisLine={false} tickLine={false}
+                    tick={{ fontSize: 8.5, fill: '#94a3b8', fontWeight: 600 }}
+                    angle={-45} textAnchor="end" interval="preserveStartEnd" height={85} dy={8} />
                 <YAxis axisLine={false} tickLine={false}
                   tick={{ fontSize: 9, fill: '#94a3b8', fontWeight: 600 }}
                   tickFormatter={v => `${v}j`} width={28} />
@@ -321,6 +341,7 @@ export default function RouteAnalyticsPage({ isTAM = false }: { isTAM?: boolean 
                 </Bar>
               </BarChart>
             </ResponsiveContainer>
+            </div>
           </div>
         ) : <EmptyChart />}
       </div>
@@ -392,7 +413,9 @@ export default function RouteAnalyticsPage({ isTAM = false }: { isTAM?: boolean 
                     <Ship className="w-3.5 h-3.5" /> Bakauheni
                   </span>
                   <ArrowRight className="w-4 h-4 text-slate-300" />
-                  <span className="bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-3 py-1.5 rounded-xl text-slate-600 dark:text-slate-400 font-black">Merak → Pool</span>
+                  <span className="bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-3 py-1.5 rounded-xl text-slate-600 dark:text-slate-400 font-black">Merak</span>
+                  <ArrowRight className="w-4 h-4 text-slate-300" />
+                  <span className="bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-3 py-1.5 rounded-xl text-slate-600 dark:text-slate-400 font-black">Pool</span>
                   <span className="ml-2 text-slate-400 text-xs font-semibold">· {chartData.length} ritase</span>
                 </div>
 
@@ -415,18 +438,17 @@ export default function RouteAnalyticsPage({ isTAM = false }: { isTAM?: boolean 
                 </div>
 
                 {/* ── KPI Cards ── */}
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
                   {[
-                    { label: 'Total Ritase', value: chartData.length.toString(), unit: '', color: 'text-slate-900 dark:text-white' },
-                    { label: 'Avg. Nunggu Kapal ↑', value: avgWaitDepart, unit: 'jam', color: 'text-orange-600 dark:text-orange-400' },
-                    { label: 'Avg. Ferry Berangkat', value: avgFerry, unit: 'jam', color: 'text-blue-600 dark:text-blue-400' },
-                    { label: 'Avg. Bakauheni → Tujuan', value: avgDest, unit: 'jam', color: 'text-emerald-600 dark:text-emerald-400' },
+                    { label: 'Total Ritase', value: chartData.length.toString(), color: 'text-slate-900 dark:text-white' },
+                    { label: 'Avg. Nunggu Kapal ↑', value: fmtDur(avgWaitDepart), color: 'text-orange-600 dark:text-orange-400' },
+                    { label: 'Avg. Ferry Berangkat', value: fmtDur(avgFerry), color: 'text-blue-600 dark:text-blue-400' },
+                    { label: 'Avg. Bakauheni → Tujuan', value: fmtDur(avgDest), color: 'text-emerald-600 dark:text-emerald-400' },
                   ].map(c => (
                     <div key={c.label} className="bg-white dark:bg-slate-900 rounded-2xl p-5 border border-slate-100 dark:border-slate-800">
                       <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">{c.label}</p>
-                      <p className={`text-3xl font-black ${c.color}`}>
+                      <p className={`text-xl font-black ${c.color}`}>
                         {c.value}
-                        {c.unit && <span className="text-sm font-semibold text-slate-400 ml-1">{c.unit}</span>}
                       </p>
                     </div>
                   ))}
@@ -449,13 +471,13 @@ export default function RouteAnalyticsPage({ isTAM = false }: { isTAM?: boolean 
                         <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Segmen A</p>
                         <h3 className="font-black text-base text-slate-900 dark:text-white flex items-center gap-2">
                           <span className="text-orange-500">⏳</span>
-                          Nunggu Kapal Berangkat
+                          Menunggu Antrian Kapal
                           <span className="text-slate-400 font-normal text-sm">Tiba Merak → Masuk Kapal</span>
                         </h3>
                       </div>
                       <div className="text-right">
                         <p className="text-[10px] text-slate-400 font-semibold uppercase tracking-widest">Rata-rata</p>
-                        <p className="text-2xl font-black text-orange-600 dark:text-orange-400">{avgWaitDepart}<span className="text-sm font-semibold text-slate-400 ml-1">jam</span></p>
+                        <p className="text-xl font-black text-orange-600 dark:text-orange-400">{fmtDur(avgWaitDepart)}</p>
                       </div>
                     </div>
                     {isLoading ? <LoadingChart /> : (() => {
@@ -468,7 +490,7 @@ export default function RouteAnalyticsPage({ isTAM = false }: { isTAM?: boolean 
                               <XAxis dataKey="label" axisLine={false} tickLine={false} tick={{ fontSize: 8.5, fill: '#94a3b8', fontWeight: 600 }} angle={-45} textAnchor="end" interval={0} height={85} dy={8} />
                               <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 9, fill: '#94a3b8', fontWeight: 600 }} tickFormatter={v => `${v}j`} width={28} />
                               <Tooltip content={<CustomTooltip />} cursor={{ fill: '#fff7ed' }} />
-                              <ReferenceLine y={Number(avgWaitDepart)} stroke="#e2e8f0" strokeDasharray="4 3" label={{ position: 'right', value: `${avgWaitDepart}j`, fill: '#94a3b8', fontSize: 9, fontWeight: 700 }} />
+                              <ReferenceLine y={Number(avgWaitDepart)} stroke="#e2e8f0" strokeDasharray="4 3" label={{ position: 'right', value: `${Number(avgWaitDepart).toFixed(1)}j`, fill: '#94a3b8', fontSize: 9, fontWeight: 700 }} />
                               <Bar dataKey="waitDepartHours" radius={[4, 4, 0, 0]} maxBarSize={28}>
                                 {d.map((e, i) => <Cell key={i} fill={e.waitDepartHours > 4 ? '#f87171' : e.waitDepartHours > 2 ? '#fb923c' : '#fdba74'} />)}
                               </Bar>
@@ -498,7 +520,7 @@ export default function RouteAnalyticsPage({ isTAM = false }: { isTAM?: boolean 
                     </div>
                     <div className="text-right">
                       <p className="text-[10px] text-slate-400 font-semibold uppercase tracking-widest">Rata-rata</p>
-                      <p className="text-2xl font-black text-blue-600 dark:text-blue-400">{avgFerry}<span className="text-sm font-semibold text-slate-400 ml-1">jam</span></p>
+                        <p className="text-xl font-black text-blue-600 dark:text-blue-400">{fmtDur(avgFerry)}</p>
                     </div>
                   </div>
 
@@ -510,7 +532,7 @@ export default function RouteAnalyticsPage({ isTAM = false }: { isTAM?: boolean 
                           <XAxis dataKey="label" axisLine={false} tickLine={false} tick={{ fontSize: 8.5, fill: '#94a3b8', fontWeight: 600 }} angle={-45} textAnchor="end" interval={0} height={85} dy={8} />
                           <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 9, fill: '#94a3b8', fontWeight: 600 }} tickFormatter={v => `${v}j`} width={28} />
                           <Tooltip content={<CustomTooltip />} cursor={{ fill: '#f8fafc' }} />
-                          <ReferenceLine y={Number(avgFerry)} stroke="#e2e8f0" strokeDasharray="4 3" label={{ position: 'right', value: `${avgFerry}j`, fill: '#94a3b8', fontSize: 9, fontWeight: 700 }} />
+                          <ReferenceLine y={Number(avgFerry)} stroke="#e2e8f0" strokeDasharray="4 3" label={{ position: 'right', value: `${Number(avgFerry).toFixed(1)}j`, fill: '#94a3b8', fontSize: 9, fontWeight: 700 }} />
                           <Bar dataKey="ferryDepartHours" radius={[4, 4, 0, 0]} maxBarSize={28}>
                             {chartData.map((e, i) => (
                               <Cell key={i} fill={e.ferryDepartHours > 8 ? '#f87171' : e.ferryDepartHours > 5 ? '#fbbf24' : '#60a5fa'} />
@@ -541,28 +563,30 @@ export default function RouteAnalyticsPage({ isTAM = false }: { isTAM?: boolean 
                     </div>
                     <div className="text-right">
                       <p className="text-[10px] text-slate-400 font-semibold uppercase tracking-widest">Rata-rata</p>
-                      <p className="text-2xl font-black text-emerald-600 dark:text-emerald-400">{avgDest}<span className="text-sm font-semibold text-slate-400 ml-1">jam</span></p>
+                        <p className="text-xl font-black text-emerald-600 dark:text-emerald-400">{fmtDur(avgDest)}</p>
                     </div>
                   </div>
 
                   {(() => {
                     const d2 = chartData.filter(d => d.destHours > 0);
                     return isLoading ? <LoadingChart /> : d2.length > 0 ? (
-                      <div className="h-[320px] overflow-visible">
-                        <ResponsiveContainer width="100%" height="100%" style={{ overflow: 'visible' }}>
-                          <BarChart data={d2} margin={{ top: 5, right: 30, left: -20, bottom: 5 }} barCategoryGap="30%">
-                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                            <XAxis dataKey="label" axisLine={false} tickLine={false} tick={{ fontSize: 8.5, fill: '#94a3b8', fontWeight: 600 }} angle={-45} textAnchor="end" interval={0} height={85} dy={8} />
-                            <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 9, fill: '#94a3b8', fontWeight: 600 }} tickFormatter={v => `${v}j`} width={28} />
-                            <Tooltip content={<CustomTooltip />} cursor={{ fill: '#f0fdf4' }} />
-                            <ReferenceLine y={Number(avgDest)} stroke="#e2e8f0" strokeDasharray="4 3" label={{ position: 'right', value: `${avgDest}j`, fill: '#94a3b8', fontSize: 9, fontWeight: 700 }} />
-                            <Bar dataKey="destHours" radius={[4, 4, 0, 0]} maxBarSize={28}>
-                              {d2.map((e, i) => (
-                                <Cell key={i} fill={e.destHours > 10 ? '#f87171' : e.destHours > 6 ? '#fbbf24' : '#34d399'} />
-                              ))}
-                            </Bar>
-                          </BarChart>
-                        </ResponsiveContainer>
+                      <div className="h-[320px] overflow-x-auto overflow-y-hidden custom-scrollbar">
+                        <div style={{ minWidth: `${Math.max(100, d2.length * 40)}px`, height: '100%' }}>
+                          <ResponsiveContainer width="100%" height="100%" style={{ overflow: 'visible' }}>
+                            <BarChart data={d2} margin={{ top: 5, right: 30, left: -20, bottom: 5 }} barCategoryGap="30%">
+                              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                              <XAxis dataKey="label" axisLine={false} tickLine={false} tick={{ fontSize: 8.5, fill: '#94a3b8', fontWeight: 600 }} angle={-45} textAnchor="end" interval="preserveStartEnd" height={85} dy={8} />
+                              <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 9, fill: '#94a3b8', fontWeight: 600 }} tickFormatter={v => `${v}j`} width={28} />
+                              <Tooltip content={<CustomTooltip />} cursor={{ fill: '#f0fdf4' }} />
+                              <ReferenceLine y={Number(avgDest)} stroke="#e2e8f0" strokeDasharray="4 3" label={{ position: 'right', value: `${Number(avgDest).toFixed(1)}j`, fill: '#94a3b8', fontSize: 9, fontWeight: 700 }} />
+                              <Bar dataKey="destHours" radius={[4, 4, 0, 0]} maxBarSize={28}>
+                                {d2.map((e, i) => (
+                                  <Cell key={i} fill={e.destHours > 10 ? '#f87171' : e.destHours > 6 ? '#fbbf24' : '#34d399'} />
+                                ))}
+                              </Bar>
+                            </BarChart>
+                          </ResponsiveContainer>
+                        </div>
                       </div>
                     ) : <EmptyChart />;
                   })()}
@@ -584,17 +608,17 @@ export default function RouteAnalyticsPage({ isTAM = false }: { isTAM?: boolean 
                 </div>
 
                 {/* ── KPI Pulang ── */}
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                   {[
-                    { label: 'Avg. Tujuan → Bakauheni', value: avgReturnToPort, unit: 'jam', color: 'text-purple-600 dark:text-purple-400' },
-                    { label: 'Avg. Nunggu Kapal ↓', value: avgWaitReturn, unit: 'jam', color: 'text-rose-600 dark:text-rose-400' },
-                    { label: 'Avg. Ferry Pulang', value: avgFerryReturn, unit: 'jam', color: 'text-indigo-600 dark:text-indigo-400' },
+                    { label: 'Avg. Tujuan → Bakauheni', value: fmtDur(avgReturnToPort), color: 'text-purple-600 dark:text-purple-400' },
+                    { label: 'Avg. Nunggu Kapal ↓', value: fmtDur(avgWaitReturn), color: 'text-rose-600 dark:text-rose-400' },
+                    { label: 'Avg. Ferry Pulang', value: fmtDur(avgFerryReturn), color: 'text-indigo-600 dark:text-indigo-400' },
+                    { label: 'Avg. Merak → Pool', value: fmtDur(avgOf('returnToPoolHours')), color: 'text-blue-600 dark:text-blue-400' },
                   ].map(c => (
                     <div key={c.label} className="bg-white dark:bg-slate-900 rounded-2xl p-5 border border-slate-100 dark:border-slate-800">
                       <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">{c.label}</p>
-                      <p className={`text-3xl font-black ${c.color}`}>
+                      <p className={`text-xl font-black ${c.color}`}>
                         {c.value}
-                        {c.unit && <span className="text-sm font-semibold text-slate-400 ml-1">{c.unit}</span>}
                       </p>
                     </div>
                   ))}
@@ -608,31 +632,33 @@ export default function RouteAnalyticsPage({ isTAM = false }: { isTAM?: boolean 
                         <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Segmen D</p>
                         <h3 className="font-black text-base text-slate-900 dark:text-white flex items-center gap-2">
                           <TrendingUp className="w-4 h-4 text-purple-500" />
-                          Tujuan ke Pelabuhan Bakauheni
-                          <span className="text-slate-400 font-normal text-sm">PDC Polygon → Bakauheni</span>
+                          Tujuan ke Bakauheni
+                          <span className="text-slate-400 font-normal text-sm">Tujuan → Pel. Bakauheni</span>
                         </h3>
                       </div>
                       <div className="text-right">
                         <p className="text-[10px] text-slate-400 font-semibold uppercase tracking-widest">Rata-rata</p>
-                        <p className="text-2xl font-black text-purple-600 dark:text-purple-400">{avgReturnToPort}<span className="text-sm font-semibold text-slate-400 ml-1">jam</span></p>
+                        <p className="text-xl font-black text-purple-600 dark:text-purple-400">{fmtDur(avgReturnToPort)}</p>
                       </div>
                     </div>
                     {isLoading ? <LoadingChart /> : (() => {
                       const d = chartData.filter(x => x.returnToPortHours > 0);
                       return d.length > 0 ? (
-                        <div className="h-[320px] overflow-visible">
-                          <ResponsiveContainer width="100%" height="100%" style={{ overflow: 'visible' }}>
-                            <BarChart data={d} margin={{ top: 5, right: 30, left: -20, bottom: 5 }} barCategoryGap="30%">
-                              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                              <XAxis dataKey="label" axisLine={false} tickLine={false} tick={{ fontSize: 8.5, fill: '#94a3b8', fontWeight: 600 }} angle={-45} textAnchor="end" interval={0} height={85} dy={8} />
-                              <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 9, fill: '#94a3b8', fontWeight: 600 }} tickFormatter={v => `${v}j`} width={28} />
-                              <Tooltip content={<CustomTooltip />} cursor={{ fill: '#fdf4ff' }} />
-                              <ReferenceLine y={Number(avgReturnToPort)} stroke="#e2e8f0" strokeDasharray="4 3" label={{ position: 'right', value: `${avgReturnToPort}j`, fill: '#94a3b8', fontSize: 9, fontWeight: 700 }} />
-                              <Bar dataKey="returnToPortHours" radius={[4, 4, 0, 0]} maxBarSize={28}>
-                                {d.map((e, i) => <Cell key={i} fill={e.returnToPortHours > 10 ? '#f87171' : e.returnToPortHours > 6 ? '#c084fc' : '#a855f7'} />)}
-                              </Bar>
-                            </BarChart>
-                          </ResponsiveContainer>
+                        <div className="h-[320px] overflow-x-auto overflow-y-hidden custom-scrollbar">
+                          <div style={{ minWidth: `${Math.max(100, d.length * 40)}px`, height: '100%' }}>
+                            <ResponsiveContainer width="100%" height="100%" style={{ overflow: 'visible' }}>
+                              <BarChart data={d} margin={{ top: 5, right: 30, left: -20, bottom: 5 }} barCategoryGap="30%">
+                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                                <XAxis dataKey="label" axisLine={false} tickLine={false} tick={{ fontSize: 8.5, fill: '#94a3b8', fontWeight: 600 }} angle={-45} textAnchor="end" interval="preserveStartEnd" height={85} dy={8} />
+                                <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 9, fill: '#94a3b8', fontWeight: 600 }} tickFormatter={v => `${v}j`} width={28} />
+                                <Tooltip content={<CustomTooltip />} cursor={{ fill: '#fdf4ff' }} />
+                                <ReferenceLine y={Number(avgReturnToPort)} stroke="#e2e8f0" strokeDasharray="4 3" label={{ position: 'right', value: `${Number(avgReturnToPort).toFixed(1)}j`, fill: '#94a3b8', fontSize: 9, fontWeight: 700 }} />
+                                <Bar dataKey="returnToPortHours" radius={[4, 4, 0, 0]} maxBarSize={28}>
+                                  {d.map((e, i) => <Cell key={i} fill={e.returnToPortHours > 10 ? '#f87171' : e.returnToPortHours > 6 ? '#c084fc' : '#a855f7'} />)}
+                                </Bar>
+                              </BarChart>
+                            </ResponsiveContainer>
+                          </div>
                         </div>
                       ) : <EmptyChart />;
                     })()}
@@ -647,31 +673,33 @@ export default function RouteAnalyticsPage({ isTAM = false }: { isTAM?: boolean 
                         <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Segmen E</p>
                         <h3 className="font-black text-base text-slate-900 dark:text-white flex items-center gap-2">
                           <span className="text-rose-500">⏳</span>
-                          Nunggu Kapal Pulang
+                          Menunggu Antrian Kapal Pulang
                           <span className="text-slate-400 font-normal text-sm">Tiba Bakauheni → Masuk Kapal Pulang</span>
                         </h3>
                       </div>
                       <div className="text-right">
                         <p className="text-[10px] text-slate-400 font-semibold uppercase tracking-widest">Rata-rata</p>
-                        <p className="text-2xl font-black text-rose-600 dark:text-rose-400">{avgWaitReturn}<span className="text-sm font-semibold text-slate-400 ml-1">jam</span></p>
+                        <p className="text-xl font-black text-rose-600 dark:text-rose-400">{fmtDur(avgWaitReturn)}</p>
                       </div>
                     </div>
                     {isLoading ? <LoadingChart /> : (() => {
                       const d = chartData.filter(x => x.waitReturnHours > 0);
                       return d.length > 0 ? (
-                        <div className="h-[320px] overflow-visible">
-                          <ResponsiveContainer width="100%" height="100%" style={{ overflow: 'visible' }}>
-                            <BarChart data={d} margin={{ top: 5, right: 30, left: -20, bottom: 5 }} barCategoryGap="30%">
-                              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                              <XAxis dataKey="label" axisLine={false} tickLine={false} tick={{ fontSize: 8.5, fill: '#94a3b8', fontWeight: 600 }} angle={-45} textAnchor="end" interval={0} height={85} dy={8} />
-                              <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 9, fill: '#94a3b8', fontWeight: 600 }} tickFormatter={v => `${v}j`} width={28} />
-                              <Tooltip content={<CustomTooltip />} cursor={{ fill: '#fff1f2' }} />
-                              <ReferenceLine y={Number(avgWaitReturn)} stroke="#e2e8f0" strokeDasharray="4 3" label={{ position: 'right', value: `${avgWaitReturn}j`, fill: '#94a3b8', fontSize: 9, fontWeight: 700 }} />
-                              <Bar dataKey="waitReturnHours" radius={[4, 4, 0, 0]} maxBarSize={28}>
-                                {d.map((e, i) => <Cell key={i} fill={e.waitReturnHours > 4 ? '#f87171' : e.waitReturnHours > 2 ? '#fb7185' : '#fda4af'} />)}
-                              </Bar>
-                            </BarChart>
-                          </ResponsiveContainer>
+                        <div className="h-[320px] overflow-x-auto overflow-y-hidden custom-scrollbar">
+                          <div style={{ minWidth: `${Math.max(100, d.length * 40)}px`, height: '100%' }}>
+                            <ResponsiveContainer width="100%" height="100%" style={{ overflow: 'visible' }}>
+                              <BarChart data={d} margin={{ top: 5, right: 30, left: -20, bottom: 5 }} barCategoryGap="30%">
+                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                                <XAxis dataKey="label" axisLine={false} tickLine={false} tick={{ fontSize: 8.5, fill: '#94a3b8', fontWeight: 600 }} angle={-45} textAnchor="end" interval="preserveStartEnd" height={85} dy={8} />
+                                <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 9, fill: '#94a3b8', fontWeight: 600 }} tickFormatter={v => `${v}j`} width={28} />
+                                <Tooltip content={<CustomTooltip />} cursor={{ fill: '#fff1f2' }} />
+                                <ReferenceLine y={Number(avgWaitReturn)} stroke="#e2e8f0" strokeDasharray="4 3" label={{ position: 'right', value: `${Number(avgWaitReturn).toFixed(1)}j`, fill: '#94a3b8', fontSize: 9, fontWeight: 700 }} />
+                                <Bar dataKey="waitReturnHours" radius={[4, 4, 0, 0]} maxBarSize={28}>
+                                  {d.map((e, i) => <Cell key={i} fill={e.waitReturnHours > 4 ? '#f87171' : e.waitReturnHours > 2 ? '#fb7185' : '#fda4af'} />)}
+                                </Bar>
+                              </BarChart>
+                            </ResponsiveContainer>
+                          </div>
                         </div>
                       ) : <EmptyChart />;
                     })()}
@@ -692,25 +720,27 @@ export default function RouteAnalyticsPage({ isTAM = false }: { isTAM?: boolean 
                       </div>
                       <div className="text-right">
                         <p className="text-[10px] text-slate-400 font-semibold uppercase tracking-widest">Rata-rata</p>
-                        <p className="text-2xl font-black text-indigo-600 dark:text-indigo-400">{avgFerryReturn}<span className="text-sm font-semibold text-slate-400 ml-1">jam</span></p>
+                        <p className="text-xl font-black text-indigo-600 dark:text-indigo-400">{fmtDur(avgFerryReturn)}</p>
                       </div>
                     </div>
                     {isLoading ? <LoadingChart /> : (() => {
                       const d = chartData.filter(x => x.ferryReturnHours > 0);
                       return d.length > 0 ? (
-                        <div className="h-[320px] overflow-visible">
-                          <ResponsiveContainer width="100%" height="100%" style={{ overflow: 'visible' }}>
-                            <BarChart data={d} margin={{ top: 5, right: 30, left: -20, bottom: 5 }} barCategoryGap="30%">
-                              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                              <XAxis dataKey="label" axisLine={false} tickLine={false} tick={{ fontSize: 8.5, fill: '#94a3b8', fontWeight: 600 }} angle={-45} textAnchor="end" interval={0} height={85} dy={8} />
-                              <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 9, fill: '#94a3b8', fontWeight: 600 }} tickFormatter={v => `${v}j`} width={28} />
-                              <Tooltip content={<CustomTooltip />} cursor={{ fill: '#eef2ff' }} />
-                              <ReferenceLine y={Number(avgFerryReturn)} stroke="#e2e8f0" strokeDasharray="4 3" label={{ position: 'right', value: `${avgFerryReturn}j`, fill: '#94a3b8', fontSize: 9, fontWeight: 700 }} />
-                              <Bar dataKey="ferryReturnHours" radius={[4, 4, 0, 0]} maxBarSize={28}>
-                                {d.map((e, i) => <Cell key={i} fill={e.ferryReturnHours > 8 ? '#f87171' : e.ferryReturnHours > 5 ? '#fbbf24' : '#818cf8'} />)}
-                              </Bar>
-                            </BarChart>
-                          </ResponsiveContainer>
+                        <div className="h-[320px] overflow-x-auto overflow-y-hidden custom-scrollbar">
+                          <div style={{ minWidth: `${Math.max(100, d.length * 40)}px`, height: '100%' }}>
+                            <ResponsiveContainer width="100%" height="100%" style={{ overflow: 'visible' }}>
+                              <BarChart data={d} margin={{ top: 5, right: 30, left: -20, bottom: 5 }} barCategoryGap="30%">
+                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                                <XAxis dataKey="label" axisLine={false} tickLine={false} tick={{ fontSize: 8.5, fill: '#94a3b8', fontWeight: 600 }} angle={-45} textAnchor="end" interval="preserveStartEnd" height={85} dy={8} />
+                                <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 9, fill: '#94a3b8', fontWeight: 600 }} tickFormatter={v => `${v}j`} width={28} />
+                                <Tooltip content={<CustomTooltip />} cursor={{ fill: '#eef2ff' }} />
+                                <ReferenceLine y={Number(avgFerryReturn)} stroke="#e2e8f0" strokeDasharray="4 3" label={{ position: 'right', value: `${Number(avgFerryReturn).toFixed(1)}j`, fill: '#94a3b8', fontSize: 9, fontWeight: 700 }} />
+                                <Bar dataKey="ferryReturnHours" radius={[4, 4, 0, 0]} maxBarSize={28}>
+                                  {d.map((e, i) => <Cell key={i} fill={e.ferryReturnHours > 8 ? '#f87171' : e.ferryReturnHours > 5 ? '#fbbf24' : '#818cf8'} />)}
+                                </Bar>
+                              </BarChart>
+                            </ResponsiveContainer>
+                          </div>
                         </div>
                       ) : <EmptyChart />;
                     })()}
@@ -718,6 +748,53 @@ export default function RouteAnalyticsPage({ isTAM = false }: { isTAM?: boolean 
                       <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-indigo-400 inline-block" /> Normal (&lt;5j)</span>
                       <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-amber-400 inline-block" /> Lambat (5–8j)</span>
                       <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-red-400 inline-block" /> Lama (&gt;8j)</span>
+                    </div>
+                  </div>
+                )}
+
+                {/* ── Chart G: Merak → Pool ── */}
+                {chartData.some(d => d.returnToPoolHours > 0) && (
+                  <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 p-6">
+                    <div className="flex items-baseline justify-between mb-6">
+                      <div>
+                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Segmen G</p>
+                        <h3 className="font-black text-base text-slate-900 dark:text-white flex items-center gap-2">
+                          <MapPin className="w-4 h-4 text-blue-500" />
+                          Merak ke Pool
+                          <span className="text-slate-400 font-normal text-sm">Pel. Merak → Back To Pool</span>
+                        </h3>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-[10px] text-slate-400 font-semibold uppercase tracking-widest">Rata-rata</p>
+                        <p className="text-xl font-black text-blue-600 dark:text-blue-400">{fmtDur(avgOf('returnToPoolHours'))}</p>
+                      </div>
+                    </div>
+                    {isLoading ? <LoadingChart /> : (() => {
+                      const d = chartData.filter(x => x.returnToPoolHours > 0);
+                      const avgG = avgOf('returnToPoolHours');
+                      return d.length > 0 ? (
+                        <div className="h-[320px] overflow-x-auto overflow-y-hidden custom-scrollbar">
+                          <div style={{ minWidth: `${Math.max(100, d.length * 40)}px`, height: '100%' }}>
+                            <ResponsiveContainer width="100%" height="100%" style={{ overflow: 'visible' }}>
+                              <BarChart data={d} margin={{ top: 5, right: 30, left: -20, bottom: 5 }} barCategoryGap="30%">
+                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                                <XAxis dataKey="label" axisLine={false} tickLine={false} tick={{ fontSize: 8.5, fill: '#94a3b8', fontWeight: 600 }} angle={-45} textAnchor="end" interval="preserveStartEnd" height={85} dy={8} />
+                                <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 9, fill: '#94a3b8', fontWeight: 600 }} tickFormatter={v => `${v}j`} width={28} />
+                                <Tooltip content={<CustomTooltip />} cursor={{ fill: '#eff6ff' }} />
+                                <ReferenceLine y={Number(avgG)} stroke="#e2e8f0" strokeDasharray="4 3" label={{ position: 'right', value: `${Number(avgG).toFixed(1)}j`, fill: '#94a3b8', fontSize: 9, fontWeight: 700 }} />
+                                <Bar dataKey="returnToPoolHours" radius={[4, 4, 0, 0]} maxBarSize={28}>
+                                  {d.map((e, i) => <Cell key={i} fill={e.returnToPoolHours > 5 ? '#f87171' : e.returnToPoolHours > 3 ? '#fbbf24' : '#60a5fa'} />)}
+                                </Bar>
+                              </BarChart>
+                            </ResponsiveContainer>
+                          </div>
+                        </div>
+                      ) : <EmptyChart />;
+                    })()}
+                    <div className="flex items-center gap-4 mt-4 text-[10px] font-semibold text-slate-500">
+                      <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-blue-400 inline-block" /> Normal (&lt;3j)</span>
+                      <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-amber-400 inline-block" /> Lambat (3–5j)</span>
+                      <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-red-400 inline-block" /> Lama (&gt;5j)</span>
                     </div>
                   </div>
                 )}
@@ -742,16 +819,15 @@ export default function RouteAnalyticsPage({ isTAM = false }: { isTAM?: boolean 
                 {/* ── NGORO KPI Cards ── */}
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                   {[
-                    { label: 'Total Ritase', value: ngoroData.length.toString(), unit: '', color: 'text-slate-900 dark:text-white' },
-                    { label: 'Pelanggaran Rute', value: ngoroViolations.toString(), unit: 'trip', color: ngoroViolations > 0 ? 'text-red-600 dark:text-red-400' : 'text-emerald-600 dark:text-emerald-400' },
-                    { label: 'Avg. KM166 → KM575A', value: (() => { const d = ngoroData.filter(x => x.segB > 0 && x.segD > 0); return d.length > 0 ? (d.reduce((s, x) => s + x.segB + x.segC + x.segD, 0) / d.length).toFixed(1) : '0.0'; })(), unit: 'jam', color: 'text-blue-600 dark:text-blue-400' },
-                    { label: 'Avg. Total Lead Time', value: (() => { const d = ngoroData.filter(x => x.totalLT > 0); return d.length > 0 ? (d.reduce((s, x) => s + x.totalLT, 0) / d.length).toFixed(1) : '0.0'; })(), unit: 'jam', color: 'text-amber-600 dark:text-amber-400' },
+                    { label: 'Total Ritase', value: ngoroData.length.toString(), color: 'text-slate-900 dark:text-white' },
+                    { label: 'Pelanggaran Rute', value: ngoroViolations.toString() + ' ritase', color: ngoroViolations > 0 ? 'text-red-600 dark:text-red-400' : 'text-emerald-600 dark:text-emerald-400' },
+                    { label: 'Avg. KM166 → KM575A', value: fmtDur((() => { const d = ngoroData.filter(x => x.segB > 0 && x.segD > 0); return d.length > 0 ? (d.reduce((s, x) => s + x.segB + x.segC + x.segD, 0) / d.length) : 0; })()), color: 'text-blue-600 dark:text-blue-400' },
+                    { label: 'Avg. Total Lead Time', value: fmtDur((() => { const d = ngoroData.filter(x => x.totalLT > 0); return d.length > 0 ? (d.reduce((s, x) => s + x.totalLT, 0) / d.length) : 0; })()), color: 'text-amber-600 dark:text-amber-400' },
                   ].map(c => (
                     <div key={c.label} className="bg-white dark:bg-slate-900 rounded-2xl p-5 border border-slate-100 dark:border-slate-800">
                       <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">{c.label}</p>
-                      <p className={`text-3xl font-black ${c.color}`}>
+                      <p className={`text-xl font-black ${c.color}`}>
                         {c.value}
-                        {c.unit && <span className="text-sm font-semibold text-slate-400 ml-1">{c.unit}</span>}
                       </p>
                     </div>
                   ))}
@@ -802,17 +878,18 @@ export default function RouteAnalyticsPage({ isTAM = false }: { isTAM?: boolean 
                         </div>
                         <div className="text-right">
                           <p className="text-[10px] text-slate-400 font-semibold uppercase tracking-widest">Rata-rata</p>
-                          <p className={`text-2xl font-black ${info.avgColor}`}>{avg}<span className="text-sm font-semibold text-slate-400 ml-1">jam</span></p>
+                          <p className={`text-xl font-black ${info.avgColor}`}>{fmtDur(avg)}</p>
                         </div>
                       </div>
                       {isLoading ? <LoadingChart /> : (
-                        <div className="h-[300px] overflow-visible">
-                          <ResponsiveContainer width="100%" height="100%" style={{ overflow: 'visible' }}>
-                            <BarChart data={filtered} margin={{ top: 5, right: 30, left: -20, bottom: 5 }} barCategoryGap="30%">
-                              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                              <XAxis dataKey="label" axisLine={false} tickLine={false}
-                                tick={{ fontSize: 8.5, fill: '#94a3b8', fontWeight: 600 }}
-                                angle={-45} textAnchor="end" interval={0} height={85} dy={8} />
+                        <div className="h-[300px] overflow-x-auto overflow-y-hidden custom-scrollbar">
+                          <div style={{ minWidth: `${Math.max(100, filtered.length * 40)}px`, height: '100%' }}>
+                            <ResponsiveContainer width="100%" height="100%" style={{ overflow: 'visible' }}>
+                              <BarChart data={filtered} margin={{ top: 5, right: 30, left: -20, bottom: 5 }} barCategoryGap="30%">
+                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                                <XAxis dataKey="label" axisLine={false} tickLine={false}
+                                  tick={{ fontSize: 8.5, fill: '#94a3b8', fontWeight: 600 }}
+                                  angle={-45} textAnchor="end" interval="preserveStartEnd" height={85} dy={8} />
                               <YAxis axisLine={false} tickLine={false}
                                 tick={{ fontSize: 9, fill: '#94a3b8', fontWeight: 600 }}
                                 tickFormatter={v => `${v}j`} width={28} />
@@ -822,10 +899,11 @@ export default function RouteAnalyticsPage({ isTAM = false }: { isTAM?: boolean 
                               <Bar dataKey={seg} radius={[4, 4, 0, 0]} maxBarSize={28}>
                                 {filtered.map((e, i) => (
                                   <Cell key={i} fill={info.color(e[seg] as number)} />
-                                ))}
-                              </Bar>
-                            </BarChart>
-                          </ResponsiveContainer>
+                                  ))}
+                                </Bar>
+                              </BarChart>
+                            </ResponsiveContainer>
+                          </div>
                         </div>
                       )}
                       <div className="flex items-center gap-4 mt-4 text-[10px] font-semibold text-slate-500">
@@ -873,30 +951,32 @@ export default function RouteAnalyticsPage({ isTAM = false }: { isTAM?: boolean 
                             </div>
                             <div className="text-right">
                               <p className="text-[10px] text-slate-400 font-semibold uppercase tracking-widest">Rata-rata</p>
-                              <p className={`text-2xl font-black ${info.avgColor}`}>{avg}<span className="text-sm font-semibold text-slate-400 ml-1">jam</span></p>
+                              <p className={`text-xl font-black ${info.avgColor}`}>{fmtDur(avg)}</p>
                             </div>
                           </div>
                           {isLoading ? <LoadingChart /> : (
-                            <div className="h-[300px] overflow-visible">
-                              <ResponsiveContainer width="100%" height="100%" style={{ overflow: 'visible' }}>
-                                <BarChart data={filtered} margin={{ top: 5, right: 30, left: -20, bottom: 5 }} barCategoryGap="30%">
-                                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                                  <XAxis dataKey="label" axisLine={false} tickLine={false}
-                                    tick={{ fontSize: 8.5, fill: '#94a3b8', fontWeight: 600 }}
-                                    angle={-45} textAnchor="end" interval={0} height={85} dy={8} />
+                            <div className="h-[300px] overflow-x-auto overflow-y-hidden custom-scrollbar">
+                              <div style={{ minWidth: `${Math.max(100, filtered.length * 40)}px`, height: '100%' }}>
+                                <ResponsiveContainer width="100%" height="100%" style={{ overflow: 'visible' }}>
+                                  <BarChart data={filtered} margin={{ top: 5, right: 30, left: -20, bottom: 5 }} barCategoryGap="30%">
+                                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                                    <XAxis dataKey="label" axisLine={false} tickLine={false}
+                                      tick={{ fontSize: 8.5, fill: '#94a3b8', fontWeight: 600 }}
+                                      angle={-45} textAnchor="end" interval="preserveStartEnd" height={85} dy={8} />
                                   <YAxis axisLine={false} tickLine={false}
                                     tick={{ fontSize: 9, fill: '#94a3b8', fontWeight: 600 }}
                                     tickFormatter={v => `${v}j`} width={28} />
                                   <Tooltip content={<CustomTooltip />} cursor={{ fill: info.cursor }} />
                                   <ReferenceLine y={Number(avg)} stroke="#e2e8f0" strokeDasharray="4 3"
-                                    label={{ position: 'right', value: `${avg}j`, fill: '#94a3b8', fontSize: 9, fontWeight: 700 }} />
+                                    label={{ position: 'right', value: `${Number(avg).toFixed(1)}j`, fill: '#94a3b8', fontSize: 9, fontWeight: 700 }} />
                                   <Bar dataKey={seg} radius={[4, 4, 0, 0]} maxBarSize={28}>
                                     {filtered.map((e, i) => (
                                       <Cell key={i} fill={info.color(e[seg] as number)} />
-                                    ))}
-                                  </Bar>
-                                </BarChart>
-                              </ResponsiveContainer>
+                                      ))}
+                                    </Bar>
+                                  </BarChart>
+                                </ResponsiveContainer>
+                              </div>
                             </div>
                           )}
                           <div className="flex items-center gap-4 mt-4 text-[10px] font-semibold text-slate-500">

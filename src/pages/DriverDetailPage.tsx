@@ -762,6 +762,10 @@ export default function DriverDetailPage() {
                   <p className="font-bold text-slate-700 dark:text-slate-300 text-sm leading-relaxed">{driver.alamat || '---'}</p>
                 </div>
                 <div>
+                  <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">No Telpon</p>
+                  <p className="font-bold text-slate-900 dark:text-white">{driver.phone || '08xx-xxxx-xxxx'}</p>
+                </div>
+                <div>
                   <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">SIM Expiry</p>
                   <p className="font-bold text-slate-900 dark:text-white">
                     {driver.simExpiry ? new Date(driver.simExpiry).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }) : '---'}
@@ -780,9 +784,9 @@ export default function DriverDetailPage() {
                   {/* Radar Chart */}
                   {(() => {
                     const getTrainingScore = (months: string[]) => {
-                      const records = trainingRecords.filter(r => months.includes(r.bulan) && r.post_test > 0);
+                      const records = [...trainingRecords].reverse().filter(r => months.includes(r.bulan) && r.post_test > 0);
                       if (records.length === 0) return 0;
-                      return Math.round(records.reduce((acc, curr) => acc + curr.post_test, 0) / records.length);
+                      return records[0].post_test;
                     };
 
                     const radarData = [

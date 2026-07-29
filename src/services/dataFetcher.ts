@@ -143,6 +143,7 @@ export async function fetchAllDrivers() {
     simPhotoUrl: d.sim_photo_url,
     simStatus: calculateSIMStatus(d.sim_expiry),
     nik: d.nik,
+    phone: d.phone,
     alamat: d.alamat
   })) || [];
 }
@@ -224,6 +225,7 @@ export async function fetchDriverProfile(driverId: string, month: string) { // m
         simPhotoUrl: driverData.sim_photo_url,
         simStatus: calculateSIMStatus(driverData.sim_expiry),
         nik: driverData.nik,
+        phone: driverData.phone,
         alamat: driverData.alamat,
         totalViolations: 2, // Mock data
         totalRitaseMonth: ritases.length
