@@ -144,8 +144,8 @@ export default function TenkoPage({ isTAM = false }: { isTAM?: boolean }) {
     if (!summary?.raw) return [];
     return summary.raw.filter(r => {
       if (crossFilter.tensiStatus) {
-        if (crossFilter.tensiStatus === 'Normal' && (r.sistolik >= 140 || r.diastolik >= 90 || r.sistolik < 90 || r.diastolik < 60)) return false;
-        if (crossFilter.tensiStatus === 'Hipertensi' && !(r.sistolik >= 140 || r.diastolik >= 90)) return false;
+        if (crossFilter.tensiStatus === 'Normal' && (r.sistolik >= 145 || r.diastolik >= 90 || r.sistolik < 90 || r.diastolik < 60)) return false;
+        if (crossFilter.tensiStatus === 'Hipertensi' && !(r.sistolik >= 145 || r.diastolik >= 90)) return false;
         if (crossFilter.tensiStatus === 'Hipotensi' && !(r.sistolik < 90 || r.diastolik < 60)) return false;
       }
       if (crossFilter.date && !tenkoService.matchesPeriodFilter(r.tanggal, crossFilter.date)) return false;
@@ -650,7 +650,7 @@ export default function TenkoPage({ isTAM = false }: { isTAM?: boolean }) {
                     <div className="space-y-1.5">
                       <div className="flex items-center gap-2">
                         <motion.span 
-                          animate={(r.sistolik >= 140 || r.diastolik >= 90 || r.sistolik < 90 || r.diastolik < 60) ? { 
+                          animate={(r.sistolik >= 145 || r.diastolik >= 90 || r.sistolik < 90 || r.diastolik < 60) ? { 
                             opacity: [1, 0.4, 1],
                           } : {}}
                           transition={{ repeat: Infinity, duration: 3, ease: "easeInOut" }}
@@ -701,7 +701,7 @@ export default function TenkoPage({ isTAM = false }: { isTAM?: boolean }) {
                   <td className="px-6 py-5"><p className="text-xs font-black text-slate-700 dark:text-slate-300">{r.oxygen_saturation}% O₂</p><p className="text-[10px] font-bold text-slate-400 uppercase mt-1">{r.rest_time}h Rest</p></td>
                   <td className="px-6 py-5"><div className="flex items-center gap-2"><StatusBadge label="Alc" ok={Number(r.alkohol) === 0} /><StatusBadge label="Eye" ok={r.mata === 'OK'} /><StatusBadge label="Fat" ok={r.fatigue === 'NORMAL'} /></div></td>
                   <td className="px-8 py-5 text-right">
-                    {r.sistolik < 140 && r.diastolik < 90 && r.suhu_tubuh < 37.5 && Number(r.alkohol) === 0 ? (
+                    {r.sistolik < 145 && r.diastolik < 90 && r.suhu_tubuh < 37.5 && Number(r.alkohol) === 0 ? (
                       <span className="flex items-center justify-end gap-1.5 text-[10px] font-black text-emerald-500 uppercase">
                         <CheckCircle2 className="w-3.5 h-3.5" /> FIT TO DRIVE
                       </span>

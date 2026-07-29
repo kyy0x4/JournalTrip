@@ -114,7 +114,7 @@ export default function GatepassPage() {
     const record = tenkoRecords[driverId];
     if (!record) return { status: 'PENDING' };
     
-    const isHipertensi = record.sistolik >= 140 || record.diastolik >= 90;
+    const isHipertensi = record.sistolik >= 145 || record.diastolik >= 90;
     const isHipotensi = record.sistolik < 90 || record.diastolik < 60;
     const isDemam = record.suhu_tubuh >= 37.5;
     const isPositifAlkohol = Number(record.alkohol) > 0;
