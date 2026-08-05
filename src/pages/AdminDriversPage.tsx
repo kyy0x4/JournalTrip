@@ -3,7 +3,8 @@ import { supabase } from '../lib/supabase';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   Search, Image as ImageIcon, Trash2, UploadCloud, X, User,
-  ShieldCheck, ChevronLeft, ChevronRight, Filter
+  ShieldCheck, ChevronLeft, ChevronRight, Filter, Pencil, Phone,
+  MapPin, CalendarDays
 } from 'lucide-react';
 
 interface Driver {
@@ -14,6 +15,9 @@ interface Driver {
   avatar_url: string | null;
   coaching_photo_url: string | null;
   sim_photo_url: string | null;
+  phone: string | null;
+  alamat: string | null;
+  sim_expiry: string | null;
 }
 
 const AREAS = ['ALL', 'AREA 1', 'AREA 2', 'AREA 3', 'AREA 4', 'AREA 5'];
@@ -32,17 +36,70 @@ export default function AdminDriversPage() {
   }>({ isOpen: false, type: 'avatar', driver: null });
   const [isUploading, setIsUploading] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+  const [editState, setEditState] = useState<{
+    isOpen: boolean;
+    driver: Driver | null;
+    phone: string;
+    alamat: string;
+    sim_expiry: string;
+  }>({ isOpen: false, driver: null, phone: '', alamat: '', sim_expiry: '' });
+  const [isSaving, setIsSaving] = useState(false);
 
   const showToast = (message: string, type: 'success' | 'error') => {
     setToast({ message, type });
     setTimeout(() => setToast(null), 3000);
   };
 
+  const normalizeDate = (v: string | null | undefined): string => {
+    if (!v) return '';
+    return v.slice(0, 10);
+  };
+
+  const openEdit = (driver: Driver) => {
+    setEditState({
+      isOpen: true,
+      driver,
+      phone: driver.phone || '',
+      alamat: driver.alamat || '',
+      sim_expiry: normalizeDate(driver.sim_expiry),
+    });
+  };
+
+  const closeEdit = () => {
+    if (!isSaving) {
+      setEditState({ isOpen: false, driver: null, phone: '', alamat: '', sim_expiry: '' });
+    }
+  };
+
+  const handleSaveData = async () => {
+    if (!editState.driver) return;
+    setIsSaving(true);
+    try {
+      const { error } = await supabase
+        .from('drivers')
+        .update({
+          phone: editState.phone.trim() || null,
+          alamat: editState.alamat.trim() || null,
+          sim_expiry: editState.sim_expiry || null,
+        })
+        .eq('id', editState.driver.id);
+      if (error) throw new Error(`Gagal simpan: ${error.message}`);
+      await fetchDrivers();
+      showToast('Data driver berhasil disimpan!', 'success');
+      closeEdit();
+    } catch (e: any) {
+      console.error(e);
+      showToast(e.message || 'Gagal menyimpan data.', 'error');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   const fetchDrivers = async () => {
     setIsLoading(true);
     const { data, error } = await supabase
       .from('drivers')
-      .select('id, name, nik, area, avatar_url, coaching_photo_url, sim_photo_url')
+      .select('id, name, nik, area, avatar_url, coaching_photo_url, sim_photo_url, phone, alamat, sim_expiry')
       .order('name');
 
     if (!error && data) {
@@ -248,6 +305,7 @@ export default function AdminDriversPage() {
                   <th className="px-6 py-4">Foto Profil</th>
                   <th className="px-6 py-4">Foto Coaching</th>
                   <th className="px-6 py-4">Foto SIM</th>
+                  <th className="px-6 py-4">Aksi</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800/50">
@@ -267,7 +325,7 @@ export default function AdminDriversPage() {
                   ))
                 ) : pagedDrivers.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="px-6 py-16 text-center text-slate-400 italic text-sm">
+                    <td colSpan={7} className="px-6 py-16 text-center text-slate-400 italic text-sm">
                       Tidak ada driver yang cocok.
                     </td>
                   </tr>
@@ -333,6 +391,15 @@ export default function AdminDriversPage() {
                         >
                           <ImageIcon className="w-3.5 h-3.5" />
                           {d.sim_photo_url ? 'Edit' : 'Upload'}
+                        </button>
+                      </td>
+                      <td className="px-6 py-4">
+                        <button
+                          onClick={() => openEdit(d)}
+                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all bg-slate-100 text-slate-600 hover:bg-blue-100 hover:text-blue-700 dark:bg-slate-800 dark:text-slate-400 dark:hover:bg-blue-900/30 dark:hover:text-blue-400"
+                        >
+                          <Pencil className="w-3.5 h-3.5" />
+                          Edit Data
                         </button>
                       </td>
                     </tr>
@@ -465,6 +532,107 @@ export default function AdminDriversPage() {
                     {photoUrl ? 'Ganti Foto' : 'Upload Foto'}
                   </div>
                 </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ── Modal Edit Data ── */}
+      <AnimatePresence>
+        {editState.isOpen && editState.driver && (
+          <motion.div
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm"
+            onClick={(e) => { if (e.target === e.currentTarget) closeEdit(); }}
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0, y: 10 }} animate={{ scale: 1, opacity: 1, y: 0 }} exit={{ scale: 0.95, opacity: 0, y: 10 }}
+              className="bg-white dark:bg-slate-900 rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden"
+            >
+              <div className="flex items-center justify-between p-5 border-b border-slate-100 dark:border-slate-800">
+                <div>
+                  <h3 className="font-black text-lg flex items-center gap-2">
+                    <Pencil className="w-4 h-4 text-blue-500" /> Edit Data Driver
+                  </h3>
+                  <p className="text-xs text-slate-500 font-semibold mt-0.5">
+                    {editState.driver.name} · {editState.driver.nik || 'No NIK'} · {editState.driver.area || 'No Area'}
+                  </p>
+                </div>
+                <button onClick={closeEdit} disabled={isSaving} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors disabled:opacity-50">
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="p-6 space-y-5">
+                <div>
+                  <label className="flex items-center gap-1.5 text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">
+                    <Phone className="w-3 h-3" /> No. Telepon
+                  </label>
+                  <input
+                    type="text"
+                    value={editState.phone}
+                    onChange={e => setEditState(s => ({ ...s, phone: e.target.value }))}
+                    placeholder="08xx-xxxx-xxxx"
+                    className="w-full bg-slate-100 dark:bg-slate-800 border-0 rounded-xl px-4 py-2.5 text-sm font-semibold focus:ring-2 focus:ring-blue-500/20 outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="flex items-center gap-1.5 text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">
+                    <MapPin className="w-3 h-3" /> Alamat
+                  </label>
+                  <textarea
+                    value={editState.alamat}
+                    onChange={e => setEditState(s => ({ ...s, alamat: e.target.value }))}
+                    placeholder="Alamat lengkap pengemudi"
+                    rows={3}
+                    className="w-full bg-slate-100 dark:bg-slate-800 border-0 rounded-xl px-4 py-2.5 text-sm font-semibold focus:ring-2 focus:ring-blue-500/20 outline-none resize-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="flex items-center gap-1.5 text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">
+                    <CalendarDays className="w-3 h-3" /> SIM Berlaku Hingga
+                  </label>
+                  <input
+                    type="date"
+                    value={editState.sim_expiry}
+                    onChange={e => setEditState(s => ({ ...s, sim_expiry: e.target.value }))}
+                    className="w-full bg-slate-100 dark:bg-slate-800 border-0 rounded-xl px-4 py-2.5 text-sm font-semibold focus:ring-2 focus:ring-blue-500/20 outline-none dark:[color-scheme:dark]"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setEditState(s => ({ ...s, sim_expiry: '' }))}
+                    className="mt-1.5 text-[10px] font-bold text-slate-400 hover:text-red-500 transition-colors"
+                  >
+                    {editState.sim_expiry ? 'Hapus tanggal SIM' : 'Belum diisi'}
+                  </button>
+                </div>
+              </div>
+
+              <div className="p-5 border-t border-slate-100 dark:border-slate-800 flex gap-3">
+                <button
+                  onClick={closeEdit}
+                  disabled={isSaving}
+                  className="flex-1 py-2.5 rounded-xl font-bold text-sm bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:hover:bg-slate-700 transition-colors disabled:opacity-50"
+                >
+                  Batal
+                </button>
+                <button
+                  onClick={handleSaveData}
+                  disabled={isSaving}
+                  className="flex-1 flex justify-center items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white py-2.5 rounded-xl font-bold text-sm transition-colors disabled:opacity-50"
+                >
+                  {isSaving ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      Menyimpan...
+                    </>
+                  ) : (
+                    'Simpan'
+                  )}
+                </button>
               </div>
             </motion.div>
           </motion.div>
