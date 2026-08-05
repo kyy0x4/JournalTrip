@@ -13,6 +13,7 @@ interface Driver {
   area: string | null;
   avatar_url: string | null;
   coaching_photo_url: string | null;
+  sim_photo_url: string | null;
 }
 
 const AREAS = ['ALL', 'AREA 1', 'AREA 2', 'AREA 3', 'AREA 4', 'AREA 5'];
@@ -26,7 +27,7 @@ export default function AdminDriversPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [modalState, setModalState] = useState<{
     isOpen: boolean;
-    type: 'avatar' | 'coaching';
+    type: 'avatar' | 'coaching' | 'sim';
     driver: Driver | null;
   }>({ isOpen: false, type: 'avatar', driver: null });
   const [isUploading, setIsUploading] = useState(false);
@@ -41,7 +42,7 @@ export default function AdminDriversPage() {
     setIsLoading(true);
     const { data, error } = await supabase
       .from('drivers')
-      .select('id, name, nik, area, avatar_url, coaching_photo_url')
+      .select('id, name, nik, area, avatar_url, coaching_photo_url, sim_photo_url')
       .order('name');
 
     if (!error && data) {
@@ -77,7 +78,7 @@ export default function AdminDriversPage() {
   const totalPages = Math.max(1, Math.ceil(filteredDrivers.length / PAGE_SIZE));
   const pagedDrivers = filteredDrivers.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
 
-  const openModal = (driver: Driver, type: 'avatar' | 'coaching') => {
+  const openModal = (driver: Driver, type: 'avatar' | 'coaching' | 'sim') => {
     setModalState({ isOpen: true, type, driver });
   };
 
@@ -90,20 +91,20 @@ export default function AdminDriversPage() {
   const handleDeletePhoto = async () => {
     if (!modalState.driver) return;
     const { driver, type } = modalState;
-    const currentUrl = type === 'avatar' ? driver.avatar_url : driver.coaching_photo_url;
+    const currentUrl = type === 'avatar' ? driver.avatar_url : type === 'coaching' ? driver.coaching_photo_url : driver.sim_photo_url;
     if (!currentUrl) return;
 
     if (!confirm('Yakin ingin menghapus foto ini?')) return;
 
     setIsUploading(true);
     try {
-      const bucket = type === 'avatar' ? 'driver-photos' : 'coaching-photos';
+      const bucket = type === 'avatar' ? 'driver-photos' : type === 'coaching' ? 'coaching-photos' : 'sim-photos';
       const urlParts = currentUrl.split('/');
       const fileName = urlParts[urlParts.length - 1];
       if (fileName) {
         await supabase.storage.from(bucket).remove([fileName]);
       }
-      const column = type === 'avatar' ? 'avatar_url' : 'coaching_photo_url';
+      const column = type === 'avatar' ? 'avatar_url' : type === 'coaching' ? 'coaching_photo_url' : 'sim_photo_url';
       const { error: dbError } = await supabase
         .from('drivers')
         .update({ [column]: null })
@@ -125,9 +126,9 @@ export default function AdminDriversPage() {
 
     const file = e.target.files[0];
     const { driver, type } = modalState;
-    const bucket = type === 'avatar' ? 'driver-photos' : 'coaching-photos';
-    const column = type === 'avatar' ? 'avatar_url' : 'coaching_photo_url';
-    const currentUrl = type === 'avatar' ? driver.avatar_url : driver.coaching_photo_url;
+    const bucket = type === 'avatar' ? 'driver-photos' : type === 'coaching' ? 'coaching-photos' : 'sim-photos';
+    const column = type === 'avatar' ? 'avatar_url' : type === 'coaching' ? 'coaching_photo_url' : 'sim_photo_url';
+    const currentUrl = type === 'avatar' ? driver.avatar_url : type === 'coaching' ? driver.coaching_photo_url : driver.sim_photo_url;
 
     setIsUploading(true);
     try {
@@ -162,7 +163,9 @@ export default function AdminDriversPage() {
   };
 
   const photoUrl = modalState.driver
-    ? (modalState.type === 'avatar' ? modalState.driver.avatar_url : modalState.driver.coaching_photo_url)
+    ? (modalState.type === 'avatar' ? modalState.driver.avatar_url
+      : modalState.type === 'coaching' ? modalState.driver.coaching_photo_url
+      : modalState.driver.sim_photo_url)
     : null;
 
   return (
@@ -239,11 +242,12 @@ export default function AdminDriversPage() {
             <table className="w-full text-sm text-left">
               <thead className="bg-slate-50 dark:bg-slate-800/50 text-slate-500 dark:text-slate-400 font-bold uppercase text-[10px] tracking-widest">
                 <tr>
-                  <th className="px-6 py-4 w-8">#</th>
+                  <th className="px-6 py-4">#</th>
                   <th className="px-6 py-4">Driver</th>
                   <th className="px-6 py-4">Area</th>
                   <th className="px-6 py-4">Foto Profil</th>
                   <th className="px-6 py-4">Foto Coaching</th>
+                  <th className="px-6 py-4">Foto SIM</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800/50">
@@ -258,11 +262,12 @@ export default function AdminDriversPage() {
                       <td className="px-6 py-4"><div className="h-3.5 w-16 bg-slate-200 dark:bg-slate-700 rounded" /></td>
                       <td className="px-6 py-4"><div className="h-7 w-24 bg-slate-200 dark:bg-slate-700 rounded-lg" /></td>
                       <td className="px-6 py-4"><div className="h-7 w-24 bg-slate-200 dark:bg-slate-700 rounded-lg" /></td>
+                      <td className="px-6 py-4"><div className="h-7 w-24 bg-slate-200 dark:bg-slate-700 rounded-lg" /></td>
                     </tr>
                   ))
                 ) : pagedDrivers.length === 0 ? (
                   <tr>
-                    <td colSpan={5} className="px-6 py-16 text-center text-slate-400 italic text-sm">
+                    <td colSpan={6} className="px-6 py-16 text-center text-slate-400 italic text-sm">
                       Tidak ada driver yang cocok.
                     </td>
                   </tr>
@@ -317,6 +322,17 @@ export default function AdminDriversPage() {
                         >
                           <ImageIcon className="w-3.5 h-3.5" />
                           {d.coaching_photo_url ? 'Edit' : 'Upload'}
+                        </button>
+                      </td>
+                      <td className="px-6 py-4">
+                        <button
+                          onClick={() => openModal(d, 'sim')}
+                          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${d.sim_photo_url
+                            ? 'bg-amber-100 text-amber-700 hover:bg-amber-200 dark:bg-amber-900/30 dark:text-amber-400'
+                            : 'bg-slate-100 text-slate-500 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-400'}`}
+                        >
+                          <ImageIcon className="w-3.5 h-3.5" />
+                          {d.sim_photo_url ? 'Edit' : 'Upload'}
                         </button>
                       </td>
                     </tr>
@@ -393,7 +409,7 @@ export default function AdminDriversPage() {
               <div className="flex items-center justify-between p-5 border-b border-slate-100 dark:border-slate-800">
                 <div>
                   <h3 className="font-black text-lg">
-                    {modalState.type === 'avatar' ? '📸 Foto Profil' : '🎓 Foto Coaching'}
+                    {modalState.type === 'avatar' ? '📸 Foto Profil' : modalState.type === 'coaching' ? '🎓 Foto Coaching' : '🪪 Foto SIM'}
                   </h3>
                   <p className="text-xs text-slate-500 font-semibold mt-0.5">{modalState.driver.name} · {modalState.driver.area || 'No Area'}</p>
                 </div>
