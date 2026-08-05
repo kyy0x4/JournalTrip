@@ -77,4 +77,5 @@ export interface TrainingMonthlyRecord {
   kelulusan: string | null; // 'L' / 'TL'
   score_kpi: number;
   created_at: string;
+  area?: string;
 }

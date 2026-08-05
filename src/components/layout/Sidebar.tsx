@@ -27,6 +27,7 @@ interface SidebarProps {
   onShiftChange?: (shift: 'Day' | 'Night') => void;
   selectedArea?: string;
   isTAM?: boolean;
+  isAdmin?: boolean;
 }
 
 // Core Operations only — Analytics & Master Data are in the Navbar App Launcher
@@ -72,6 +73,7 @@ export default function Sidebar({
   onShiftChange,
   selectedArea = 'JBK',
   isTAM = false,
+  isAdmin = false,
 }: SidebarProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const location = useLocation();
@@ -164,6 +166,38 @@ export default function Sidebar({
               </Link>
             );
           })}
+          {isAdmin && (
+            <Link
+              to="/admin-drivers"
+              onClick={() => { if (window.innerWidth < 768) onClose(); }}
+              title={isCollapsed ? 'Admin Foto Driver' : undefined}
+              className={`
+                w-full flex items-center rounded-xl transition-all duration-200 group relative
+                ${isCollapsed ? 'justify-center p-3' : 'gap-3 px-3 py-2.5'}
+                ${location.pathname.startsWith('/admin-drivers')
+                  ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/20'
+                  : 'text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800/50 hover:text-slate-800 dark:hover:text-slate-200'}
+              `}
+            >
+              <span className={`shrink-0 transition-transform ${location.pathname.startsWith('/admin-drivers') ? 'scale-100' : 'group-hover:scale-110'}`}>
+                <User className="w-5 h-5" />
+              </span>
+              {!isCollapsed && (
+                <>
+                  <div className="text-left flex-1 overflow-hidden">
+                    <p className="text-sm font-bold truncate leading-tight">Admin Foto</p>
+                    <p className={`text-[9px] truncate ${location.pathname.startsWith('/admin-drivers') ? 'text-blue-200' : 'text-slate-400 dark:text-slate-500'}`}>Manajemen Driver</p>
+                  </div>
+                  {location.pathname.startsWith('/admin-drivers') && <ChevronRight className="w-4 h-4 text-blue-300 dark:text-blue-400 shrink-0" />}
+                </>
+              )}
+              {isCollapsed && (
+                <div className="absolute left-full ml-3 px-2.5 py-1.5 bg-slate-900 dark:bg-slate-800 text-white text-xs font-bold rounded-lg opacity-0 group-hover:opacity-100 pointer-events-none whitespace-nowrap transition-opacity z-50 shadow-lg border dark:border-slate-700">
+                  Admin Foto Driver
+                </div>
+              )}
+            </Link>
+          )}
         </nav>
 
         {/* ── DRIVER PANEL (only on Journal Trip) ── */}

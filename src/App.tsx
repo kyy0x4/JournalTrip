@@ -21,6 +21,7 @@ const LoginPage = lazy(() => import('./pages/LoginPage'));
 const RouteAnalyticsPage = lazy(() => import('./pages/RouteAnalyticsPage'));
 const TrainingDashboardPage = lazy(() => import('./pages/TrainingDashboardPage'));
 const KRDashboardPage = lazy(() => import('./pages/KRDashboardPage'));
+const AdminDriversPage = lazy(() => import('./pages/AdminDriversPage'));
 
 import Footer from './components/layout/Footer';
 import { fetchDashboardData, fetchActiveDrivers, getDefaultOperationalShift } from './services/dataFetcher';
@@ -54,6 +55,7 @@ export default function App() {
   });
 
   const isTAM = session?.user?.email === 'toyotaastra@kmdi.co.id';
+  const isAdmin = session?.user?.email === 'kmdimcc@gmail.com';
 
   useEffect(() => {
     const root = window.document.documentElement;
@@ -213,6 +215,7 @@ export default function App() {
           onShiftChange={setSelectedShift}
           selectedArea={selectedArea}
           isTAM={isTAM}
+          isAdmin={isAdmin}
         />
 
         <div className={`flex-1 flex flex-col transition-all duration-300 ${sidebarWidth} overflow-x-hidden`}>
@@ -228,6 +231,7 @@ export default function App() {
                 onThemeToggle={toggleTheme}
                 session={session}
                 isTAM={isTAM}
+                isAdmin={isAdmin}
               />
 
               <main id="pdf-export-content" className="pt-16 min-h-screen">
@@ -296,6 +300,7 @@ export default function App() {
                     <Route path="/drivers/:id" element={<DriverDetailPage />} />
                     <Route path="/training" element={<TrainingDashboardPage />} />
                     <Route path="/kr-schedule" element={<KRDashboardPage />} />
+                    <Route path="/admin-drivers" element={isAdmin ? <AdminDriversPage /> : <Navigate to="/" replace />} />
                     <Route path="*" element={<Navigate to="/" replace />} />
                   </Routes>
                   </Suspense>

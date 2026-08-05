@@ -4,7 +4,7 @@ import { Link, useLocation } from 'react-router-dom';
 import {
   Calendar as CalendarIcon, Menu, X, Sun, Moon,
   ChevronDown, Download, LogOut,
-  Clock, Leaf, TreePine, Users, LayoutGrid, MapPin
+  Clock, Leaf, TreePine, Users, LayoutGrid, MapPin, ShieldCheck
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { supabase } from '../../lib/supabase';
@@ -24,6 +24,7 @@ interface NavbarProps {
   onThemeToggle: () => void;
   session?: any;
   isTAM?: boolean;
+  isAdmin?: boolean;
 }
 
 const PAGE_TITLES: Record<string, { title: string; sub: string }> = {
@@ -37,6 +38,7 @@ const PAGE_TITLES: Record<string, { title: string; sub: string }> = {
   '/carbon': { title: 'Carbon Neutral', sub: 'Carbon Footprint & Environmental Impact' },
   '/training': { title: 'Training Center', sub: 'Analytics & Driver Development' },
   '/kr-schedule': { title: 'Jadwal KR', sub: 'Schedule Keamanan & Ketertiban' },
+  '/admin-drivers': { title: 'Admin Foto Driver', sub: 'Manajemen Foto & Dokumentasi' },
 };
 
 // Analytics & Master Data items for the App Launcher
@@ -110,6 +112,7 @@ export default function Navbar({
   onThemeToggle,
   session,
   isTAM = false,
+  isAdmin = false,
 }: NavbarProps) {
   const location = useLocation();
   const dateInputRef = useRef<HTMLInputElement>(null);
@@ -502,6 +505,16 @@ export default function Navbar({
                     </p>
                   </div>
                   <div className="p-1.5">
+                    {isAdmin && (
+                      <Link
+                        to="/admin-drivers"
+                        onClick={() => setIsProfileOpen(false)}
+                        className="flex items-center gap-3 px-3 py-2.5 w-full rounded-xl transition-colors text-xs font-black uppercase tracking-wider text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-500/10 mb-0.5"
+                      >
+                        <ShieldCheck className="w-4 h-4 shrink-0 text-blue-500" />
+                        Admin Foto Driver
+                      </Link>
+                    )}
                     <motion.button
                       whileHover={{ x: 3 }}
                       whileTap={{ scale: 0.97 }}

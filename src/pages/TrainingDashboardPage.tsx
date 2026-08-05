@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   GraduationCap, Users, Award, CheckCircle2, TrendingUp,
-  BarChart3, Calendar, Star, AlertTriangle, ChevronDown, User
+  BarChart3, Calendar, Star, AlertTriangle, ChevronDown, User, MapPin
 } from 'lucide-react';
 import {
   ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid,
@@ -12,8 +12,8 @@ import { supabase } from '../lib/supabase';
 import { TrainingMonthlyRecord } from '../types';
 
 // ── Types ──────────────────────────────────────────────────────
-interface DriverRow { id: string; name: string; avatar_url?: string; nik?: string; }
-interface TrainingWithDriver extends TrainingMonthlyRecord { driverName: string; driverAvatar?: string; }
+interface DriverRow { id: string; name: string; avatar_url?: string; nik?: string; area?: string; }
+interface TrainingWithDriver extends TrainingMonthlyRecord { driverName: string; driverAvatar?: string; area?: string; }
 
 const MONTHS_ORDER = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
 const MONTH_LABELS: Record<string, string> = {
@@ -53,6 +53,7 @@ function StatCard({ icon, label, value, sub, color }: {
 
 export default function TrainingDashboardPage() {
   const [year, setYear] = useState(currentYear);
+  const [selectedArea, setSelectedArea] = useState('ALL');
   const [allRecords, setAllRecords] = useState<TrainingWithDriver[]>([]);
   const [totalDrivers, setTotalDrivers] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
@@ -63,7 +64,7 @@ export default function TrainingDashboardPage() {
     const fetchAll = async () => {
       setIsLoading(true);
       const [{ data: drivers }, { data: trainings }] = await Promise.all([
-        supabase.from('drivers').select('id, name, avatar_url, nik').order('name'),
+        supabase.from('drivers').select('id, name, avatar_url, nik, area').order('name'),
         supabase.from('driver_training_monthly').select('*'),
       ]);
       const driverMap: Record<string, DriverRow> = {};
@@ -73,12 +74,31 @@ export default function TrainingDashboardPage() {
         ...r,
         driverName: driverMap[r.driver_id]?.name || 'Driver Tidak Dikenal',
         driverAvatar: driverMap[r.driver_id]?.avatar_url,
+        area: driverMap[r.driver_id]?.area,
       }));
       setAllRecords(merged);
       setIsLoading(false);
     };
     fetchAll();
   }, []);
+
+  // ── Area options & filtered records ───────────────────────────
+  const areaOptions = useMemo(() => {
+    const areas = new Set<string>();
+    allRecords.forEach(r => { if (r.area) areas.add(r.area); });
+    return ['ALL', ...Array.from(areas).sort()];
+  }, [allRecords]);
+
+  const filteredRecords = useMemo(() => {
+    if (!selectedArea || selectedArea === 'ALL') return allRecords;
+    return allRecords.filter(r => r.area === selectedArea);
+  }, [allRecords, selectedArea]);
+
+  // Jumlah driver yang terlihat = total driver di area terpilih (jika filter aktif)
+  const visibleTotalDrivers = useMemo(() => {
+    if (!selectedArea || selectedArea === 'ALL') return totalDrivers;
+    return new Set(filteredRecords.map(r => r.driver_id)).size;
+  }, [selectedArea, filteredRecords, totalDrivers]);
 
   // ── Helper: extract year from DD/MM/YYYY or MM/DD/YYYY date string ───────────
   const getTrainingYear = (dateStr: string | null | undefined): number | null => {
@@ -99,7 +119,7 @@ export default function TrainingDashboardPage() {
   // ── Monthly stats ──────────────────────────────────────────────
   const monthlyStats = useMemo(() => {
     return MONTHS_ORDER.map(month => {
-      const monthRecs = allRecords.filter(r => {
+      const monthRecs = filteredRecords.filter(r => {
         const bulan = r.bulan?.toUpperCase();
         const recYear = getTrainingYear(r.tanggal_training);
         return bulan === month && (recYear === year || recYear === null);
@@ -111,16 +131,16 @@ export default function TrainingDashboardPage() {
         label: MONTH_LABELS[month],
         peserta: uniqueDrivers.size,
         lulus: passing.size,
-        pctPeserta: totalDrivers > 0 ? Math.round((uniqueDrivers.size / totalDrivers) * 100) : 0,
+        pctPeserta: visibleTotalDrivers > 0 ? Math.round((uniqueDrivers.size / visibleTotalDrivers) * 100) : 0,
         pctLulus: uniqueDrivers.size > 0 ? Math.round((passing.size / uniqueDrivers.size) * 100) : 0,
       };
     });
-  }, [allRecords, year, totalDrivers]);
+  }, [filteredRecords, year, visibleTotalDrivers]);
 
   // ── Leaderboard ────────────────────────────────────────────────
   const leaderboard = useMemo(() => {
     const counts: Record<string, { name: string; avatar?: string; count: number; passed: number }> = {};
-    allRecords
+    filteredRecords
       .filter(r => r.kehadiran > 0 || r.post_test > 0)
       .forEach(r => {
         if (!counts[r.driver_id]) counts[r.driver_id] = { name: r.driverName, avatar: r.driverAvatar, count: 0, passed: 0 };
@@ -131,7 +151,7 @@ export default function TrainingDashboardPage() {
       .map(([id, v]) => ({ id, ...v, pctPass: v.count > 0 ? Math.round((v.passed / v.count) * 100) : 0 }))
       .sort((a, b) => b.count - a.count)
       .slice(0, 15);
-  }, [allRecords]);
+  }, [filteredRecords]);
 
   // ── Q1 Compliance (rolling 3-month window) ─────────────────────
   const q1Compliance = useMemo(() => {
@@ -145,7 +165,7 @@ export default function TrainingDashboardPage() {
     });
 
     const driverCounts: Record<string, { name: string; avatar?: string; count: number }> = {};
-    allRecords
+    filteredRecords
       .filter(r => relevantMonths.includes(r.bulan?.toUpperCase()) && (r.kehadiran > 0 || r.post_test > 0))
       .forEach(r => {
         if (!driverCounts[r.driver_id]) driverCounts[r.driver_id] = { name: r.driverName, avatar: r.driverAvatar, count: 0 };
@@ -154,13 +174,13 @@ export default function TrainingDashboardPage() {
 
     // Build a map of all driver names from the complete allRecords list (not just 3-month active ones)
     const allDriverNames: Record<string, { name: string; avatar?: string }> = {};
-    allRecords.forEach(r => {
+    filteredRecords.forEach(r => {
       if (!allDriverNames[r.driver_id]) {
         allDriverNames[r.driver_id] = { name: r.driverName, avatar: r.driverAvatar };
       }
     });
 
-    const allDriverIds = [...new Set(allRecords.map(r => r.driver_id))];
+    const allDriverIds = [...new Set(filteredRecords.map(r => r.driver_id))];
     return allDriverIds.map(id => ({
       id,
       name: allDriverNames[id]?.name || driverCounts[id]?.name || 'Driver',
@@ -168,7 +188,7 @@ export default function TrainingDashboardPage() {
       count: driverCounts[id]?.count || 0,
       compliant: (driverCounts[id]?.count || 0) >= 1,
     })).sort((a, b) => b.count - a.count);
-  }, [allRecords, year]);
+  }, [filteredRecords, year]);
 
   const q1Compliant = q1Compliance.filter(d => d.compliant).length;
   const q1Total = q1Compliance.length;
@@ -207,20 +227,30 @@ export default function TrainingDashboardPage() {
       <div className="max-w-6xl mx-auto px-4 md:px-6 py-8 space-y-8 mt-4">
         {/* ── Summary Stats ── */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <StatCard icon={<Users className="w-5 h-5 text-blue-600" />} label="Total Driver" value={totalDrivers} sub="Driver aktif terdaftar" color="bg-blue-50 dark:bg-blue-900/20" />
-          <StatCard icon={<BarChart3 className="w-5 h-5 text-emerald-600" />} label="Rata-rata Peserta/Bulan" value={Math.round(avgMonthlyPeserta)} sub={`~${Math.round((avgMonthlyPeserta / (totalDrivers || 1)) * 100)}% dari total driver`} color="bg-emerald-50 dark:bg-emerald-900/20" />
+          <StatCard icon={<Users className="w-5 h-5 text-blue-600" />} label="Total Driver" value={visibleTotalDrivers} sub={selectedArea !== 'ALL' ? `Driver area ${selectedArea}` : 'Driver aktif terdaftar'} color="bg-blue-50 dark:bg-blue-900/20" />
+          <StatCard icon={<BarChart3 className="w-5 h-5 text-emerald-600" />} label="Rata-rata Peserta/Bulan" value={Math.round(avgMonthlyPeserta)} sub={`~${Math.round((avgMonthlyPeserta / (visibleTotalDrivers || 1)) * 100)}% dari total driver`} color="bg-emerald-50 dark:bg-emerald-900/20" />
           <StatCard icon={<Award className="w-5 h-5 text-amber-600" />} label="Avg. Kelulusan" value={`${Math.round(avgMonthlyLulus)}%`} sub="Dari peserta yang hadir" color="bg-amber-50 dark:bg-amber-900/20" />
           <StatCard icon={<CheckCircle2 className="w-5 h-5 text-violet-600" />} label="Kepatuhan Q (3 Bln)" value={`${q1Compliant}/${q1Total}`} sub={q1Total > 0 ? `${Math.round((q1Compliant / q1Total) * 100)}% driver memenuhi standar` : 'Belum ada data'} color="bg-violet-50 dark:bg-violet-900/20" />
         </div>
 
-        {/* ── Tabs ── */}
-        <div className="flex gap-1 bg-slate-100 dark:bg-slate-800/50 p-1 rounded-2xl w-fit">
-          {TABS.map(t => (
-            <button key={t.key} onClick={() => setActiveTab(t.key)}
-              className={`px-4 py-2 rounded-xl text-xs font-black tracking-widest uppercase transition-all ${activeTab === t.key ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-sm' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'}`}>
-              {t.label}
-            </button>
-          ))}
+        {/* ── Tabs & Filters ── */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex gap-1 bg-slate-100 dark:bg-slate-800/50 p-1 rounded-2xl w-fit">
+            {TABS.map(t => (
+              <button key={t.key} onClick={() => setActiveTab(t.key)}
+                className={`px-4 py-2 rounded-xl text-xs font-black tracking-widest uppercase transition-all ${activeTab === t.key ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-sm' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'}`}>
+                {t.label}
+              </button>
+            ))}
+          </div>
+          <div className="relative shrink-0">
+            <select value={selectedArea} onChange={e => setSelectedArea(e.target.value)}
+              className="appearance-none bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl pl-9 pr-10 py-2.5 text-sm font-black text-slate-700 dark:text-slate-300 cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500/20 shadow-sm w-full sm:w-48">
+              {areaOptions.map(a => <option key={a} value={a}>{a === 'ALL' ? 'Semua Area' : a}</option>)}
+            </select>
+            <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-blue-500 pointer-events-none" />
+            <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+          </div>
         </div>
 
         <AnimatePresence mode="wait">
@@ -320,7 +350,7 @@ export default function TrainingDashboardPage() {
                         className="flex items-center gap-4 p-3 rounded-2xl hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
                         <span className={`text-sm font-black w-6 text-center ${i === 0 ? 'text-amber-500' : i === 1 ? 'text-slate-400' : i === 2 ? 'text-orange-500' : 'text-slate-300 dark:text-slate-600'}`}>{i + 1}</span>
                         {d.avatar ? (
-                          <img src={d.avatar} className="w-10 h-10 rounded-full object-cover border-2 border-white dark:border-slate-800 shadow-sm" alt={d.name} />
+                          <img src={d.avatar} onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(d.name)}&background=e2e8f0&color=475569`; }} className="w-10 h-10 rounded-full object-cover border-2 border-white dark:border-slate-800 shadow-sm" alt={d.name} />
                         ) : (
                           <div className="w-10 h-10 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
                             <User className="w-5 h-5 text-slate-400" />
@@ -377,7 +407,7 @@ export default function TrainingDashboardPage() {
                     {q1Compliance.map(d => (
                       <div key={d.id} className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
                         {d.avatar ? (
-                          <img src={d.avatar} className="w-8 h-8 rounded-full object-cover border-2 border-white dark:border-slate-800 shadow-sm shrink-0" alt={d.name} />
+                          <img src={d.avatar} onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(d.name)}&background=e2e8f0&color=475569`; }} className="w-8 h-8 rounded-full object-cover border-2 border-white dark:border-slate-800 shadow-sm shrink-0" alt={d.name} />
                         ) : (
                           <div className="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center shrink-0">
                             <User className="w-4 h-4 text-slate-400" />
