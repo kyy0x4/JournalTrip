@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { supabase } from '../lib/supabase';
 import { motion, AnimatePresence } from 'motion/react';
 import {
@@ -44,10 +44,12 @@ export default function AdminDriversPage() {
     sim_expiry: string;
   }>({ isOpen: false, driver: null, phone: '', alamat: '', sim_expiry: '' });
   const [isSaving, setIsSaving] = useState(false);
+  const toastTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const showToast = (message: string, type: 'success' | 'error') => {
+    if (toastTimeout.current) clearTimeout(toastTimeout.current);
     setToast({ message, type });
-    setTimeout(() => setToast(null), 3000);
+    toastTimeout.current = setTimeout(() => setToast(null), 3000);
   };
 
   const normalizeDate = (v: string | null | undefined): string => {
@@ -133,6 +135,14 @@ export default function AdminDriversPage() {
   }, [drivers, search, selectedArea]);
 
   const totalPages = Math.max(1, Math.ceil(filteredDrivers.length / PAGE_SIZE));
+
+  // Clamp currentPage jika data berubah (misal setelah edit/hapus) sehingga halaman tidak kosong
+  useEffect(() => {
+    if (currentPage > totalPages) {
+      setCurrentPage(totalPages);
+    }
+  }, [currentPage, totalPages]);
+
   const pagedDrivers = filteredDrivers.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
 
   const openModal = (driver: Driver, type: 'avatar' | 'coaching' | 'sim') => {

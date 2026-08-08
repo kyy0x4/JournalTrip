@@ -280,12 +280,19 @@ export default function EcoDrivingPage({ isTAM = false }: { isTAM?: boolean }) {
     
     const buildFilters = (month: number, year: number) => {
       const y2 = year.toString().slice(-2);
+      const y4 = year.toString();
       const mEN = monthEN[month];
       const mID = monthID[month];
       return [
+        // Format: DD-Mon-YY  e.g. 03-Jul-26
         `%-${mEN}-${y2}`, `%-${mID}-${y2}`,
-        `% ${mEN} ${year}`, `% ${mID} ${year}`,
+        // Format: DD Mon YYYY  e.g. 03 Jul 2026
+        `% ${mEN} ${y4}`, `% ${mID} ${y4}`,
+        // Format: DD Mon YY  e.g. 03 Jul 26
         `% ${mEN} ${y2}`, `% ${mID} ${y2}`,
+        // Wildcard anywhere - catches any format with month name + year
+        `%${mEN}%${y4}`, `%${mID}%${y4}`,
+        `%${mEN}%${y2}`, `%${mID}%${y2}`,
       ];
     };
 
