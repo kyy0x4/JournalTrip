@@ -253,7 +253,7 @@ export default function P2HPage() {
                           <div className={`px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider ${
                             record.status === 'OK' 
                               ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400' 
-                              : 'bg-red-50 text-red-600 dark:bg-red-500/10 dark:text-red-400'
+                              : 'bg-rose-50 text-rose-600 dark:bg-rose-500/10 dark:text-rose-400'
                           }`}>
                             {record.status === 'OK' ? 'SIAP OPERASIONAL' : 'TIDAK SIAP'}
                           </div>

@@ -38,18 +38,23 @@ const RitaseItem: React.FC<RitaseItemProps> = ({ ritase, isExpanded, onToggle })
       <motion.button 
         whileTap={isLocked ? {} : { scale: 0.98 }}
         onClick={() => !isLocked && onToggle()}
-        className={`w-full text-left bg-white dark:bg-slate-900/50 rounded-2xl p-4 md:p-5 shadow-sm transition-all hover:bg-slate-50 dark:hover:bg-slate-800/50 relative z-20 overflow-hidden outline-none ${
+        className={`w-full text-left glass-card glass-hover rounded-2xl p-4 md:p-5 relative z-20 overflow-hidden outline-none ${
           isLocked ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer active:scale-[0.99]'
-        } ${isExpanded ? 'shadow-lg shadow-blue-500/10 dark:shadow-blue-500/5' : ''}`}
+        } ${isExpanded ? 'shadow-lg shadow-red-500/10 dark:shadow-red-500/5 border-red-500/25' : ''}`}
       >
-        {ritase.type === 'active' && <div className="absolute top-0 left-0 w-1.5 h-full bg-red-600 dark:bg-red-500" />}
+        {ritase.type === 'active' && (
+          <motion.div
+            layoutId={`activebar-${ritase.id}`}
+            className="absolute top-0 left-0 w-1.5 h-full claude-gradient shadow-[2px_0_12px_rgba(217,119,87,0.5)]"
+          />
+        )}
         
         <div className="flex justify-between items-center">
           <div className="flex items-center gap-3 md:gap-4">
-            <div className={`w-8 h-8 md:w-10 md:h-10 rounded-full flex items-center justify-center font-bold text-xs md:text-sm shadow-sm ring-1 ring-slate-100 dark:ring-slate-800 ${
-              ritase.status === 'finished' ? 'bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400' :
-              ritase.status === 'active' ? 'bg-red-600 dark:bg-red-700 text-white' :
-              'bg-slate-50 dark:bg-slate-800 text-slate-400 dark:text-slate-500'
+            <div className={`w-8 h-8 md:w-10 md:h-10 rounded-full flex items-center justify-center font-bold text-xs md:text-sm shadow-md ring-1 ${
+              ritase.status === 'finished' ? 'bg-emerald-500 text-white ring-emerald-500/30 shadow-emerald-500/30' :
+              ritase.status === 'active' ? 'claude-gradient text-white ring-red-500/30 shadow-red-500/30' :
+              'bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-500 ring-slate-200/50 dark:ring-slate-700'
             }`}>
               <Truck className="w-4 h-4 md:w-5 md:h-5" />
             </div>
@@ -59,17 +64,22 @@ const RitaseItem: React.FC<RitaseItemProps> = ({ ritase, isExpanded, onToggle })
             </div>
           </div>
           <div className="flex items-center gap-2 md:gap-3 shrink-0">
-            <span className={`text-[9px] md:text-[10px] font-bold px-2 md:px-3 py-1 rounded-full uppercase border ${
-              ritase.status === 'finished' ? 'text-green-600 bg-green-50 border-green-100 dark:text-green-400 dark:bg-green-900/20 dark:border-green-900/30' :
-              ritase.status === 'active' ? 'text-red-600 bg-red-50 border-red-100 dark:text-red-400 dark:bg-red-900/20 dark:border-red-900/30' :
-              'text-slate-400 bg-slate-50 border-slate-100 dark:text-slate-500 dark:bg-slate-800 dark:border-slate-700'
+            <span className={`flex items-center gap-1.5 text-[9px] md:text-[10px] font-bold px-2.5 md:px-3 py-1 rounded-full uppercase border backdrop-blur-sm ${
+              ritase.status === 'finished' ? 'text-emerald-600 bg-emerald-50/70 border-emerald-200 dark:text-emerald-400 dark:bg-emerald-500/10 dark:border-emerald-500/20' :
+              ritase.status === 'active' ? 'text-red-600 bg-red-50/70 border-red-200 dark:text-red-400 dark:bg-red-500/10 dark:border-red-500/20 shadow-[0_0_12px_rgba(217,119,87,0.25)]' :
+              'text-slate-400 bg-slate-100/70 border-slate-200 dark:text-slate-500 dark:bg-slate-800 dark:border-slate-700'
             }`}>
+              <span className={`w-1.5 h-1.5 rounded-full ${
+                ritase.status === 'active' ? 'bg-red-500 animate-pulse' : ritase.status === 'finished' ? 'bg-emerald-500' : 'bg-slate-400'
+              }`} />
               {ritase.status}
             </span>
             {isLocked ? (
               <Lock className="w-4 h-4 text-slate-300 dark:text-slate-700" />
             ) : (
-              isExpanded ? <ChevronUp className="w-4 h-4 text-slate-400 dark:text-slate-500" /> : <ChevronDown className="w-4 h-4 text-slate-400 dark:text-slate-500" />
+              <motion.span animate={{ rotate: isExpanded ? 180 : 0 }} transition={{ duration: 0.25, ease: 'easeOut' }}>
+                <ChevronDown className="w-4 h-4 text-slate-400 dark:text-slate-500" />
+              </motion.span>
             )}
           </div>
         </div>
@@ -82,11 +92,11 @@ const RitaseItem: React.FC<RitaseItemProps> = ({ ritase, isExpanded, onToggle })
             animate={{ height: 'auto', opacity: 1, y: 0 }}
             exit={{ height: 0, opacity: 0, y: -20 }}
             transition={{ duration: 0.4, ease: [0.04, 0.62, 0.23, 0.98] }}
-            className="overflow-hidden bg-white dark:bg-slate-900/80 rounded-b-2xl -mt-4 mx-2 md:mx-4 pt-8 pb-6 px-4 md:px-6 shadow-xl shadow-slate-200 dark:shadow-black/40 relative z-10"
+            className="overflow-hidden glass-card rounded-b-2xl -mt-4 mx-2 md:mx-4 pt-8 pb-6 px-4 md:px-6 shadow-xl shadow-slate-200/50 dark:shadow-black/40 relative z-10"
           >
             <div className="space-y-10">
               <div className="flex flex-col md:flex-row justify-between md:items-end gap-3">
-                <div className="flex items-center gap-2 text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 px-3 py-1.5 rounded-lg w-fit border dark:border-red-900/30">
+                <div className="flex items-center gap-2 text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-900/20 px-3 py-1.5 rounded-lg w-fit border dark:border-rose-900/30">
                   <MapPin className="w-4 h-4" />
                   <span className="text-[10px] md:text-xs font-bold tracking-tight">Rute: {ritase.route}</span>
                 </div>
@@ -145,11 +155,11 @@ const RitaseItem: React.FC<RitaseItemProps> = ({ ritase, isExpanded, onToggle })
                         <span className="text-[10px] font-bold text-slate-600 dark:text-slate-400 font-mono">{step.plan}</span>
                       </div>
                       <div className="flex items-center md:justify-center gap-1">
-                        <div className={`w-1.5 h-1.5 rounded-full ${step.delay && ritase.type !== 'completed' ? 'bg-red-500 animate-pulse' : (ritase.type === 'completed' || step.type === 'completed' ? 'bg-green-500' : 'bg-slate-300 dark:bg-slate-700')}`} />
-                        <span className={`text-[10px] font-bold font-mono ${step.delay && ritase.type !== 'completed' ? 'text-red-500' : 'text-slate-500 dark:text-slate-400'}`}>
+                        <div className={`w-1.5 h-1.5 rounded-full ${step.delay && ritase.type !== 'completed' ? 'bg-rose-500 animate-pulse' : (ritase.type === 'completed' || step.type === 'completed' ? 'bg-green-500' : 'bg-slate-300 dark:bg-slate-700')}`} />
+                        <span className={`text-[10px] font-bold font-mono ${step.delay && ritase.type !== 'completed' ? 'text-rose-500' : 'text-slate-500 dark:text-slate-400'}`}>
                           {step.actual}
                         </span>
-                        {step.delay && ritase.type !== 'completed' && <span className="text-[8px] font-black text-red-500 dark:text-red-400">{step.delay}</span>}
+                        {step.delay && ritase.type !== 'completed' && <span className="text-[8px] font-black text-rose-500 dark:text-rose-400">{step.delay}</span>}
                       </div>
                     </div>
                   </motion.div>

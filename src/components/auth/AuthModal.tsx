@@ -76,7 +76,7 @@ export default function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps
 
                 <form onSubmit={handleLogin} className="space-y-5">
                   {error && (
-                    <div className="p-3 text-xs text-red-600 bg-red-50 rounded-xl font-medium text-center">
+                    <div className="p-3 text-xs text-rose-600 bg-rose-50 rounded-xl font-medium text-center">
                       {error}
                     </div>
                   )}

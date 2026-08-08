@@ -381,7 +381,7 @@ export default function StandarLeadtimePage() {
             },
           ].map((param, i) => {
             const colorStyles: Record<string, { bg: string; text: string; border: string; pill: string; badge: string }> = {
-              red:    { bg: 'bg-red-50 dark:bg-red-500/10',     text: 'text-red-600 dark:text-red-400',     border: 'border-red-100 dark:border-red-500/20',     pill: 'bg-red-100 dark:bg-red-500/20 text-red-700 dark:text-red-300',     badge: 'bg-red-500' },
+              red:    { bg: 'bg-rose-50 dark:bg-rose-500/10',     text: 'text-rose-600 dark:text-rose-400',     border: 'border-rose-100 dark:border-rose-500/20',     pill: 'bg-rose-100 dark:bg-rose-500/20 text-rose-700 dark:text-rose-300',     badge: 'bg-rose-500' },
               blue:   { bg: 'bg-blue-50 dark:bg-blue-500/10',   text: 'text-blue-600 dark:text-blue-400',   border: 'border-blue-100 dark:border-blue-500/20',   pill: 'bg-blue-100 dark:bg-blue-500/20 text-blue-700 dark:text-blue-300',   badge: 'bg-blue-500' },
               amber:  { bg: 'bg-amber-50 dark:bg-amber-500/10', text: 'text-amber-600 dark:text-amber-400', border: 'border-amber-100 dark:border-amber-500/20', pill: 'bg-amber-100 dark:bg-amber-500/20 text-amber-700 dark:text-amber-300', badge: 'bg-amber-500' },
               purple: { bg: 'bg-purple-50 dark:bg-purple-500/10',text: 'text-purple-600 dark:text-purple-400',border: 'border-purple-100 dark:border-purple-500/20',pill: 'bg-purple-100 dark:bg-purple-500/20 text-purple-700 dark:text-purple-300',badge: 'bg-purple-500' },

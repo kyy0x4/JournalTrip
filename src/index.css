@@ -3,20 +3,68 @@
 /* Kembalikan mesin dark mode sakti Tailwind v4 */
 @variant dark (&:where(.dark, .dark *, [data-theme="dark"], [data-theme="dark"] *));
 
-:root {
-  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
-  
-  --bg-app: #f8f9fc;
-  --text-main: #181c23;
+/*
+  Claude Amber Theme
+  Brand scale berikut memetakan seluruh kelas `red-*` menjadi
+  palet amber terakota khas Claude (#D97757). Semua elemen brand
+  (navbar, sidebar, tombol, gradient) otomatis berganti tanpa
+  mengubah satu pun file komponen. Warna "danger" asli (alarm,
+  tensi abnormal, dll.) memakai skala `rose-*`.
+*/
+@theme {
+  --color-red-50: #fdf3ee;
+  --color-red-100: #fae5da;
+  --color-red-200: #f5c9b6;
+  --color-red-300: #efa78a;
+  --color-red-400: #e88d68;
+  --color-red-500: #d97757;
+  --color-red-600: #c15f3c;
+  --color-red-700: #a04a2e;
+  --color-red-800: #813b27;
+  --color-red-900: #693022;
+  --color-red-950: #39170f;
 
-  --color-primary: #dc2626;
+  --color-red-150: #f8dcd0;
+  --color-red-155: #f8dcd0;
+  --color-red-550: #df8260;
+  --color-red-650: #b95536;
+  --color-red-750: #8f4129;
+
+  --color-primary: #c15f3c;
   --radius-lg: 1rem;
   --radius-xl: 1.5rem;
+
+  --shadow-glow-amber: 0 10px 40px -12px rgba(217, 119, 87, 0.45);
+  --shadow-glow-amber-sm: 0 6px 20px -8px rgba(217, 119, 87, 0.4);
+
+  --animate-float: float 6s ease-in-out infinite;
+  --animate-shimmer: shimmer 2.2s linear infinite;
+  --animate-glow-pulse: glowPulse 2.4s ease-in-out infinite;
+
+  @keyframes float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-10px); }
+  }
+  @keyframes shimmer {
+    0% { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+  }
+  @keyframes glowPulse {
+    0%, 100% { opacity: 0.6; }
+    50% { opacity: 1; }
+  }
+}
+
+:root {
+  --font-sans: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
+  
+  --bg-app: #faf7f4;
+  --text-main: #181c23;
 }
 
 [data-theme="dark"], .dark {
-  --bg-app: #0f172a;
-  --text-main: #f1f5f9;
+  --bg-app: #151210;
+  --text-main: #f5f0ec;
   color-scheme: dark;
 }
 
@@ -73,20 +121,20 @@
   }
 
   ::-webkit-scrollbar-thumb {
-    background: #e2e8f0;
+    background: #f0d9cc;
     border-radius: 10px;
   }
 
   .dark ::-webkit-scrollbar-thumb {
-    background: #334155;
+    background: #3b2a21;
   }
 
   ::-webkit-scrollbar-thumb:hover {
-    background: #cbd5e1;
+    background: #e2b8a4;
   }
 
   .dark ::-webkit-scrollbar-thumb:hover {
-    background: #475569;
+    background: #523a2c;
   }
 
 /* ── PRINT STYLES ── */
@@ -113,7 +161,7 @@
   }
 
   /* Rapiin Layout Utama */
-  nav, aside, footer {
+  nav, aside, footer, .aurora-bg {
     display: none !important;
   }
 
@@ -153,12 +201,12 @@
   .glass-effect {
     background-color: rgba(255, 255, 255, 0.7);
     backdrop-filter: blur(12px);
-    border-bottom: 1px solid rgba(226, 232, 240, 0.5);
+    border-bottom: 1px solid rgba(245, 201, 182, 0.5);
   }
 
   .dark .glass-effect {
-    background-color: rgba(15, 23, 42, 0.8);
-    border-bottom: 1px solid rgba(30, 41, 59, 0.5);
+    background-color: rgba(21, 18, 16, 0.8);
+    border-bottom: 1px solid rgba(59, 42, 33, 0.5);
   }
 
   .no-scrollbar::-webkit-scrollbar {
@@ -168,5 +216,131 @@
   .no-scrollbar {
     -ms-overflow-style: none;
     scrollbar-width: none;
+  }
+
+  .claude-gradient {
+    background-image: linear-gradient(135deg, #d97757 0%, #c15f3c 55%, #a04a2e 100%);
+  }
+
+  .claude-gradient-soft {
+    background-image: linear-gradient(135deg, rgba(217, 119, 87, 0.12) 0%, rgba(193, 95, 60, 0.06) 60%, transparent 100%);
+  }
+
+  /* ── Premium Glassmorphism Shell ── */
+  .glass-panel {
+    background: linear-gradient(160deg, rgba(255,255,255,0.72) 0%, rgba(255,255,255,0.45) 100%);
+    -webkit-backdrop-filter: blur(28px) saturate(160%);
+    backdrop-filter: blur(28px) saturate(160%);
+    border: 1px solid rgba(255,255,255,0.65);
+    box-shadow:
+      0 24px 60px -24px rgba(160, 74, 46, 0.18),
+      inset 0 1px 0 rgba(255,255,255,0.75);
+  }
+
+  .dark .glass-panel {
+    background: linear-gradient(160deg, rgba(35,28,24,0.72) 0%, rgba(26,21,18,0.55) 100%);
+    border: 1px solid rgba(255,255,255,0.07);
+    box-shadow:
+      0 24px 60px -24px rgba(0,0,0,0.6),
+      inset 0 1px 0 rgba(255,255,255,0.06);
+  }
+
+  .glass-card {
+    background: linear-gradient(160deg, rgba(255,255,255,0.66) 0%, rgba(255,255,255,0.32) 100%);
+    -webkit-backdrop-filter: blur(20px) saturate(150%);
+    backdrop-filter: blur(20px) saturate(150%);
+    border: 1px solid rgba(255,255,255,0.6);
+    box-shadow:
+      0 16px 40px -20px rgba(160, 74, 46, 0.16),
+      inset 0 1px 0 rgba(255,255,255,0.7);
+  }
+
+  .dark .glass-card {
+    background: linear-gradient(160deg, rgba(33,27,23,0.6) 0%, rgba(24,19,16,0.4) 100%);
+    border: 1px solid rgba(255,255,255,0.06);
+    box-shadow:
+      0 16px 40px -20px rgba(0,0,0,0.55),
+      inset 0 1px 0 rgba(255,255,255,0.05);
+  }
+
+  /* Hover lift untuk kartu */
+  .glass-hover {
+    transition: transform 0.3s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.3s cubic-bezier(0.22, 1, 0.36, 1), border-color 0.3s ease;
+  }
+  .glass-hover:hover {
+    transform: translateY(-3px);
+    border-color: rgba(217, 119, 87, 0.35);
+    box-shadow:
+      0 28px 60px -24px rgba(160, 74, 46, 0.28),
+      inset 0 1px 0 rgba(255,255,255,0.75);
+  }
+  .dark .glass-hover:hover {
+    border-color: rgba(217, 119, 87, 0.3);
+    box-shadow:
+      0 28px 60px -24px rgba(0,0,0,0.7),
+      inset 0 1px 0 rgba(255,255,255,0.06);
+  }
+
+  /* Nav item glass active */
+  .nav-item-active {
+    background: linear-gradient(135deg, #d97757 0%, #b95536 100%);
+    box-shadow: 0 10px 28px -10px rgba(217, 119, 87, 0.55), inset 0 1px 0 rgba(255,255,255,0.25);
+  }
+
+  .nav-item-hover {
+    background: rgba(217, 119, 87, 0.08);
+  }
+  .dark .nav-item-hover {
+    background: rgba(217, 119, 87, 0.1);
+  }
+}
+
+/* ── AMBIENT AURORA BACKGROUND ── */
+.aurora-bg {
+  position: fixed;
+  inset: 0;
+  z-index: -10;
+  overflow: hidden;
+  pointer-events: none;
+}
+.aurora-bg::before,
+.aurora-bg::after {
+  content: '';
+  position: absolute;
+  border-radius: 9999px;
+  filter: blur(90px);
+  opacity: 0.55;
+  will-change: transform;
+}
+.aurora-bg::before {
+  width: 620px;
+  height: 620px;
+  top: -180px;
+  right: -120px;
+  background: radial-gradient(circle, rgba(217, 119, 87, 0.4) 0%, transparent 65%);
+  animation: float 9s ease-in-out infinite;
+}
+.aurora-bg::after {
+  width: 560px;
+  height: 560px;
+  bottom: -160px;
+  left: -120px;
+  background: radial-gradient(circle, rgba(224, 160, 120, 0.32) 0%, transparent 65%);
+  animation: float 11s ease-in-out infinite reverse;
+}
+.dark .aurora-bg::before {
+  background: radial-gradient(circle, rgba(217, 119, 87, 0.28) 0%, transparent 65%);
+}
+.dark .aurora-bg::after {
+  background: radial-gradient(circle, rgba(160, 74, 46, 0.22) 0%, transparent 65%);
+}
+
+/* prefers-reduced-motion: matikan animasi untuk aksesibilitas */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
 }

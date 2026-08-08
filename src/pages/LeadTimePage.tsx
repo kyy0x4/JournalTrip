@@ -677,7 +677,7 @@ const reasonDelay = config.stage !== 'unknown' ? (getReasonDelay(item, config.st
                 onClickDelay={() => setDelayPopup({ title: 'IN-PDC DELAY REASONS', reasons: (stats?.inpdc?.reasons || []).filter((r:any) => { const l=r.name.toLowerCase(); return !l.includes('delay')&&!l.includes('advance')&&!l.includes('ontime')&&l!=='ok'&&l!=='-'&&l!=='tidak ada'; }), delayCount: stats?.inpdc?.chartData?.find((d:any)=>d.name==='Delay')?.value||0 })}
                 onSelect={(r: any) => { setReasonFilter(r.name); setCurrentPage(1); }}
               />
-              <ReasonSection title="DELIVERY DELAYS" stageStats={stats?.delivery} color="text-red-500"
+              <ReasonSection title="DELIVERY DELAYS" stageStats={stats?.delivery} color="text-rose-500"
                 onClickDelay={() => setDelayPopup({ title: 'DELIVERY DELAY REASONS', reasons: (stats?.delivery?.reasons || []).filter((r:any) => { const l=r.name.toLowerCase(); return !l.includes('delay')&&!l.includes('advance')&&!l.includes('ontime')&&l!=='ok'&&l!=='-'&&l!=='tidak ada'; }), delayCount: stats?.delivery?.chartData?.find((d:any)=>d.name==='Delay')?.value||0 })}
                 onSelect={(r: any) => { setReasonFilter(r.name); setCurrentPage(1); }}
               />
@@ -821,7 +821,7 @@ const reasonDelay = config.stage !== 'unknown' ? (getReasonDelay(item, config.st
                           <div className={`text-[10px] sm:text-[12px] font-black ${counts.advance > 0 ? 'text-amber-500' : 'text-slate-300 dark:text-slate-700'}`}>{counts.advance}</div>
                         </td>
                         <td className="px-4 py-4">
-                          <div className={`text-[10px] sm:text-[12px] font-black ${counts.delay > 0 ? 'text-red-500' : 'text-slate-300 dark:text-slate-700'}`}>{counts.delay}</div>
+                          <div className={`text-[10px] sm:text-[12px] font-black ${counts.delay > 0 ? 'text-rose-500' : 'text-slate-300 dark:text-slate-700'}`}>{counts.delay}</div>
                         </td>
                       </tr>
                     );
@@ -871,12 +871,12 @@ const reasonDelay = config.stage !== 'unknown' ? (getReasonDelay(item, config.st
                             <div className="flex justify-between items-start">
                               <span className="text-[10px] font-black text-slate-700 dark:text-slate-300 uppercase tracking-widest leading-tight pr-4">{r.name}</span>
                               <div className="text-right shrink-0">
-                                <span className="block text-sm font-black text-red-500">{r.value}</span>
+                                <span className="block text-sm font-black text-rose-500">{r.value}</span>
                                 <span className="block text-[8px] font-bold text-slate-400">{pct}%</span>
                               </div>
                             </div>
                             <div className="w-full h-1 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden mt-1">
-                              <div className="h-full bg-red-500 rounded-full transition-all" style={{ width: `${pct}%` }} />
+                              <div className="h-full bg-rose-500 rounded-full transition-all" style={{ width: `${pct}%` }} />
                             </div>
                           </button>
                         );
@@ -910,7 +910,7 @@ const reasonDelay = config.stage !== 'unknown' ? (getReasonDelay(item, config.st
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6">
                     <div className="min-w-0 flex-1">
                       <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-1">Occurrences</p>
-                      <p className="text-xl font-black text-red-600 tracking-tighter truncate">{selectedReason.count} <span className="text-[9px] text-slate-400 ml-1 uppercase tracking-widest">Trips</span></p>
+                      <p className="text-xl font-black text-rose-600 tracking-tighter truncate">{selectedReason.count} <span className="text-[9px] text-slate-400 ml-1 uppercase tracking-widest">Trips</span></p>
                     </div>
                     <button onClick={() => { setReasonFilter(selectedReason.reason); setSelectedReason(null); setCurrentPage(1); }} className="w-full sm:w-auto px-6 py-3 bg-blue-600 text-white rounded-xl sm:rounded-2xl text-[10px] font-black shadow-lg shadow-blue-600/20 uppercase tracking-widest">View Trips</button>
                   </div>
@@ -962,7 +962,7 @@ function ReasonSection({ title, stageStats, color, onClickDelay, onSelect }: {
 
   const totalReasons = actualReasons.reduce((acc, r: any) => acc + r.value, 0);
   const CHART_COLORS = [
-    '#ef4444', // red-500
+    '#d97757', // claude amber-500 (primary reason)
     '#3b82f6', // blue-500
     '#10b981', // emerald-500
     '#f59e0b', // amber-500
@@ -1044,7 +1044,7 @@ function ReasonSection({ title, stageStats, color, onClickDelay, onSelect }: {
                             <div className="bg-slate-900/95 backdrop-blur-md p-3 rounded-xl shadow-xl border border-slate-800 max-w-[200px]">
                               <p className="text-[10px] font-black text-white uppercase tracking-widest break-words">{payload[0].name}</p>
                               <div className="flex items-center gap-2 mt-1">
-                                <p className="text-xs font-black text-red-400">{payload[0].value} Kasus</p>
+                                <p className="text-xs font-black text-rose-400">{payload[0].value} Kasus</p>
                                 <p className="text-[9px] font-bold text-slate-400">({pct}%)</p>
                               </div>
                             </div>
@@ -1167,16 +1167,16 @@ function StatusCard({ onClick, active, type, eff, count, prevCount, prevPeriod }
   return (
     <button onClick={onClick} className={`w-full rounded-xl border transition-all text-left shadow-sm p-3 overflow-hidden shrink-0 ${
       active
-        ? (isDelay ? 'bg-red-600 text-white border-red-700' : isAdvance ? 'bg-amber-500 text-white border-amber-600' : 'bg-emerald-500 text-white border-emerald-600')
-        : (isDelay ? 'bg-red-50 dark:bg-red-500/5 border-red-100 dark:border-red-500/20' : isAdvance ? 'bg-amber-50 dark:bg-amber-500/5 border-amber-100 dark:border-amber-500/20' : 'bg-emerald-50 dark:bg-emerald-500/5 border-emerald-100 dark:border-emerald-500/20')
+        ? (isDelay ? 'bg-rose-600 text-white border-rose-700' : isAdvance ? 'bg-amber-500 text-white border-amber-600' : 'bg-emerald-500 text-white border-emerald-600')
+        : (isDelay ? 'bg-rose-50 dark:bg-rose-500/5 border-rose-100 dark:border-rose-500/20' : isAdvance ? 'bg-amber-50 dark:bg-amber-500/5 border-amber-100 dark:border-amber-500/20' : 'bg-emerald-50 dark:bg-emerald-500/5 border-emerald-100 dark:border-emerald-500/20')
     }`}>
       <div className="flex items-center justify-between mb-1">
         <span className={`block text-[6px] sm:text-[8px] font-black uppercase tracking-widest truncate ${
-          active ? 'opacity-90' : (isDelay ? 'text-red-500' : isAdvance ? 'text-amber-500' : 'text-emerald-600')
+          active ? 'opacity-90' : (isDelay ? 'text-rose-500' : isAdvance ? 'text-amber-500' : 'text-emerald-600')
         }`}>{type}</span>
         {prevCount !== undefined && (
           <div className={`flex items-center gap-0.5 text-[7px] font-black ${
-            active ? 'text-white/80' : (isGood ? 'text-emerald-500' : isBad ? 'text-red-500' : 'text-slate-400')
+            active ? 'text-white/80' : (isGood ? 'text-emerald-500' : isBad ? 'text-rose-500' : 'text-slate-400')
           }`}>
             {isUp ? <ChevronUp className="w-2.5 h-2.5" /> : delta < 0 ? <ChevronDown className="w-2.5 h-2.5" /> : null}
             {percentage.toFixed(0)}%
@@ -1187,7 +1187,7 @@ function StatusCard({ onClick, active, type, eff, count, prevCount, prevPeriod }
       <div className="text-[14px] sm:text-2xl font-black tracking-tighter leading-none truncate">{count ?? 0}</div>
       {/* Efficiency % — small below */}
       <div className={`text-[8px] sm:text-[10px] font-bold mt-0.5 tracking-widest truncate ${
-        active ? 'opacity-80' : (isDelay ? 'text-red-400' : isAdvance ? 'text-amber-400' : 'text-emerald-500')
+        active ? 'opacity-80' : (isDelay ? 'text-rose-400' : isAdvance ? 'text-amber-400' : 'text-emerald-500')
       }`}>{eff || '0%'}</div>
       {prevCount !== undefined && (
         <div className="text-[6px] opacity-40 font-black uppercase tracking-tighter mt-1 truncate shrink-0">{prevPeriod || 'vs prev'}</div>
@@ -1201,7 +1201,7 @@ function StatusBadge({ status, label }: { status: string, label: string }) {
   const isWarning = status === 'Advance';
   const isDanger = status === 'Delay';
   return (
-    <div className={`inline-flex flex-col px-1.5 py-0.5 rounded-md text-[7px] sm:text-[10px] font-black tracking-widest border transition-all shadow-sm overflow-hidden ${isSuccess ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20' : isWarning ? 'bg-amber-500/10 text-amber-600 border-amber-500/20' : isDanger ? 'bg-red-500/10 text-red-600 border-red-500/20' : 'bg-slate-100 text-slate-400 border-slate-200'}`}>
+    <div className={`inline-flex flex-col px-1.5 py-0.5 rounded-md text-[7px] sm:text-[10px] font-black tracking-widest border transition-all shadow-sm overflow-hidden ${isSuccess ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20' : isWarning ? 'bg-amber-500/10 text-amber-600 border-amber-500/20' : isDanger ? 'bg-rose-500/10 text-rose-600 border-rose-500/20' : 'bg-slate-100 text-slate-400 border-slate-200'}`}>
       <span className="uppercase truncate max-w-10 sm:max-w-none">{status}</span>
       <span className="text-[6px] sm:text-[8px] opacity-60 truncate max-w-10 sm:max-w-20 font-black uppercase mt-0.5">{label || '-'}</span>
     </div>

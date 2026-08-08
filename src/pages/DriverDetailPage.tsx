@@ -543,11 +543,11 @@ export default function DriverDetailPage() {
                       return (
                         <>
                           <div className="flex flex-col">
-                            <span className="inline-flex items-center text-xs font-black text-red-550 dark:text-red-400 uppercase tracking-wider gap-1">
+                            <span className="inline-flex items-center text-xs font-black text-rose-550 dark:text-rose-400 uppercase tracking-wider gap-1">
                               <ShieldAlert className="w-4 h-4" />
                               DITAHAN (NG)
                             </span>
-                            <span className="text-[9px] text-red-400 font-bold mt-0.5">{tenko.details}</span>
+                            <span className="text-[9px] text-rose-400 font-bold mt-0.5">{tenko.details}</span>
                           </div>
                           <button
                             onClick={() => setShowTenkoModal(true)}
@@ -614,12 +614,12 @@ export default function DriverDetailPage() {
                       return (
                         <>
                           <div className="flex flex-col">
-                            <span className="inline-flex items-center text-xs font-black text-red-550 dark:text-red-400 uppercase tracking-wider gap-1">
+                            <span className="inline-flex items-center text-xs font-black text-rose-550 dark:text-rose-400 uppercase tracking-wider gap-1">
                               <XCircle className="w-4 h-4" />
                               RUSAK (NG)
                             </span>
                             {p2hRecord?.catatan && (
-                              <span className="text-[9px] text-red-400 font-bold mt-0.5 truncate max-w-[150px]">{p2hRecord.catatan}</span>
+                              <span className="text-[9px] text-rose-400 font-bold mt-0.5 truncate max-w-[150px]">{p2hRecord.catatan}</span>
                             )}
                           </div>
                           <button
@@ -675,7 +675,7 @@ export default function DriverDetailPage() {
                       );
                     } else if (gpStatus === 'BLOCKED') {
                       return (
-                        <div className="w-full inline-flex items-center justify-center px-4 py-2.5 rounded-xl text-[10px] font-black bg-red-500/15 text-red-550 dark:text-red-400 border border-red-500/20 uppercase tracking-widest cursor-default">
+                        <div className="w-full inline-flex items-center justify-center px-4 py-2.5 rounded-xl text-[10px] font-black bg-rose-500/15 text-rose-550 dark:text-rose-400 border border-rose-500/20 uppercase tracking-widest cursor-default">
                           Tidak Siap Operasional
                         </div>
                       );
@@ -730,7 +730,7 @@ export default function DriverDetailPage() {
                 </div>
                 <p className="text-xs font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">Status SIM</p>
               </div>
-              <p className={`text-2xl font-black ${driver.simStatus === 'Valid' ? 'text-green-600' : 'text-red-500'}`}>{driver.simStatus?.toUpperCase()}</p>
+              <p className={`text-2xl font-black ${driver.simStatus === 'Valid' ? 'text-green-600' : 'text-rose-500'}`}>{driver.simStatus?.toUpperCase()}</p>
             </div>
 
             <div className="p-6 bg-slate-50 dark:bg-slate-800/50 rounded-3xl shadow-sm">
@@ -851,7 +851,7 @@ export default function DriverDetailPage() {
                               {latest.kelulusan === 'L' ? (
                                 <span className="inline-block mt-1 px-2 py-0.5 bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 rounded text-[10px] font-black tracking-wider">LULUS (L)</span>
                               ) : latest.kelulusan === 'TL' ? (
-                                <span className="inline-block mt-1 px-2 py-0.5 bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400 rounded text-[10px] font-black tracking-wider">TIDAK LULUS (TL)</span>
+                                <span className="inline-block mt-1 px-2 py-0.5 bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400 rounded text-[10px] font-black tracking-wider">TIDAK LULUS (TL)</span>
                               ) : (
                                 <span className="inline-block mt-1 px-2 py-0.5 bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-400 rounded text-[10px] font-black tracking-wider">BELUM DIKETAHUI</span>
                               )}
@@ -902,7 +902,7 @@ export default function DriverDetailPage() {
                       </div>
                       <div className="p-3 bg-white/5 rounded-2xl border border-white/10 text-right">
                         <p className="text-[8px] font-black text-slate-500 uppercase mb-1">Trend Status</p>
-                        <p className={`text-xs font-black ${ecoViolations.length > 5 ? 'text-red-400' : 'text-emerald-400'}`}>
+                        <p className={`text-xs font-black ${ecoViolations.length > 5 ? 'text-rose-400' : 'text-emerald-400'}`}>
                           {ecoViolations.length > 5 ? 'High Risk' : 'Healthy'}
                         </p>
                       </div>
@@ -1208,13 +1208,13 @@ export default function DriverDetailPage() {
                           <td className="px-6 py-4">
                             <span className={`inline-flex items-center px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-tighter ${
                               v.jenis_peringatan.toLowerCase().includes('akselerasi') ? 'bg-orange-100 text-orange-700 border border-orange-200' :
-                              v.jenis_peringatan.toLowerCase().includes('perlambatan') ? 'bg-red-100 text-red-700 border border-red-200' :
+                              v.jenis_peringatan.toLowerCase().includes('perlambatan') ? 'bg-rose-100 text-rose-700 border border-rose-200' :
                               v.jenis_peringatan.toLowerCase().includes('kecepatan') ? 'bg-amber-100 text-amber-700 border border-amber-200' :
                               'bg-blue-100 text-blue-700 border border-blue-200'
                             }`}>
                               <div className={`w-1.5 h-1.5 rounded-full mr-2 ${
                                 v.jenis_peringatan.toLowerCase().includes('akselerasi') ? 'bg-orange-500' :
-                                v.jenis_peringatan.toLowerCase().includes('perlambatan') ? 'bg-red-500' :
+                                v.jenis_peringatan.toLowerCase().includes('perlambatan') ? 'bg-rose-500' :
                                 v.jenis_peringatan.toLowerCase().includes('kecepatan') ? 'bg-amber-500' :
                                 'bg-blue-500'
                               }`} />
@@ -1375,8 +1375,8 @@ export default function DriverDetailPage() {
                   </div>
 
                   {isHipertensi(tenkoForm.sistolik, tenkoForm.diastolik) && (
-                    <div className="p-4 rounded-2xl border border-red-200 dark:border-red-900/40 bg-red-50/50 dark:bg-red-950/20 space-y-3">
-                      <p className="text-[10px] font-black text-red-600 dark:text-red-400 uppercase tracking-widest">
+                    <div className="p-4 rounded-2xl border border-rose-200 dark:border-rose-900/40 bg-rose-50/50 dark:bg-rose-950/20 space-y-3">
+                      <p className="text-[10px] font-black text-rose-600 dark:text-rose-400 uppercase tracking-widest">
                         Hipertensi Terdeteksi — Isi Faktor
                       </p>
                       <div>
@@ -1466,7 +1466,7 @@ export default function DriverDetailPage() {
                         onClick={() => setTenkoForm(prev => ({ ...prev, fatigue: 'LELAH' }))}
                         className={`flex-1 py-3 px-4 rounded-xl border text-[10px] font-black uppercase tracking-wider transition-all ${
                           tenkoForm.fatigue === 'LELAH'
-                            ? 'bg-red-500/10 border-red-500 text-red-650'
+                            ? 'bg-rose-500/10 border-rose-500 text-rose-650'
                             : 'bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-400'
                         }`}
                       >
@@ -1563,7 +1563,7 @@ export default function DriverDetailPage() {
                         onClick={() => setP2HForm(prev => ({ ...prev, status: 'NG' }))}
                         className={`flex-1 py-4 px-6 rounded-2xl flex flex-col items-center justify-center border transition-all ${
                           p2hForm.status === 'NG'
-                            ? 'bg-red-500/15 border-red-500 text-red-600 font-black shadow-lg shadow-red-500/10'
+                            ? 'bg-rose-500/15 border-rose-500 text-rose-600 font-black shadow-lg shadow-rose-500/10'
                             : 'bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-400 font-bold hover:bg-slate-100/50'
                         }`}
                       >

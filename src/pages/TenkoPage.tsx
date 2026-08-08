@@ -373,9 +373,9 @@ export default function TenkoPage({ isTAM = false }: { isTAM?: boolean }) {
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <StatCard icon={Activity} label="Total Checkups" value={crossSummary?.totalCheckups || 0} sub={hasActiveCrossFilter ? 'Filtered results' : 'Drivers verified'} color="text-blue-500" bgColor="bg-blue-500/10" />
-        <StatCard icon={Heart} label="Abnormal Tensi" value={(crossSummary?.tensi.hipertensi || 0) + (crossSummary?.tensi.hipotensi || 0)} sub="Requires monitoring" color="text-red-500" bgColor="bg-red-500/10" trend={crossSummary ? `${((((crossSummary.tensi.hipertensi + crossSummary.tensi.hipotensi) / (crossSummary.totalCheckups || 1)) || 0) * 100).toFixed(1)}%` : '0%'} />
+        <StatCard icon={Heart} label="Abnormal Tensi" value={(crossSummary?.tensi.hipertensi || 0) + (crossSummary?.tensi.hipotensi || 0)} sub="Requires monitoring" color="text-rose-500" bgColor="bg-rose-500/10" trend={crossSummary ? `${((((crossSummary.tensi.hipertensi + crossSummary.tensi.hipotensi) / (crossSummary.totalCheckups || 1)) || 0) * 100).toFixed(1)}%` : '0%'} />
         <StatCard icon={Thermometer} label="Body Temp Alert" value={crossSummary?.suhu.demam || 0} sub="Over 37.5°C" color="text-orange-500" bgColor="bg-orange-500/10" />
-        <StatCard icon={Wine} label="Alcohol Check" value={crossSummary?.alkohol.positif || 0} sub="Positive cases" color={crossSummary?.alkohol.positif ? 'text-red-600' : 'text-emerald-500'} bgColor={crossSummary?.alkohol.positif ? 'bg-red-500/10' : 'bg-emerald-500/10'} />
+        <StatCard icon={Wine} label="Alcohol Check" value={crossSummary?.alkohol.positif || 0} sub="Positive cases" color={crossSummary?.alkohol.positif ? 'text-rose-600' : 'text-emerald-500'} bgColor={crossSummary?.alkohol.positif ? 'bg-rose-500/10' : 'bg-emerald-500/10'} />
       </div>
 
       {/* Metric chart pagination */}
@@ -655,7 +655,7 @@ export default function TenkoPage({ isTAM = false }: { isTAM?: boolean }) {
                           } : {}}
                           transition={{ repeat: Infinity, duration: 3, ease: "easeInOut" }}
                           className={`px-2 py-1 rounded-lg text-[10px] font-black ${
-                            isHipertensi(r.sistolik, r.diastolik) ? 'bg-red-500/10 text-red-500 shadow-lg shadow-red-500/20' : (r.sistolik < 90 || r.diastolik < 60) ? 'bg-amber-500/10 text-amber-500 shadow-lg shadow-amber-500/20' : 'bg-emerald-500/10 text-emerald-500'
+                            isHipertensi(r.sistolik, r.diastolik) ? 'bg-rose-500/10 text-rose-500 shadow-lg shadow-rose-500/20' : (r.sistolik < 90 || r.diastolik < 60) ? 'bg-amber-500/10 text-amber-500 shadow-lg shadow-amber-500/20' : 'bg-emerald-500/10 text-emerald-500'
                           }`}>
                           {r.tensi}
                         </motion.span>
@@ -663,7 +663,7 @@ export default function TenkoPage({ isTAM = false }: { isTAM?: boolean }) {
                       </div>
                       {isHipertensi(r.sistolik, r.diastolik) && (
                         <div className="max-w-[220px]">
-                          <p className="text-[9px] font-black text-red-500/80 uppercase tracking-wide">
+                          <p className="text-[9px] font-black text-rose-500/80 uppercase tracking-wide">
                             {getHipertensiTypeLabel(r.sistolik, r.diastolik)}
                           </p>
                           {isLoggedIn ? (
@@ -709,7 +709,7 @@ export default function TenkoPage({ isTAM = false }: { isTAM?: boolean }) {
                       <motion.span 
                         animate={{ opacity: [1, 0.4, 1] }}
                         transition={{ repeat: Infinity, duration: 4, ease: "easeInOut" }}
-                        className="flex items-center justify-end gap-1.5 text-[10px] font-black text-red-500 uppercase"
+                        className="flex items-center justify-end gap-1.5 text-[10px] font-black text-rose-500 uppercase"
                       >
                         <AlertCircle className="w-3.5 h-3.5" /> UNFIT
                       </motion.span>
@@ -834,7 +834,7 @@ function StatCard({ icon: Icon, label, value, sub, color, bgColor, trend }: any)
 
 function StatusBadge({ label, ok }: { label: string, ok: boolean }) {
   return (
-    <div className={`px-2 py-1 rounded-lg flex items-center gap-1 border ${ok ? 'bg-emerald-500/5 border-emerald-500/20 text-emerald-500' : 'bg-red-500/5 border-red-500/20 text-red-500'}`}>
+    <div className={`px-2 py-1 rounded-lg flex items-center gap-1 border ${ok ? 'bg-emerald-500/5 border-emerald-500/20 text-emerald-500' : 'bg-rose-500/5 border-rose-500/20 text-rose-500'}`}>
       <span className="text-[8px] font-black uppercase">{label}</span>{ok ? <CheckCircle2 className="w-2.5 h-2.5" /> : <XCircle className="w-2.5 h-2.5" />}
     </div>
   );

@@ -314,13 +314,13 @@ export default function TrainingDashboardPage() {
                           <td className="py-3 text-right font-semibold text-slate-700 dark:text-slate-300">{m.peserta || '—'}</td>
                           <td className="py-3 text-right">
                             {m.peserta > 0 ? (
-                              <span className={`font-black text-xs px-2 py-0.5 rounded-lg ${m.pctPeserta >= 80 ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' : m.pctPeserta >= 50 ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400' : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'}`}>{m.pctPeserta}%</span>
+                              <span className={`font-black text-xs px-2 py-0.5 rounded-lg ${m.pctPeserta >= 80 ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' : m.pctPeserta >= 50 ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400' : 'bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400'}`}>{m.pctPeserta}%</span>
                             ) : <span className="text-slate-300 dark:text-slate-600">—</span>}
                           </td>
                           <td className="py-3 text-right font-semibold text-emerald-600 dark:text-emerald-400">{m.lulus || '—'}</td>
                           <td className="py-3 text-right">
                             {m.peserta > 0 ? (
-                              <span className={`font-black text-xs px-2 py-0.5 rounded-lg ${m.pctLulus >= 80 ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' : m.pctLulus >= 60 ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400' : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'}`}>{m.pctLulus}%</span>
+                              <span className={`font-black text-xs px-2 py-0.5 rounded-lg ${m.pctLulus >= 80 ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' : m.pctLulus >= 60 ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400' : 'bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400'}`}>{m.pctLulus}%</span>
                             ) : <span className="text-slate-300 dark:text-slate-600">—</span>}
                           </td>
                         </tr>
@@ -385,12 +385,12 @@ export default function TrainingDashboardPage() {
                   <p className="text-3xl font-black text-emerald-600 dark:text-emerald-400">{q1Compliant}</p>
                   <p className="text-xs text-emerald-600/70 dark:text-emerald-400/70 mt-1">≥1 kali dalam 3 bulan terakhir</p>
                 </div>
-                <div className="bg-red-50 dark:bg-red-900/20 rounded-3xl p-5 border border-red-100 dark:border-red-900/40">
-                  <p className="text-[10px] font-black text-red-600 dark:text-red-400 uppercase tracking-widest mb-2 flex items-center gap-1.5">
+                <div className="bg-rose-50 dark:bg-rose-900/20 rounded-3xl p-5 border border-rose-100 dark:border-rose-900/40">
+                  <p className="text-[10px] font-black text-rose-600 dark:text-rose-400 uppercase tracking-widest mb-2 flex items-center gap-1.5">
                     <AlertTriangle className="w-3 h-3" /> Perlu Perhatian
                   </p>
-                  <p className="text-3xl font-black text-red-600 dark:text-red-400">{q1Total - q1Compliant}</p>
-                  <p className="text-xs text-red-600/70 dark:text-red-400/70 mt-1">Belum ikut training 3 bulan terakhir</p>
+                  <p className="text-3xl font-black text-rose-600 dark:text-rose-400">{q1Total - q1Compliant}</p>
+                  <p className="text-xs text-rose-600/70 dark:text-rose-400/70 mt-1">Belum ikut training 3 bulan terakhir</p>
                 </div>
               </div>
 
@@ -415,7 +415,7 @@ export default function TrainingDashboardPage() {
                         )}
                         <p className="flex-1 font-semibold text-sm text-slate-900 dark:text-white truncate">{d.name}</p>
                         <span className="font-black text-xs text-slate-500">{d.count}× hadir</span>
-                        <span className={`text-[10px] font-black px-2.5 py-1 rounded-lg ${d.compliant ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'}`}>
+                        <span className={`text-[10px] font-black px-2.5 py-1 rounded-lg ${d.compliant ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' : 'bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400'}`}>
                           {d.compliant ? '✓ OK' : '✗ Kurang'}
                         </span>
                       </div>

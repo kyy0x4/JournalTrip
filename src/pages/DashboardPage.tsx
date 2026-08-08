@@ -381,7 +381,7 @@ export default function DashboardPage({ isTAM = false }: DashboardProps) {
                 />
               </div>
               <span className="text-[9px] font-black text-emerald-600 dark:text-emerald-400 shrink-0">{ltStats.rate}% OnTime</span>
-              <span className="text-[9px] font-black text-red-500 shrink-0">{fmtNum(ltStats.delay)} Delay</span>
+              <span className="text-[9px] font-black text-rose-500 shrink-0">{fmtNum(ltStats.delay)} Delay</span>
             </div>
           )}
         </div>
@@ -448,9 +448,9 @@ export default function DashboardPage({ isTAM = false }: DashboardProps) {
                   <p className="text-[9px] font-black text-emerald-600 uppercase tracking-widest">Normal</p>
                   <p className="text-2xl font-black text-emerald-700 dark:text-emerald-400">{fmtNum(tenkoStats.normal)}</p>
                 </div>
-                <div className="p-3 bg-red-50 dark:bg-red-500/10 rounded-2xl">
-                  <p className="text-[9px] font-black text-red-500 uppercase tracking-widest">Abnormal</p>
-                  <p className="text-2xl font-black text-red-600 dark:text-red-400">{fmtNum(tenkoStats.abnormal)}</p>
+                <div className="p-3 bg-rose-50 dark:bg-rose-500/10 rounded-2xl">
+                  <p className="text-[9px] font-black text-rose-500 uppercase tracking-widest">Abnormal</p>
+                  <p className="text-2xl font-black text-rose-600 dark:text-rose-400">{fmtNum(tenkoStats.abnormal)}</p>
                 </div>
                 <div className="p-3 bg-slate-50 dark:bg-slate-800/50 rounded-2xl">
                   <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Total Checkup</p>

@@ -93,7 +93,7 @@ function StatCard({ label, value, prevValue, icon: Icon, iconColor, iconBg, acti
         </div>
         {prevValue !== undefined && (
           <div className="flex flex-col items-end">
-            <div className={`flex items-center gap-0.5 text-[10px] font-black ${isUp ? 'text-emerald-500' : delta < 0 ? 'text-red-500' : 'text-slate-400'}`}>
+            <div className={`flex items-center gap-0.5 text-[10px] font-black ${isUp ? 'text-emerald-500' : delta < 0 ? 'text-rose-500' : 'text-slate-400'}`}>
               {isUp ? <ChevronUp className="w-3 h-3" /> : delta < 0 ? <ChevronDown className="w-3 h-3" /> : null}
               {percentage.toFixed(1)}%
             </div>
@@ -781,10 +781,10 @@ export default function EcoDrivingPage({ isTAM = false }: { isTAM?: boolean }) {
                 value={countType('kecepatan')} 
                 prevValue={countType('kecepatan', typePrevViolations)}
                 icon={Activity}
-                iconColor="text-red-500"
-                iconBg="bg-red-50 dark:bg-red-900/20"
+                iconColor="text-rose-500"
+                iconBg="bg-rose-50 dark:bg-rose-900/20"
                 active={cfType === 'Kecepatan'}
-                activeColor="border-red-500"
+                activeColor="border-rose-500"
                 onClick={() => setCfType(cfType === 'Kecepatan' ? null : 'Kecepatan')}
               />
               <StatCard 
@@ -1021,7 +1021,7 @@ export default function EcoDrivingPage({ isTAM = false }: { isTAM?: boolean }) {
                                 <span className={`inline-block px-2 py-0.5 rounded-md text-[9px] font-black uppercase mb-2 ${
                                   iconKey.includes('Akselerasi') ? 'bg-blue-500 text-white' :
                                   iconKey.includes('Perlambatan') ? 'bg-amber-500 text-white' :
-                                  iconKey.includes('Kecepatan') ? 'bg-red-500 text-white' :
+                                  iconKey.includes('Kecepatan') ? 'bg-rose-500 text-white' :
                                   'bg-purple-500 text-white'
                                 }`}>{v.jenis_peringatan}</span>
                                 <p className="text-[10px] text-slate-500 font-bold line-clamp-2">{v.lokasi}</p>
@@ -1069,7 +1069,7 @@ export default function EcoDrivingPage({ isTAM = false }: { isTAM?: boolean }) {
                             >
                               <td className="px-4 py-3">
                                 <span className={`inline-flex items-center justify-center w-6 h-6 rounded-lg text-[10px] font-black ${
-                                  rankNum === 1 ? 'bg-red-100 text-red-600' :
+                                  rankNum === 1 ? 'bg-rose-100 text-rose-600' :
                                   rankNum === 2 ? 'bg-orange-100 text-orange-600' :
                                   rankNum === 3 ? 'bg-amber-100 text-amber-600' :
                                   'bg-slate-100 dark:bg-slate-800 text-slate-500'
@@ -1159,7 +1159,7 @@ export default function EcoDrivingPage({ isTAM = false }: { isTAM?: boolean }) {
                             <div className={`px-2 py-0.5 rounded text-[7px] font-black uppercase tracking-wider ${
                               v.jenis_peringatan?.includes('Akselerasi') ? 'bg-blue-500 text-white' :
                               v.jenis_peringatan?.includes('Perlambatan') ? 'bg-amber-500 text-white' :
-                              v.jenis_peringatan?.includes('Kecepatan') ? 'bg-red-500 text-white' :
+                              v.jenis_peringatan?.includes('Kecepatan') ? 'bg-rose-500 text-white' :
                               'bg-purple-500 text-white'
                             }`}>
                               {v.jenis_peringatan}
@@ -1175,7 +1175,7 @@ export default function EcoDrivingPage({ isTAM = false }: { isTAM?: boolean }) {
                               {v.pengemudi}
                             </p>
                             <div className="flex items-start gap-2 text-slate-500 dark:text-slate-400">
-                              <MapPin className="w-3 h-3 shrink-0 mt-0.5 text-red-500/50" />
+                              <MapPin className="w-3 h-3 shrink-0 mt-0.5 text-rose-500/50" />
                               <p className="text-[9px] font-bold leading-relaxed line-clamp-2 italic">
                                 {v.lokasi}
                               </p>

@@ -502,7 +502,7 @@ export default function RouteAnalyticsPage({ isTAM = false }: { isTAM?: boolean 
                     <div className="flex items-center gap-4 mt-4 text-[10px] font-semibold text-slate-500">
                       <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-orange-200 inline-block" /> Cepat (&lt;2j)</span>
                       <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-orange-400 inline-block" /> Lama (2–4j)</span>
-                      <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-red-400 inline-block" /> Sangat Lama (&gt;4j)</span>
+                      <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-rose-400 inline-block" /> Sangat Lama (&gt;4j)</span>
                     </div>
                   </div>
                 )}
@@ -546,7 +546,7 @@ export default function RouteAnalyticsPage({ isTAM = false }: { isTAM?: boolean 
                   <div className="flex items-center gap-4 mt-4 text-[10px] font-semibold text-slate-500">
                     <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-blue-400 inline-block" /> Normal (&lt;5j)</span>
                     <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-amber-400 inline-block" /> Lambat (5–8j)</span>
-                    <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-red-400 inline-block" /> Lama (&gt;8j)</span>
+                    <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-rose-400 inline-block" /> Lama (&gt;8j)</span>
                   </div>
                 </div>
 
@@ -594,7 +594,7 @@ export default function RouteAnalyticsPage({ isTAM = false }: { isTAM?: boolean 
                   <div className="flex items-center gap-4 mt-4 text-[10px] font-semibold text-slate-500">
                     <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-emerald-400 inline-block" /> Normal (&lt;6j)</span>
                     <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-amber-400 inline-block" /> Lambat (6–10j)</span>
-                    <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-red-400 inline-block" /> Lama (&gt;10j)</span>
+                    <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-rose-400 inline-block" /> Lama (&gt;10j)</span>
                   </div>
                 </div>
 
@@ -747,7 +747,7 @@ export default function RouteAnalyticsPage({ isTAM = false }: { isTAM?: boolean 
                     <div className="flex items-center gap-4 mt-4 text-[10px] font-semibold text-slate-500">
                       <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-indigo-400 inline-block" /> Normal (&lt;5j)</span>
                       <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-amber-400 inline-block" /> Lambat (5–8j)</span>
-                      <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-red-400 inline-block" /> Lama (&gt;8j)</span>
+                      <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-rose-400 inline-block" /> Lama (&gt;8j)</span>
                     </div>
                   </div>
                 )}
@@ -794,7 +794,7 @@ export default function RouteAnalyticsPage({ isTAM = false }: { isTAM?: boolean 
                     <div className="flex items-center gap-4 mt-4 text-[10px] font-semibold text-slate-500">
                       <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-blue-400 inline-block" /> Normal (&lt;3j)</span>
                       <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-amber-400 inline-block" /> Lambat (3–5j)</span>
-                      <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-red-400 inline-block" /> Lama (&gt;5j)</span>
+                      <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-rose-400 inline-block" /> Lama (&gt;5j)</span>
                     </div>
                   </div>
                 )}
@@ -820,7 +820,7 @@ export default function RouteAnalyticsPage({ isTAM = false }: { isTAM?: boolean 
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                   {[
                     { label: 'Total Ritase', value: ngoroData.length.toString(), color: 'text-slate-900 dark:text-white' },
-                    { label: 'Pelanggaran Rute', value: ngoroViolations.toString() + ' ritase', color: ngoroViolations > 0 ? 'text-red-600 dark:text-red-400' : 'text-emerald-600 dark:text-emerald-400' },
+                    { label: 'Pelanggaran Rute', value: ngoroViolations.toString() + ' ritase', color: ngoroViolations > 0 ? 'text-rose-600 dark:text-rose-400' : 'text-emerald-600 dark:text-emerald-400' },
                     { label: 'Avg. KM166 → KM575A', value: fmtDur((() => { const d = ngoroData.filter(x => x.segB > 0 && x.segD > 0); return d.length > 0 ? (d.reduce((s, x) => s + x.segB + x.segC + x.segD, 0) / d.length) : 0; })()), color: 'text-blue-600 dark:text-blue-400' },
                     { label: 'Avg. Total Lead Time', value: fmtDur((() => { const d = ngoroData.filter(x => x.totalLT > 0); return d.length > 0 ? (d.reduce((s, x) => s + x.totalLT, 0) / d.length) : 0; })()), color: 'text-amber-600 dark:text-amber-400' },
                   ].map(c => (
@@ -835,10 +835,10 @@ export default function RouteAnalyticsPage({ isTAM = false }: { isTAM?: boolean 
 
                 {/* ── Pelanggaran Rute Alert ── */}
                 {ngoroViolations > 0 && (
-                  <div className="flex items-start gap-3 bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-900/50 rounded-2xl p-4">
-                    <AlertTriangle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
+                  <div className="flex items-start gap-3 bg-rose-50 dark:bg-rose-950/20 border border-rose-200 dark:border-rose-900/50 rounded-2xl p-4">
+                    <AlertTriangle className="w-5 h-5 text-rose-500 flex-shrink-0 mt-0.5" />
                     <div>
-                      <p className="text-sm font-black text-red-700 dark:text-red-400 mb-1">{ngoroViolations} Trip dengan Pelanggaran Rute</p>
+                      <p className="text-sm font-black text-rose-700 dark:text-rose-400 mb-1">{ngoroViolations} Trip dengan Pelanggaran Rute</p>
                     </div>
                   </div>
                 )}

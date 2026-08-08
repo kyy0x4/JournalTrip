@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import {
   X, User, Search,
   PanelLeftClose, PanelLeft,
-  Route, ChevronRight, BarChart3,
+  Route, BarChart3,
   Activity, Ticket, ClipboardCheck,
   Timer, LayoutDashboard, GraduationCap, ShieldCheck
 } from 'lucide-react';
@@ -85,6 +85,10 @@ export default function Sidebar({
 
   const showDriverPanel = location.pathname === '/';
 
+  const activeStyle = (active: boolean) => active
+    ? 'nav-item-active text-white'
+    : 'text-slate-500 dark:text-slate-400 hover:bg-white/60 dark:hover:bg-white/[0.06] hover:text-slate-800 dark:hover:text-slate-100';
+
   return (
     <>
       {/* Mobile Backdrop */}
@@ -95,29 +99,43 @@ export default function Sidebar({
         />
       )}
 
-      <aside className={`
-        fixed top-0 left-0 z-50 h-full bg-white dark:bg-[#0f172a] border-r border-slate-200/60 dark:border-slate-800/60
-        transition-all duration-500 ease-in-out flex flex-col shadow-xl md:shadow-sm
-        ${isOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
-        ${isCollapsed ? 'w-18' : 'w-64'}
-      `}>
+      <motion.aside
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.4, ease: 'easeOut' }}
+        className={`
+          fixed top-4 bottom-4 left-4 z-50 glass-panel rounded-3xl
+          flex flex-col overflow-hidden
+          transition-all duration-500 ease-[cubic-bezier(0.22,1,0.36,1)]
+          ${isOpen ? 'translate-x-0' : '-translate-x-[120%] md:translate-x-0'}
+          ${isCollapsed ? 'w-[76px]' : 'w-[260px]'}
+        `}
+      >
+        {/* Gradient accent top strip */}
+        <div className="absolute top-0 inset-x-0 h-px bg-linear-to-r from-transparent via-red-400/50 to-transparent" />
 
         {/* ── BRAND HEADER ── */}
-        <div className={`h-19 flex items-center border-b border-slate-100 dark:border-slate-800 shrink-0 ${isCollapsed ? 'justify-center px-0' : 'px-4 gap-3'}`}>
-          <div className="w-15 h-15 shrink-0 flex items-center justify-center overflow-hidden p-1">
-              <img 
-                src={isCollapsed ? Logo1 : Logo} 
-                alt="K Line" 
-                className="w-full h-full object-contain transition-all duration-500" 
+        <div className={`h-19 flex items-center border-b border-slate-200/40 dark:border-white/[0.06] shrink-0 ${isCollapsed ? 'justify-center px-0' : 'px-5 gap-3'}`}>
+          <div className="w-12 h-12 shrink-0 flex items-center justify-center overflow-hidden p-1">
+              <img
+                src={isCollapsed ? Logo1 : Logo}
+                alt="K Line"
+                className="w-full h-full object-contain transition-all duration-500"
                 title="K Line"
               />
             </div>
           {!isCollapsed && (
             <div className="flex-1 overflow-hidden">
-              <p className="text-lg font-black text-red-600 dark:text-red-500 truncate tracking-tight">K Line</p>
+              <p className="text-lg font-black text-slate-900 dark:text-white truncate tracking-tight">
+                K Line
+                <span className="text-red-500">.</span>
+              </p>
+              <p className="text-[9px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-[0.18em] truncate">
+                Fleet Monitoring
+              </p>
             </div>
           )}
-          <button onClick={onClose} className="md:hidden p-1.5 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-lg text-slate-400">
+          <button onClick={onClose} className="md:hidden p-1.5 hover:bg-white/60 dark:hover:bg-white/10 rounded-lg text-slate-400">
             <X className="w-5 h-5" />
           </button>
         </div>
@@ -128,8 +146,8 @@ export default function Sidebar({
             <p className="text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest px-3 mb-3">Main Menu</p>
           )}
           {NAV_ITEMS.filter(item => isTAM ? !['p2h', 'gatepass'].includes(item.id) : true).map(item => {
-            const active = item.path === '/' 
-              ? location.pathname === '/' 
+            const active = item.path === '/'
+              ? location.pathname === '/'
               : location.pathname.startsWith(item.path);
 
             return (
@@ -141,9 +159,7 @@ export default function Sidebar({
                 className={`
                   w-full flex items-center rounded-xl transition-all duration-200 group relative
                   ${isCollapsed ? 'justify-center p-3' : 'gap-3 px-3 py-2.5'}
-                  ${active
-                    ? 'bg-red-600 text-white shadow-lg shadow-red-500/20'
-                    : 'text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800/50 hover:text-slate-800 dark:hover:text-slate-200'}
+                  ${activeStyle(active)}
                 `}
               >
                 <span className={`shrink-0 transition-transform ${active ? 'scale-100' : 'group-hover:scale-110'}`}>
@@ -153,9 +169,16 @@ export default function Sidebar({
                   <>
                     <div className="text-left flex-1 overflow-hidden">
                       <p className="text-sm font-bold truncate leading-tight">{item.label}</p>
-                      <p className={`text-[9px] truncate ${active ? 'text-red-200' : 'text-slate-400 dark:text-slate-500'}`}>{item.sub}</p>
+                      <p className={`text-[9px] truncate ${active ? 'text-white/70' : 'text-slate-400 dark:text-slate-500'}`}>{item.sub}</p>
                     </div>
-                    {active && <ChevronRight className="w-4 h-4 text-red-300 dark:text-red-400 shrink-0" />}
+                    {active && (
+                      <motion.span
+                        initial={{ scale: 0 }}
+                        animate={{ scale: 1 }}
+                        transition={{ type: 'spring', stiffness: 500, damping: 20 }}
+                        className="w-1.5 h-1.5 rounded-full bg-white/90 shadow-[0_0_8px_rgba(255,255,255,0.8)] shrink-0"
+                      />
+                    )}
                   </>
                 )}
                 {isCollapsed && (
@@ -174,9 +197,7 @@ export default function Sidebar({
               className={`
                 w-full flex items-center rounded-xl transition-all duration-200 group relative
                 ${isCollapsed ? 'justify-center p-3' : 'gap-3 px-3 py-2.5'}
-                ${location.pathname.startsWith('/admin-drivers')
-                  ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/20'
-                  : 'text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800/50 hover:text-slate-800 dark:hover:text-slate-200'}
+                ${activeStyle(location.pathname.startsWith('/admin-drivers'))}
               `}
             >
               <span className={`shrink-0 transition-transform ${location.pathname.startsWith('/admin-drivers') ? 'scale-100' : 'group-hover:scale-110'}`}>
@@ -186,9 +207,16 @@ export default function Sidebar({
                 <>
                   <div className="text-left flex-1 overflow-hidden">
                     <p className="text-sm font-bold truncate leading-tight">Admin Foto</p>
-                    <p className={`text-[9px] truncate ${location.pathname.startsWith('/admin-drivers') ? 'text-blue-200' : 'text-slate-400 dark:text-slate-500'}`}>Manajemen Driver</p>
+                    <p className={`text-[9px] truncate ${location.pathname.startsWith('/admin-drivers') ? 'text-white/70' : 'text-slate-400 dark:text-slate-500'}`}>Manajemen Driver</p>
                   </div>
-                  {location.pathname.startsWith('/admin-drivers') && <ChevronRight className="w-4 h-4 text-blue-300 dark:text-blue-400 shrink-0" />}
+                  {location.pathname.startsWith('/admin-drivers') && (
+                    <motion.span
+                      initial={{ scale: 0 }}
+                      animate={{ scale: 1 }}
+                      transition={{ type: 'spring', stiffness: 500, damping: 20 }}
+                      className="w-1.5 h-1.5 rounded-full bg-white/90 shrink-0"
+                    />
+                  )}
                 </>
               )}
               {isCollapsed && (
@@ -207,7 +235,7 @@ export default function Sidebar({
               initial={{ opacity: 0, height: 0 }}
               animate={{ opacity: 1, height: 'auto' }}
               exit={{ opacity: 0, height: 0 }}
-              className="flex flex-col flex-1 overflow-hidden border-t border-slate-100 dark:border-slate-800 mt-2"
+              className="flex flex-col flex-1 overflow-hidden border-t border-slate-200/40 dark:border-white/[0.06] mt-2"
             >
               {/* Driver Panel Header */}
               {!isCollapsed && (
@@ -220,14 +248,14 @@ export default function Sidebar({
                       placeholder="Cari driver..."
                       value={searchQuery}
                       onChange={e => setSearchQuery(e.target.value)}
-                      className="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-700 rounded-xl py-2 pl-9 pr-3 text-xs font-medium outline-none focus:ring-2 focus:ring-red-500/10 focus:border-red-400 dark:focus:border-red-500/50 transition-all text-slate-900 dark:text-slate-100"
+                      className="w-full bg-white/60 dark:bg-white/[0.05] border border-slate-200/60 dark:border-white/[0.08] rounded-xl py-2 pl-9 pr-3 text-xs font-medium outline-none focus:ring-2 focus:ring-red-500/15 focus:border-red-400/40 transition-all text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-600"
                     />
                   </div>
                 </div>
               )}
 
               {/* Driver List */}
-              <motion.div 
+              <motion.div
                 variants={containerVariants}
                 initial="hidden"
                 animate="show"
@@ -251,21 +279,25 @@ export default function Sidebar({
                           w-full flex items-center rounded-xl transition-all group relative
                           ${isCollapsed ? 'justify-center p-2' : 'gap-3 p-2.5'}
                           ${selectedDriverId === driver.id
-                            ? 'bg-red-50 dark:bg-red-500/10 ring-1 ring-red-100 dark:ring-red-500/20 text-red-700 dark:text-red-300'
-                            : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800/50 hover:text-slate-900 dark:hover:text-slate-100'}
+                            ? 'bg-white/70 dark:bg-white/[0.06] ring-1 ring-red-500/25 text-red-700 dark:text-red-300 shadow-sm'
+                            : 'text-slate-600 dark:text-slate-400 hover:bg-white/50 dark:hover:bg-white/[0.04] hover:text-slate-900 dark:hover:text-slate-100'}
                         `}
                       >
                         <div className="relative shrink-0">
                           {driver.avatar ? (
                             <img src={driver.avatar} alt={driver.name}
-                              className="w-9 h-9 rounded-full object-cover border-2 border-white dark:border-slate-800 shadow-sm" />
+                              className="w-9 h-9 rounded-full object-cover border-2 border-white/80 dark:border-white/10 shadow-sm" />
                           ) : (
-                            <div className="w-9 h-9 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center border-2 border-white dark:border-slate-800 shadow-sm">
+                            <div className="w-9 h-9 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center border-2 border-white/80 dark:border-white/10 shadow-sm">
                               <User className="w-4 h-4 text-slate-400 dark:text-slate-500" />
                             </div>
                           )}
                           {selectedDriverId === driver.id && (
-                            <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-red-500 rounded-full border-2 border-white dark:border-slate-800" />
+                            <motion.div
+                              initial={{ scale: 0 }}
+                              animate={{ scale: 1 }}
+                              className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-red-500 rounded-full border-2 border-white dark:border-slate-900 shadow-[0_0_6px_rgba(217,119,87,0.8)]"
+                            />
                           )}
                         </div>
                         {!isCollapsed && (
@@ -304,17 +336,15 @@ export default function Sidebar({
                   </>
                 )}
               </motion.div>
-              </motion.div>
+            </motion.div>
           )}
         </AnimatePresence>
 
-
-
         {/* ── COLLAPSE TOGGLE (Desktop only) ── */}
-        <div className="p-3 border-t border-slate-100 dark:border-slate-800 shrink-0 hidden md:block">
+        <div className="p-3 border-t border-slate-200/40 dark:border-white/[0.06] shrink-0 hidden md:block">
           <button
             onClick={onToggleCollapse}
-            className="w-full flex items-center justify-center p-2.5 hover:bg-slate-50 dark:hover:bg-slate-800/50 rounded-xl text-slate-400 dark:text-slate-500 transition-colors group"
+            className="w-full flex items-center justify-center p-2.5 hover:bg-white/60 dark:hover:bg-white/[0.06] rounded-xl text-slate-400 dark:text-slate-500 transition-colors group"
             title={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
           >
             {isCollapsed
@@ -323,7 +353,7 @@ export default function Sidebar({
             }
           </button>
         </div>
-      </aside>
+      </motion.aside>
     </>
   );
 }

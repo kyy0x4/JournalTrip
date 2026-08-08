@@ -243,7 +243,7 @@ export default function AdminDriversPage() {
         {toast && (
           <motion.div
             initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}
-            className={`fixed top-5 left-1/2 -translate-x-1/2 z-[9999] px-5 py-3 rounded-2xl shadow-xl font-bold text-sm text-white ${toast.type === 'success' ? 'bg-emerald-500' : 'bg-red-500'}`}
+            className={`fixed top-5 left-1/2 -translate-x-1/2 z-[9999] px-5 py-3 rounded-2xl shadow-xl font-bold text-sm text-white ${toast.type === 'success' ? 'bg-emerald-500' : 'bg-rose-500'}`}
           >
             {toast.message}
           </motion.div>
@@ -524,7 +524,7 @@ export default function AdminDriversPage() {
                   <button
                     onClick={handleDeletePhoto}
                     disabled={isUploading}
-                    className="flex-1 flex justify-center items-center gap-2 bg-red-100 text-red-700 hover:bg-red-200 dark:bg-red-900/30 dark:text-red-400 dark:hover:bg-red-900/50 py-2.5 rounded-xl font-bold text-sm transition-colors disabled:opacity-50"
+                    className="flex-1 flex justify-center items-center gap-2 bg-rose-100 text-rose-700 hover:bg-rose-200 dark:bg-rose-900/30 dark:text-rose-400 dark:hover:bg-rose-900/50 py-2.5 rounded-xl font-bold text-sm transition-colors disabled:opacity-50"
                   >
                     <Trash2 className="w-4 h-4" /> Hapus
                   </button>
@@ -614,7 +614,7 @@ export default function AdminDriversPage() {
                   <button
                     type="button"
                     onClick={() => setEditState(s => ({ ...s, sim_expiry: '' }))}
-                    className="mt-1.5 text-[10px] font-bold text-slate-400 hover:text-red-500 transition-colors"
+                    className="mt-1.5 text-[10px] font-bold text-slate-400 hover:text-rose-500 transition-colors"
                   >
                     {editState.sim_expiry ? 'Hapus tanggal SIM' : 'Belum diisi'}
                   </button>

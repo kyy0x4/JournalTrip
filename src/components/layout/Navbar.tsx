@@ -188,12 +188,11 @@ export default function Navbar({
 
   return (
     <nav className={`
-      fixed top-0 z-50 right-0
-      bg-white/90 dark:bg-[#0f172a]/95 backdrop-blur-md
-      border-b border-slate-200/60 dark:border-slate-800/60
-      h-16 flex items-center px-4 md:px-6 shadow-sm
+      fixed top-4 z-50 right-4
+      glass-panel rounded-2xl
+      h-16 flex items-center px-3 md:px-5
       transition-all duration-500 gap-4
-      ${isSidebarCollapsed ? 'md:left-18' : 'md:left-64'} left-0
+      ${isSidebarCollapsed ? 'md:left-[100px]' : 'md:left-[284px]'} left-0
     `}>
 
       {/* ── Hamburger (mobile) ── */}
@@ -509,9 +508,9 @@ export default function Navbar({
                       <Link
                         to="/admin-drivers"
                         onClick={() => setIsProfileOpen(false)}
-                        className="flex items-center gap-3 px-3 py-2.5 w-full rounded-xl transition-colors text-xs font-black uppercase tracking-wider text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-500/10 mb-0.5"
+                        className="flex items-center gap-3 px-3 py-2.5 w-full rounded-xl transition-colors text-xs font-black uppercase tracking-wider text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 mb-0.5"
                       >
-                        <ShieldCheck className="w-4 h-4 shrink-0 text-blue-500" />
+                        <ShieldCheck className="w-4 h-4 shrink-0 text-red-500" />
                         Admin Foto Driver
                       </Link>
                     )}

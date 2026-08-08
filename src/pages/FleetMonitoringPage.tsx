@@ -371,7 +371,7 @@ export default function FleetMonitoringPage({ isTAM = false }: { isTAM?: boolean
                               {item.status}
                             </span>
                             {item.isDelayed && (
-                              <span className="text-[9px] font-black text-red-600 animate-pulse flex items-center gap-1">
+                              <span className="text-[9px] font-black text-rose-600 animate-pulse flex items-center gap-1">
                                 <Clock className="w-2.5 h-2.5" />
                                 Rit {item.delayRitase} Berpotensi Delay
                               </span>
@@ -423,7 +423,7 @@ export default function FleetMonitoringPage({ isTAM = false }: { isTAM?: boolean
                           {item.status}
                         </span>
                         {item.isDelayed && (
-                          <span className="text-[8px] font-black text-red-600 animate-pulse flex items-center gap-1">
+                          <span className="text-[8px] font-black text-rose-600 animate-pulse flex items-center gap-1">
                             <Clock className="w-2.5 h-2.5" />
                             Rit {item.delayRitase} Delay
                           </span>
@@ -547,7 +547,7 @@ export default function FleetMonitoringPage({ isTAM = false }: { isTAM?: boolean
                                 </div>
                                 <div className="flex flex-col gap-1 items-end">
                                   {trip.isDelayed && (
-                                    <span className="bg-red-50 text-red-600 px-2 py-0.5 rounded text-[7px] font-black uppercase animate-pulse">Berpotensi Delay</span>
+                                    <span className="bg-rose-50 text-rose-600 px-2 py-0.5 rounded text-[7px] font-black uppercase animate-pulse">Berpotensi Delay</span>
                                   )}
                                   {trip.isChange && (
                                     <span className="bg-amber-50 text-amber-600 px-2 py-0.5 rounded text-[7px] font-black uppercase">Change Shift</span>
@@ -562,7 +562,7 @@ export default function FleetMonitoringPage({ isTAM = false }: { isTAM?: boolean
                                 </div>
                                 <div>
                                   <p className="text-[8px] font-black text-slate-400 uppercase mb-1">Actual In PDC</p>
-                                  <p className={`text-xs font-black ${trip.isDelayed ? 'text-red-600' : (isCompleted && !trip.actual_in_pdc ? 'text-slate-400' : 'text-emerald-600')}`}>
+                                  <p className={`text-xs font-black ${trip.isDelayed ? 'text-rose-600' : (isCompleted && !trip.actual_in_pdc ? 'text-slate-400' : 'text-emerald-600')}`}>
                                     {trip.actual_in_pdc || (trip.actual_unloading || trip.actual_out_pdc ? 'Bypassed' : 'Waiting...')}
                                   </p>
                                 </div>

@@ -116,11 +116,11 @@ export default function DriversPage() {
 
               <div className="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-100 dark:border-slate-800">
                 <div className="flex items-center gap-2">
-                  <Shield className={`w-3.5 h-3.5 ${driver.simStatus === 'Valid' ? 'text-green-500' : 'text-red-500'}`} />
+                  <Shield className={`w-3.5 h-3.5 ${driver.simStatus === 'Valid' ? 'text-green-500' : 'text-rose-500'}`} />
                   <span className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase">SIM Status</span>
                 </div>
                 <span className={`text-[10px] font-black uppercase ${
-                  driver.simStatus === 'Valid' ? 'text-green-600 dark:text-green-400' : 'text-red-500'
+                  driver.simStatus === 'Valid' ? 'text-green-600 dark:text-green-400' : 'text-rose-500'
                 }`}>
                   {driver.simStatus || '--'}
                 </span>

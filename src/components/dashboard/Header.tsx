@@ -26,7 +26,7 @@ export default function Header({ driver, selectedDate, onDateChange, selectedAre
       >
         <div className="flex flex-wrap items-center gap-3">
           {/* Area Switcher Premium - Pembersihan total outline/border */}
-          <div className="bg-slate-200/50 dark:bg-slate-800/50 p-1 rounded-2xl flex items-center shadow-inner backdrop-blur-sm">
+          <div className="glass-card p-1 rounded-2xl flex items-center gap-1">
             {(isTAM ? ['JBK', 'NGORO', 'SUMATERA'] : areas).map((area) => (
                 <motion.button
                   key={area}
@@ -39,7 +39,7 @@ export default function Header({ driver, selectedDate, onDateChange, selectedAre
                   {selectedArea === area && (
                     <motion.div
                       layoutId="activeArea"
-                      className="absolute inset-0 bg-red-600 dark:bg-red-700 rounded-xl"
+                      className="absolute inset-0 claude-gradient rounded-xl shadow-[0_8px_20px_-6px_rgba(217,119,87,0.5)]"
                       transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
                     />
                   )}
@@ -52,37 +52,44 @@ export default function Header({ driver, selectedDate, onDateChange, selectedAre
 
       {driver ? (
         <motion.div 
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          className="bg-white dark:bg-slate-900/50 border border-slate-200/50 dark:border-slate-800/50 rounded-3xl p-6 md:p-8 shadow-sm relative overflow-hidden"
+          initial={{ opacity: 0, scale: 0.95, y: 12 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          transition={{ type: 'spring', stiffness: 260, damping: 26 }}
+          className="glass-card glass-hover rounded-3xl p-6 md:p-8 relative overflow-hidden"
         >
           {/* Decorative background element */}
-          <div className="absolute top-0 right-0 w-64 h-64 bg-red-50/50 dark:bg-red-900/10 rounded-full blur-3xl -mr-20 -mt-20 z-0" />
+          <div className="absolute top-0 right-0 w-72 h-72 bg-red-50/60 dark:bg-red-900/10 rounded-full blur-3xl -mr-20 -mt-20 z-0" />
+          <div className="absolute bottom-0 left-10 w-40 h-40 bg-orange-50/40 dark:bg-orange-500/5 rounded-full blur-3xl -mb-20 z-0" />
           
           <div className="relative z-10">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
               <div className="flex items-center gap-6">
                 <motion.div 
-                  whileHover={{ scale: 1.05 }}
+                  whileHover={{ scale: 1.05, rotate: 2 }}
+                  transition={{ type: 'spring', stiffness: 300, damping: 18 }}
                   className="relative"
                 >
+                  <div className="absolute -inset-1.5 rounded-[26px] bg-linear-to-br from-red-400/40 via-orange-400/30 to-red-600/40 blur-lg opacity-70" />
                   {driver.avatar ? (
                     <img 
                       src={driver.avatar} 
                       alt={driver.name} 
-                      className="w-20 h-20 md:w-24 md:h-24 rounded-3xl object-cover shadow-lg ring-4 ring-white dark:ring-slate-800" 
+                      className="relative w-20 h-20 md:w-24 md:h-24 rounded-3xl object-cover shadow-lg ring-4 ring-white/80 dark:ring-slate-800" 
                     />
                   ) : (
-                    <div className="w-20 h-20 md:w-24 md:h-24 rounded-3xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center shadow-lg ring-4 ring-white dark:ring-slate-800">
+                    <div className="relative w-20 h-20 md:w-24 md:h-24 rounded-3xl bg-white/60 dark:bg-slate-800 flex items-center justify-center shadow-lg ring-4 ring-white/80 dark:ring-slate-800">
                       <User className="w-10 h-10 text-slate-300 dark:text-slate-600" />
                     </div>
+                  )}
+                  {driver.status === 'online' && (
+                    <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-emerald-500 rounded-full border-[3px] border-white dark:border-slate-900 shadow-[0_0_10px_rgba(16,185,129,0.6)]" />
                   )}
                 </motion.div>
                 
                 <div>
                   <h1 className="text-2xl md:text-4xl font-black text-slate-900 dark:text-slate-100 leading-tight mb-1">{driver.name}</h1>
                   <div className="flex flex-wrap items-center gap-3 mt-1">
-                    <span className="bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 px-3 py-1 rounded-full text-xs font-black tracking-tight border border-red-100 dark:border-red-900/30">
+                    <span className="bg-white/60 dark:bg-white/[0.06] backdrop-blur-sm text-red-600 dark:text-red-400 px-3 py-1 rounded-full text-xs font-black tracking-tight border border-slate-200/50 dark:border-white/[0.08]">
                       {driver.noPolisi || '--'}
                     </span>
                     <motion.button 
@@ -92,7 +99,7 @@ export default function Header({ driver, selectedDate, onDateChange, selectedAre
                         driver.simStatus === 'Valid' ? 'bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 border-green-100 dark:border-green-900/30 hover:bg-green-100 dark:hover:bg-green-900/40' : 
                         driver.simStatus === 'Warning' ? 'bg-yellow-50 dark:bg-yellow-900/20 text-yellow-600 dark:text-yellow-400 border-yellow-100 dark:border-yellow-900/30 hover:bg-yellow-100 dark:hover:bg-yellow-900/40' :
                         (!driver.simStatus || driver.simStatus === '--') ? 'bg-slate-50 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border-slate-100 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700' :
-                        'bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 border-red-100 dark:border-red-900/30 hover:bg-red-100 dark:hover:bg-red-900/40'
+                        'bg-rose-50 dark:bg-rose-900/20 text-rose-600 dark:text-rose-400 border-rose-100 dark:border-rose-900/30 hover:bg-rose-100 dark:hover:bg-rose-900/40'
                       }`}
                     >
                       <ShieldCheck className="w-3.5 h-3.5" />
@@ -116,8 +123,10 @@ export default function Header({ driver, selectedDate, onDateChange, selectedAre
           </div>
         </motion.div>
       ) : (
-        <div className="bg-white/50 dark:bg-slate-900/30 border border-dashed border-slate-300 dark:border-slate-700 rounded-3xl p-12 text-center">
-            <User className="w-12 h-12 text-slate-300 dark:text-slate-700 mx-auto mb-4" />
+        <div className="glass-card rounded-3xl p-12 text-center">
+            <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-white/60 dark:bg-white/[0.06] flex items-center justify-center">
+              <User className="w-8 h-8 text-slate-300 dark:text-slate-600" />
+            </div>
             <p className="text-slate-500 dark:text-slate-400 font-bold uppercase tracking-widest text-sm">Pilih Driver untuk melihat detail {selectedArea}</p>
         </div>
       )}
@@ -141,8 +150,8 @@ export default function Header({ driver, selectedDate, onDateChange, selectedAre
             >
               {/* Premium Modal Header */}
               <div className="h-24 md:h-40 bg-slate-900 dark:bg-black relative overflow-hidden">
-                <div className="absolute inset-0 bg-[radial-gradient(at_top_right,rgba(220,38,38,0.2)_0%,transparent_50%)]" />
-                <div className="absolute inset-0 bg-[radial-gradient(at_bottom_left,rgba(51,65,85,0.3)_0%,transparent_50%)]" />
+                <div className="absolute inset-0 bg-[radial-gradient(at_top_right,rgba(217,119,87,0.35)_0%,transparent_50%)]" />
+                <div className="absolute inset-0 bg-[radial-gradient(at_bottom_left,rgba(193,95,60,0.3)_0%,transparent_50%)]" />
                 
                 <div className="absolute inset-0 flex items-center justify-between px-6 md:px-10">
                   <div className="relative z-10">
@@ -188,7 +197,7 @@ export default function Header({ driver, selectedDate, onDateChange, selectedAre
                 <div className="grid grid-cols-2 gap-4 mt-6 md:mt-8">
                   <div className="p-4 md:p-6 bg-slate-50 dark:bg-slate-800/50 rounded-2xl md:rounded-3xl border border-slate-100 dark:border-slate-800">
                     <p className="text-[9px] md:text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-1.5 leading-tight">License Status</p>
-                    <p className={`text-base md:text-xl font-black ${driver.simStatus === 'Valid' ? 'text-green-600 dark:text-green-400' : 'text-red-500 dark:text-red-400'}`}>
+                    <p className={`text-base md:text-xl font-black ${driver.simStatus === 'Valid' ? 'text-green-600 dark:text-green-400' : 'text-rose-500 dark:text-rose-400'}`}>
                       {(!driver.simStatus || driver.simStatus === '--') ? '--' : driver.simStatus.toUpperCase()}
                     </p>
                   </div>

@@ -1,10 +1,11 @@
 import { useState, useEffect, useCallback, lazy, Suspense } from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import Navbar from './components/layout/Navbar';
 import Sidebar from './components/layout/Sidebar';
 import Header from './components/dashboard/Header';
 import RitaseTracking from './components/dashboard/RitaseTracking';
+import LoadingScreen from './components/common/LoadingScreen';
 
 const DriversPage = lazy(() => import('./pages/DriversPage'));
 const DriverDetailPage = lazy(() => import('./pages/DriverDetailPage'));
@@ -167,7 +168,7 @@ export default function App() {
   if (isAuthLoading) {
     return (
       <div className="min-h-screen bg-slate-50 dark:bg-slate-900 flex items-center justify-center">
-        <div className="w-10 h-10 border-4 border-red-500 border-t-transparent rounded-full animate-spin" />
+        <div className="w-10 h-10 border-4 border-red-500/25 border-t-red-500 rounded-full animate-spin" />
       </div>
     );
   }
@@ -177,7 +178,7 @@ export default function App() {
       <BrowserRouter>
         <Suspense fallback={
           <div className="min-h-screen bg-slate-50 dark:bg-slate-900 flex items-center justify-center">
-            <div className="w-10 h-10 border-4 border-red-500 border-t-transparent rounded-full animate-spin" />
+            <div className="w-10 h-10 border-4 border-red-500/25 border-t-red-500 rounded-full animate-spin" />
           </div>
         }>
           <Routes>
@@ -193,14 +194,95 @@ export default function App() {
     localStorage.setItem('manual-theme-set', 'true');
   };
 
-  const sidebarWidth = isSidebarCollapsed ? 'md:ml-[72px]' : 'md:ml-64';
+  const sidebarWidth = isSidebarCollapsed ? 'md:ml-[100px]' : 'md:ml-[284px]';
+
+  const AnimatedRoutes = () => {
+    const location = useLocation();
+    return (
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={location.pathname}
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -8 }}
+          transition={{ duration: 0.22, ease: 'easeOut' }}
+        >
+          <Routes location={location}>
+            <Route path="/" element={
+              <AnimatePresence mode="wait">
+                {isLoading && !selectedDriver ? (
+                  <motion.div
+                    key="skeleton"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    className="space-y-8 animate-pulse"
+                  >
+                    <div className="h-48 bg-white/50 dark:bg-white/[0.04] rounded-4xl border border-slate-200/40 dark:border-white/[0.06]" />
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                      <div className="lg:col-span-2 h-96 bg-white/50 dark:bg-white/[0.04] rounded-4xl border border-slate-200/40 dark:border-white/[0.06]" />
+                      <div className="h-96 bg-white/50 dark:bg-white/[0.04] rounded-4xl border border-slate-200/40 dark:border-white/[0.06]" />
+                    </div>
+                  </motion.div>
+                ) : (
+                  <motion.div
+                    key="content"
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    transition={{ duration: 0.3 }}
+                  >
+                    <Header
+                      driver={selectedDriver as any}
+                      selectedDate={selectedDate}
+                      onDateChange={setSelectedDate}
+                      selectedArea={selectedArea}
+                      onAreaChange={setSelectedArea}
+                      isTAM={isTAM}
+                    />
+                    <div className="mt-6">
+                      <RitaseTracking
+                        selectedDate={selectedDate}
+                        ritases={ritases}
+                        isLoading={isLoading}
+                      />
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            } />
+            <Route path="/dashboard" element={<DashboardPage isTAM={isTAM} />} />
+            <Route path="/monitoring" element={<FleetMonitoringPage isTAM={isTAM} />} />
+            <Route path="/leadtime" element={<LeadTimePage isTAM={isTAM} />} />
+            <Route path="/route-analytics" element={<RouteAnalyticsPage isTAM={isTAM} />} />
+            <Route path="/standar-leadtime" element={<StandarLeadtimePage />} />
+            <Route path="/eco" element={<EcoDrivingPage isTAM={isTAM} />} />
+            <Route path="/carbon" element={<CarbonNeutralPage />} />
+            <Route path="/tenko" element={<TenkoPage isTAM={isTAM} />} />
+            <Route path="/p2h" element={<P2HPage />} />
+            
+            <Route path="/gatepass" element={<GatepassPage />} />
+            <Route path="/drivers" element={<DriversPage />} />
+            <Route path="/drivers/:id" element={<DriverDetailPage />} />
+            <Route path="/training" element={<TrainingDashboardPage />} />
+            <Route path="/kr-schedule" element={<KRDashboardPage />} />
+            <Route path="/admin-drivers" element={isAdmin ? <AdminDriversPage /> : <Navigate to="/" replace />} />
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </motion.div>
+      </AnimatePresence>
+    );
+  };
 
   return (
     <BrowserRouter>
-      <div 
+      <div
         data-theme={theme}
         className={`flex min-h-screen bg-(--bg-app) text-(--text-main) transition-colors duration-300 ${theme === 'dark' ? 'dark' : ''}`}
       >
+        {/* Ambient aurora background */}
+        <div className="aurora-bg" aria-hidden="true" />
+
         <Sidebar
           drivers={drivers}
           selectedDriverId={selectedDriverId}
@@ -234,75 +316,10 @@ export default function App() {
                 isAdmin={isAdmin}
               />
 
-              <main id="pdf-export-content" className="pt-16 min-h-screen">
+              <main id="pdf-export-content" className="pt-24 min-h-screen">
                 <div className="max-w-7xl mx-auto px-4 md:px-6 py-6">
-                  <Suspense fallback={
-                    <div className="flex items-center justify-center h-[50vh]">
-                      <div className="w-10 h-10 border-4 border-red-500 border-t-transparent rounded-full animate-spin"></div>
-                    </div>
-                  }>
-                    <Routes>
-                    <Route path="/" element={
-                      <AnimatePresence mode="wait">
-                        {isLoading && !selectedDriver ? (
-                          <motion.div
-                            key="skeleton"
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            exit={{ opacity: 0 }}
-                            className="space-y-8 animate-pulse"
-                          >
-                            <div className="h-48 bg-slate-100 dark:bg-slate-800/50 rounded-4xl" />
-                            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                              <div className="lg:col-span-2 h-96 bg-slate-100 dark:bg-slate-800/50 rounded-4xl" />
-                              <div className="h-96 bg-slate-100 dark:bg-slate-800/50 rounded-4xl" />
-                            </div>
-                          </motion.div>
-                        ) : (
-                          <motion.div
-                            key="content"
-                            initial={{ opacity: 0, y: 10 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            exit={{ opacity: 0, y: -10 }}
-                            transition={{ duration: 0.3 }}
-                          >
-                            <Header
-                              driver={selectedDriver as any}
-                              selectedDate={selectedDate}
-                              onDateChange={setSelectedDate}
-                              selectedArea={selectedArea}
-                              onAreaChange={setSelectedArea}
-                              isTAM={isTAM}
-                            />
-                            <div className="mt-6">
-                              <RitaseTracking
-                                selectedDate={selectedDate}
-                                ritases={ritases}
-                                isLoading={isLoading}
-                              />
-                            </div>
-                          </motion.div>
-                        )}
-                      </AnimatePresence>
-                    } />
-                    <Route path="/dashboard" element={<DashboardPage isTAM={isTAM} />} />
-                    <Route path="/monitoring" element={<FleetMonitoringPage isTAM={isTAM} />} />
-                    <Route path="/leadtime" element={<LeadTimePage isTAM={isTAM} />} />
-                    <Route path="/route-analytics" element={<RouteAnalyticsPage isTAM={isTAM} />} />
-                    <Route path="/standar-leadtime" element={<StandarLeadtimePage />} />
-                    <Route path="/eco" element={<EcoDrivingPage isTAM={isTAM} />} />
-                    <Route path="/carbon" element={<CarbonNeutralPage />} />
-                    <Route path="/tenko" element={<TenkoPage isTAM={isTAM} />} />
-                    <Route path="/p2h" element={<P2HPage />} />
-                    
-                    <Route path="/gatepass" element={<GatepassPage />} />
-                    <Route path="/drivers" element={<DriversPage />} />
-                    <Route path="/drivers/:id" element={<DriverDetailPage />} />
-                    <Route path="/training" element={<TrainingDashboardPage />} />
-                    <Route path="/kr-schedule" element={<KRDashboardPage />} />
-                    <Route path="/admin-drivers" element={isAdmin ? <AdminDriversPage /> : <Navigate to="/" replace />} />
-                    <Route path="*" element={<Navigate to="/" replace />} />
-                  </Routes>
+                  <Suspense fallback={<LoadingScreen />}>
+                    <AnimatedRoutes />
                   </Suspense>
                 </div>
               </main>
