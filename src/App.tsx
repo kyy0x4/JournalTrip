@@ -28,6 +28,7 @@ import { fetchDashboardData, fetchActiveDrivers, getDefaultOperationalShift } fr
 import { Ritase, Driver } from './types';
 import { supabase } from './lib/supabase';
 import { SpeedInsights } from "@vercel/speed-insights/react"
+import { Analytics } from "@vercel/analytics/react"
 
 export default function App() {
   const [selectedDate, setSelectedDate] = useState(() => new Date(new Date().getTime() - (new Date().getTimezoneOffset() * 60000)).toISOString().split('T')[0]);
@@ -309,6 +310,7 @@ export default function App() {
               <Footer />
             </div>
         <SpeedInsights />
+        <Analytics />
       </div>
     </BrowserRouter>
   );
