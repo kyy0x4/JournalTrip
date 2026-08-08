@@ -238,8 +238,7 @@ export async function fetchDriverProfile(driverId: string, month: string) { // m
   }
 }
 
-export async function fetchDashboardData(selectedDate: string, driverId: string, area: string = 'JBK') {
-  try {
+export async function fetchDashboardData(selectedDate: string, driverId: string, area: string = 'JBK') {  try {
     let query = supabase
       .from('trips')
       .select(`
@@ -490,5 +489,75 @@ export async function fetchFleetMonitoringData(date: string) {
   } catch (e) {
     console.error('CRITICAL ERROR in fetchFleetMonitoringData:', e);
     return [];
+  }
+}
+
+export interface LoginStats {
+  activeFleet: number;
+  onTimeRate: number;
+  liveTrips: number;
+  totalDrivers: number;
+}
+
+export function getMonthRangeWIB(): { start: string; end: string } {
+  const now = new Date();
+  const fmt = (d: Date) =>
+    new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Jakarta', year: 'numeric', month: '2-digit', day: '2-digit' }).format(d);
+
+  const wib = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Jakarta' }));
+  const start = fmt(new Date(wib.getFullYear(), wib.getMonth(), 1));
+  const end = fmt(new Date(wib.getFullYear(), wib.getMonth() + 1, 0));
+  return { start, end };
+}
+
+export async function fetchLoginStats(): Promise<LoginStats> {
+  try {
+    const { start, end } = getMonthRangeWIB();
+
+    // Total drivers
+    const { count: totalDrivers } = await supabase
+      .from('drivers')
+      .select('id', { count: 'exact', head: true });
+
+    // Month trips (broad area query, no area filter so login reflects whole fleet)
+    const { data: monthTrips, error: tripsError } = await supabase
+      .from('trips')
+      .select('driver_id, area, actual_outpool, actual_in_pdc, actual_out_pdc, actual_unloading, plan_dccp, plan_unloading, tanggal')
+      .gte('tanggal', start)
+      .lte('tanggal', end);
+
+    if (tripsError) throw tripsError;
+
+    const trips = monthTrips || [];
+
+    // Active fleet = unique drivers with trips this month
+    const activeFleet = new Set(trips.map((t: any) => t.driver_id)).size;
+
+    // Live trips = already outpool but not yet unloaded (current running trips)
+    const liveTrips = trips.filter((t: any) =>
+      !!t.actual_outpool && !t.actual_unloading
+    ).length;
+
+    // On-time rate = trips with actual_unloading present and <= plan_unloading
+    const finished = trips.filter((t: any) => !!t.actual_unloading);
+    const onTime = finished.filter((t: any) => {
+      const plan = (t.plan_unloading || '').substring(0, 5);
+      const actual = (t.actual_unloading || '').substring(0, 5);
+      return plan && actual && actual <= plan;
+    }).length;
+
+    const onTimeRate = finished.length > 0
+      ? Math.round((onTime / finished.length) * 1000) / 10
+      : 100;
+
+    return {
+      activeFleet,
+      onTimeRate,
+      liveTrips,
+      totalDrivers: totalDrivers || 0,
+    };
+  } catch (e) {
+    console.error('Error fetching login stats:', e);
+    return { activeFleet: 0, onTimeRate: 0, liveTrips: 0, totalDrivers: 0 };
   }
 }

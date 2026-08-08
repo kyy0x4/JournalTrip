@@ -1249,6 +1249,7 @@ export default function EcoDrivingPage({ isTAM = false }: { isTAM?: boolean }) {
                       className="cursor-pointer focus:outline-none"
                       style={{ outline: 'none' }}
                       label={({ x, y, width, height, value, index }) => {
+                        if (index === undefined) return null;
                         const entry = driverBarData[index];
                         if (!entry) return null;
                         return (
