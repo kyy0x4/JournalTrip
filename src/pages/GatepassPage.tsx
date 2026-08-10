@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { useEscapeKey } from '../hooks/useEscapeKey';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
@@ -761,6 +762,7 @@ export default function GatepassPage() {
       />
 
       {/* ── MODAL INPUT P2H MANUAL ── */}
+      {createPortal(
       <AnimatePresence>
         {selectedDriverForP2H && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -871,17 +873,20 @@ export default function GatepassPage() {
             </motion.div>
           </div>
         )}
-      </AnimatePresence>
+      </AnimatePresence>,
+      document.body
+      )}
 
       {/* ── PRINT OVERLAY (loading spinner only) ── */}
-      {activePrintDriver && (
+      {activePrintDriver && createPortal(
         <div className="fixed inset-0 z-50 bg-slate-900/80 backdrop-blur-sm flex flex-col items-center justify-center">
           <div className="bg-white dark:bg-slate-800 p-8 rounded-3xl shadow-2xl flex flex-col items-center border border-slate-200 dark:border-slate-700">
             <div className="w-12 h-12 border-4 border-red-500 border-t-transparent rounded-full animate-spin mb-4" />
             <h2 className="text-lg font-black text-slate-900 dark:text-white uppercase tracking-widest">Mencetak Dokumen...</h2>
             <p className="text-xs text-slate-500 dark:text-slate-400 font-bold mt-2">Sedang menyiapkan {activePrintType === 'ALL' ? '3 lembar PDF' : 'dokumen PDF'}</p>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* ── OFF-SCREEN PRINT DOCUMENTS (fixed, outside overlay, not clipped) ── */}

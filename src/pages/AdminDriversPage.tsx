@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { supabase } from '../lib/supabase';
 import { motion, AnimatePresence } from 'motion/react';
 import {
@@ -472,6 +473,7 @@ export default function AdminDriversPage() {
       </div>
 
       {/* ── Modal ── */}
+      {createPortal(
       <AnimatePresence>
         {modalState.isOpen && modalState.driver && (
           <motion.div
@@ -546,9 +548,12 @@ export default function AdminDriversPage() {
             </motion.div>
           </motion.div>
         )}
-      </AnimatePresence>
+      </AnimatePresence>,
+      document.body
+      )}
 
       {/* ── Modal Edit Data ── */}
+      {createPortal(
       <AnimatePresence>
         {editState.isOpen && editState.driver && (
           <motion.div
@@ -647,7 +652,9 @@ export default function AdminDriversPage() {
             </motion.div>
           </motion.div>
         )}
-      </AnimatePresence>
+      </AnimatePresence>,
+      document.body
+      )}
     </div>
   );
 }

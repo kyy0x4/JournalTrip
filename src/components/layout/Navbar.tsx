@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useEscapeKey } from '../../hooks/useEscapeKey';
 import { Link, useLocation } from 'react-router-dom';
 import {
@@ -11,6 +11,7 @@ import { supabase } from '../../lib/supabase';
 import { jsPDF } from 'jspdf';
 import * as htmlToImage from 'html-to-image';
 import Logo1 from '../../image/logo1.webp';
+import NotificationBell from './NotificationBell';
 
 interface NavbarProps {
   selectedDate: string;
@@ -116,10 +117,25 @@ export default function Navbar({
 }: NavbarProps) {
   const location = useLocation();
   const dateInputRef = useRef<HTMLInputElement>(null);
+  const shiftRef = useRef<HTMLDivElement>(null);
+  const launcherRef = useRef<HTMLDivElement>(null);
+  const profileRef = useRef<HTMLDivElement>(null);
   const [isShiftOpen, setIsShiftOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isLauncherOpen, setIsLauncherOpen] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
+
+  // Close dropdowns when clicking anywhere outside them
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as Node;
+      if (shiftRef.current && !shiftRef.current.contains(target)) setIsShiftOpen(false);
+      if (launcherRef.current && !launcherRef.current.contains(target)) setIsLauncherOpen(false);
+      if (profileRef.current && !profileRef.current.contains(target)) setIsProfileOpen(false);
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   const formatUserName = (email: string) => {
     if (!email) return 'User';
@@ -265,7 +281,7 @@ export default function Navbar({
               </motion.div>
 
               {/* Shift Dropdown */}
-              <div className="relative">
+              <div ref={shiftRef} className="relative">
                 <motion.button
                   whileTap={{ scale: 0.95 }}
                   onClick={() => { setIsShiftOpen(o => !o); setIsLauncherOpen(false); }}
@@ -355,6 +371,9 @@ export default function Navbar({
           )}
         </motion.button>
 
+        {/* ── Notification Bell ── */}
+        <NotificationBell />
+
         {/* ── Theme Toggle ── */}
         <motion.button
           whileTap={{ scale: 0.9, rotate: 15 }}
@@ -376,7 +395,7 @@ export default function Navbar({
         </motion.button>
 
         {/* ── APP LAUNCHER (9-Dots Mega Menu) ── */}
-        <div className="relative">
+        <div ref={launcherRef} className="relative">
           <motion.button
             whileTap={{ scale: 0.9 }}
             onClick={() => { setIsLauncherOpen(o => !o); setIsProfileOpen(false); setIsShiftOpen(false); }}
@@ -395,11 +414,6 @@ export default function Navbar({
               <LayoutGrid className="w-4 h-4" />
             </motion.span>
           </motion.button>
-
-          {/* Backdrop */}
-          {isLauncherOpen && (
-            <div className="fixed inset-0 z-[150]" onClick={() => setIsLauncherOpen(false)} />
-          )}
 
           {/* Mega Menu Dropdown */}
           <AnimatePresence>
@@ -466,7 +480,7 @@ export default function Navbar({
 
         {/* ── Profile Dropdown ── */}
         {session && (
-          <div className="relative">
+          <div ref={profileRef} className="relative">
             <motion.button
               whileTap={{ scale: 0.95 }}
               onClick={() => { setIsProfileOpen(o => !o); setIsLauncherOpen(false); }}
@@ -480,10 +494,6 @@ export default function Navbar({
               </span>
               <ChevronDown className="w-3 h-3 text-slate-400 shrink-0" />
             </motion.button>
-
-            {isProfileOpen && (
-              <div className="fixed inset-0 z-199" onClick={() => setIsProfileOpen(false)} />
-            )}
 
             <AnimatePresence>
               {isProfileOpen && (

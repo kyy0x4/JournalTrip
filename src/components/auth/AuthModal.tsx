@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useEscapeKey } from '../../hooks/useEscapeKey';
 import { supabase } from '../../lib/supabase';
 import { motion, AnimatePresence } from 'motion/react';
@@ -43,6 +44,7 @@ export default function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps
 
 
   return (
+    createPortal(
     <AnimatePresence>
       {isOpen && (
         <div className="fixed inset-0 z-99999 flex items-center justify-center p-4">
@@ -143,9 +145,11 @@ export default function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps
                 className="w-full max-w-[350px] object-contain z-10 mix-blend-multiply drop-shadow-xl"
               />
             </div>
-          </motion.div>
-        </div>
-      )}
-    </AnimatePresence>
+            </motion.div>
+          </div>
+        )}
+    </AnimatePresence>,
+    document.body
+    )
   );
 }

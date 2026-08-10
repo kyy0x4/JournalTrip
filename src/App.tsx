@@ -6,6 +6,8 @@ import Sidebar from './components/layout/Sidebar';
 import Header from './components/dashboard/Header';
 import RitaseTracking from './components/dashboard/RitaseTracking';
 import LoadingScreen from './components/common/LoadingScreen';
+import DelayNotificationStack from './components/common/DelayNotificationStack';
+import { NotificationProvider } from './context/NotificationContext';
 
 const DriversPage = lazy(() => import('./pages/DriversPage'));
 const DriverDetailPage = lazy(() => import('./pages/DriverDetailPage'));
@@ -292,11 +294,12 @@ export default function App() {
   };
 
   return (
-    <BrowserRouter>
-      <div
-        data-theme={theme}
-        className={`flex min-h-screen bg-(--bg-app) text-(--text-main) transition-colors duration-300 ${theme === 'dark' ? 'dark' : ''}`}
-      >
+    <NotificationProvider>
+      <BrowserRouter>
+        <div
+          data-theme={theme}
+          className={`flex min-h-screen bg-(--bg-app) text-(--text-main) transition-colors duration-300 ${theme === 'dark' ? 'dark' : ''}`}
+        >
         {/* Ambient aurora background */}
         <div className="aurora-bg" aria-hidden="true" />
 
@@ -344,6 +347,8 @@ export default function App() {
             </div>
         <SpeedInsights />
       </div>
+        <DelayNotificationStack />
     </BrowserRouter>
+    </NotificationProvider>
   );
 }

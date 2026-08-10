@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { useEscapeKey } from '../hooks/useEscapeKey';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
@@ -1035,6 +1036,7 @@ export default function DriverDetailPage() {
         </div>
       </div>
       {/* ── ECO DRIVING DETAIL MODAL ── */}
+      {createPortal(
       <AnimatePresence>
         {showEcoModal && (
           <div className="fixed inset-0 z-[20000] flex items-center justify-center p-4">
@@ -1284,9 +1286,12 @@ export default function DriverDetailPage() {
             </motion.div>
           </div>
         )}
-      </AnimatePresence>
+      </AnimatePresence>,
+      document.body
+      )}
 
       {/* ── MODAL INPUT TENKO MANUAL ── */}
+      {createPortal(
       <AnimatePresence>
         {showTenkoModal && (
           <div className="fixed inset-0 z-[20000] flex items-center justify-center p-4">
@@ -1496,9 +1501,12 @@ export default function DriverDetailPage() {
             </motion.div>
           </div>
         )}
-      </AnimatePresence>
+      </AnimatePresence>,
+      document.body
+      )}
 
       {/* ── MODAL INPUT P2H MANUAL ── */}
+      {createPortal(
       <AnimatePresence>
         {showP2HModal && (
           <div className="fixed inset-0 z-[20000] flex items-center justify-center p-4">
@@ -1609,7 +1617,9 @@ export default function DriverDetailPage() {
             </motion.div>
           </div>
         )}
-      </AnimatePresence>
+      </AnimatePresence>,
+      document.body
+      )}
 
       <AuthModal 
         isOpen={isAuthModalOpen} 

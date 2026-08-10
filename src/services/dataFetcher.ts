@@ -353,8 +353,25 @@ export async function fetchFleetMonitoringData(date: string) {
       const firstTrip = driverTrips[0];
       const driverInfo = firstTrip.drivers;
       
-      // Helper to compare times (HH:mm)
-      const isLate = (actual: string | null, plan: string | null) => {
+      // Helper: parse "HH:mm" (or "HH:mm:ss") ke menit sejak tengah malam
+      const toMinutes = (s: string | null): number | null => {
+        if (!s || s === '--:--') return null;
+        const m = s.match(/^(\d{1,2}):(\d{2})/);
+        return m ? Number(m[1]) * 60 + Number(m[2]) : null;
+      };
+
+      // Helper: buat Date lokal dari "YYYY-MM-DD" + menit
+      const toLocalDate = (d: string, mins: number): Date => {
+        const [y, m, day] = d.split('-').map(Number);
+        return new Date(y, m - 1, day, Math.floor(mins / 60), mins % 60, 0, 0);
+      };
+
+      const isNightShift = (shift: string) => (shift || '').toUpperCase().includes('NIGHT');
+
+      // Helper to compare times (HH:mm) dengan kesadaran shift malam.
+      // Night shift: plan/actual dini hari (< 12:00) adalah jam besok pagi
+      // (contoh: plan 02:22 pada tanggal 10 = 11 Agustus 02:22), bukan hari yang sama.
+      const isLate = (actual: string | null, plan: string | null, shift: string = '') => {
         if (!plan || plan === '--:--') return false;
         
         // Only check delay if we are looking at TODAY or past dates
@@ -363,11 +380,25 @@ export async function fetchFleetMonitoringData(date: string) {
         const todayStr = new Date(now.getTime() - (offset * 60 * 1000)).toISOString().split('T')[0];
         if (date > todayStr) return false; // Don't flag future dates
 
-        if (!actual || actual === '--:--') {
-          const currentStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
-          return currentStr > plan;
+        const planMin = toMinutes(plan);
+        if (planMin === null) return false;
+
+        let planDate = toLocalDate(date, planMin);
+        if (isNightShift(shift) && planMin < 720) {
+          planDate = new Date(planDate.getTime() + 86400000);
         }
-        return actual > plan;
+
+        const actualMin = toMinutes(actual);
+        if (actualMin === null) {
+          // Belum masuk PDC -> bandingkan jam sekarang vs deadline plan
+          return now > planDate;
+        }
+
+        let actualDate = toLocalDate(date, actualMin);
+        if (isNightShift(shift) && actualMin < 720) {
+          actualDate = new Date(actualDate.getTime() + 86400000);
+        }
+        return actualDate > planDate;
       };
 
       // Find the "current" ritase
@@ -414,7 +445,7 @@ export async function fetchFleetMonitoringData(date: string) {
           ritNo,
           isDelayed:
             // Telat masuk PDC lewat jam plan -> potensi delay
-            isLate(fmtTime(t.actual_in_pdc), fmtTime(t.plan_dccp)),
+            isLate(fmtTime(t.actual_in_pdc), fmtTime(t.plan_dccp), t.shift),
           isChange
         };
       });

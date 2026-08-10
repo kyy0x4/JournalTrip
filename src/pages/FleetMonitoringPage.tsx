@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect, useCallback, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { useEscapeKey } from '../hooks/useEscapeKey';
 import { 
   Truck, 
@@ -17,6 +18,7 @@ import {
 import { motion, AnimatePresence } from 'motion/react';
 import { fetchFleetMonitoringData } from '../services/dataFetcher';
 import { supabase } from '../lib/supabase';
+import { useNotifications } from '../context/NotificationContext';
 
 // Status Types for Fleet
 type FleetStatus = 'In Pool' | 'OTW PDC' | 'In PDC' | 'OTW Destination' | 'At Destination' | 'Finished';
@@ -56,6 +58,11 @@ export default function FleetMonitoringPage({ isTAM = false }: { isTAM?: boolean
     return localDate.toISOString().split('T')[0];
   });
 
+  // ── Notifikasi Berpotensi Delay (global context) ──
+  const { pushNotification } = useNotifications();
+  const seenDelayedRef = useRef<Set<string>>(new Set());
+  const firstLoadRef = useRef(true);
+
   const loadData = useCallback(async () => {
     setIsLoading(true);
     const data = await fetchFleetMonitoringData(selectedDate);
@@ -76,6 +83,32 @@ export default function FleetMonitoringPage({ isTAM = false }: { isTAM?: boolean
     setIsLoading(false);
   }, [selectedDate, isTAM]);
 
+  // Deteksi delay baru: hanya notify yang belum pernah dilihat
+  useEffect(() => {
+    const delayed = fleetData.filter(f => f.isDelayed && f.delayRitase > 0);
+    const keys = new Set(delayed.map(f => `${f.id}:${f.delayRitase}`));
+
+    if (firstLoadRef.current) {
+      firstLoadRef.current = false;
+      seenDelayedRef.current = keys;
+      return;
+    }
+
+    for (const f of delayed) {
+      const key = `${f.id}:${f.delayRitase}`;
+      if (!seenDelayedRef.current.has(key)) {
+        seenDelayedRef.current.add(key);
+        pushNotification({
+          driverName: f.driverName,
+          nopol: f.nopol,
+          ritase: f.delayRitase,
+          area: (f as any).area || '',
+          time: new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }),
+        });
+      }
+    }
+  }, [fleetData, pushNotification]);
+
   useEscapeKey(() => setSelectedDriver(null), !!selectedDriver);
 
   useEffect(() => {
@@ -89,7 +122,15 @@ export default function FleetMonitoringPage({ isTAM = false }: { isTAM?: boolean
       })
       .subscribe();
 
-    return () => { supabase.removeChannel(channel); };
+    // Polling periodik agar momen lewatnya jam plan tetap terdeteksi
+    const interval = window.setInterval(() => {
+      loadData();
+    }, 30000);
+
+    return () => {
+      supabase.removeChannel(channel);
+      window.clearInterval(interval);
+    };
   }, [loadData]);
 
   const getStatusColor = (status: FleetStatus) => {
@@ -466,6 +507,7 @@ export default function FleetMonitoringPage({ isTAM = false }: { isTAM?: boolean
       </div>
 
       {/* ── DRIVER DETAILS MODAL ── */}
+      {createPortal(
       <AnimatePresence>
         {selectedDriver && (
           <div className="fixed inset-0 z-20000 flex items-center justify-center p-4">
@@ -616,7 +658,9 @@ export default function FleetMonitoringPage({ isTAM = false }: { isTAM?: boolean
             </motion.div>
           </div>
         )}
-      </AnimatePresence>
+      </AnimatePresence>,
+      document.body
+      )}
     </div>
   );
 }
