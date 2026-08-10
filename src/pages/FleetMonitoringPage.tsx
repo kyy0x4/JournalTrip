@@ -625,7 +625,7 @@ export default function FleetMonitoringPage({ isTAM = false }: { isTAM?: boolean
                         <li className="flex gap-3">
                           <div className="w-1.5 h-1.5 rounded-full bg-blue-400 mt-1 shrink-0" />
                           <p className="text-[10px] font-bold text-slate-500 leading-relaxed">
-                            <span className="text-slate-800 dark:text-slate-300">Potential Delay:</span> TMMIN — berbasis waktu (RIT 1 harus sudah balik ke PDC, RIT 2 harus sudah sampai PDC sebelum 13:30, berlaku besok untuk night shift). TAM — melewati jam Plan DCCP.
+                            <span className="text-slate-800 dark:text-slate-300">Potential Delay:</span> TMMIN — berbasis waktu, unit harus sudah masuk PDC sebelum trigger. Day shift: RIT 1 = 10:30, RIT 2 = 13:30. Night shift: RIT 1 = 22:30, RIT 2 = 02:30. TAM — melewati jam Plan DCCP.
                           </p>
                         </li>
                         <li className="flex gap-3">

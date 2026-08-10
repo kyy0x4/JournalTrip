@@ -422,15 +422,19 @@ export async function fetchFleetMonitoringData(date: string) {
       const project = (isTAM ? 'TAM' : 'TMMIN') as 'TAM' | 'TMMIN';
 
       // ── Khusus TMMIN: deteksi delay berbasis WAKTU, bukan plan_dccp ──
-      // Deadline 13:30. RIT 1 dianggap ok jika sudah balik ke PDC (actual_in_pdc
-      // rit berikutnya terisi) sebelum 13:30; RIT 2 harus sudah sampai PDC.
-      // Night shift: deadline 13:30 berlaku BESOK (shift malam lewat tengah malam).
+      // Driver harus sudah MASUK PDC sebelum deadline per ritase:
+      //   Day shift  : RIT 1 = 10:30, RIT 2 dst = 13:30 (hari yang sama)
+      //   Night shift: RIT 1 = 22:30 (hari yang sama), RIT 2 dst = 02:30 (besok pagi)
       const now = new Date();
-      const TMMIN_DEADLINE_MIN = 13 * 60 + 30; // 13:30
-      let tmminDeadline = toLocalDate(date, TMMIN_DEADLINE_MIN);
-      if (project === 'TMMIN' && isNightShift(driverTrips[0]?.shift)) {
-        tmminDeadline = new Date(tmminDeadline.getTime() + 86400000);
-      }
+      const tmminIsNight = isNightShift(driverTrips[0]?.shift);
+      const tmminDeadline = (ritNo: number): Date => {
+        if (tmminIsNight) {
+          return ritNo === 1
+            ? toLocalDate(date, 22 * 60 + 30) // 22:30 malam ini
+            : new Date(toLocalDate(date, 2 * 60 + 30).getTime() + 86400000); // 02:30 besok pagi
+        }
+        return toLocalDate(date, ritNo === 1 ? 10 * 60 + 30 : 13 * 60 + 30);
+      };
 
       const enrichedTrips = driverTrips.map((t, index) => {
         const ritNo = index + 1;
@@ -448,17 +452,8 @@ export async function fetchFleetMonitoringData(date: string) {
 
         let isDelayed = false;
         if (project === 'TMMIN') {
-          // Berbasis waktu (khusus TMMIN): aktif setelah lewat deadline 13:30
-          if (now > tmminDeadline) {
-            if (ritNo === 1) {
-              // RIT 1: ok jika sudah balik ke PDC (masuk PDC untuk rit berikutnya)
-              const nextTrip = driverTrips[index + 1];
-              isDelayed = !!nextTrip && !nextTrip.actual_in_pdc;
-            } else {
-              // RIT 2 dst: harus sudah sampai PDC sebelum deadline
-              isDelayed = !t.actual_in_pdc;
-            }
-          }
+          // Berbasis waktu (khusus TMMIN): harus sudah masuk PDC sebelum deadline
+          isDelayed = now > tmminDeadline(ritNo) && !t.actual_in_pdc;
         } else {
           // Area lain (TAM): tetap berbasis plan_dccp
           isDelayed = isLate(fmtTime(t.actual_in_pdc), fmtTime(t.plan_dccp), t.shift);
