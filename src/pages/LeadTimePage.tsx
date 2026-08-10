@@ -27,7 +27,6 @@ const STATUS_COLORS = {
   ontime: '#10b981', // Emerald/Green
   advance: '#f59e0b', // Amber/Yellow
   delay: '#ef4444',   // Red
-  pending: '#3b82f6', // Blue/Sky for Belum Sampai
   navy: '#1e3a8a',
   slate: '#94a3b8'
 };
@@ -211,14 +210,13 @@ export default function LeadTimePage({ isTAM = false }: { isTAM?: boolean }) {
   };
 
   const getTripCounts = (trip: LeadTimeData, filter: string, areaName: string) => {
-    let counts = { onTime: 0, advance: 0, delay: 0, pending: 0 };
+    let counts = { onTime: 0, advance: 0, delay: 0 };
     const stages = filter === 'ALL' ? ['outpool', 'inpdc', 'delivery', 'backtopool'] : [filter];
     stages.forEach(s => {
       const stat = getRowStatus(trip, s);
       if (stat === 'OnTime') counts.onTime++;
       else if (stat === 'Advance') counts.advance++;
       else if (stat === 'Delay') counts.delay++;
-      else if (stat === 'Belum Sampai') counts.pending++;
     });
     return counts;
   };
@@ -279,19 +277,8 @@ export default function LeadTimePage({ isTAM = false }: { isTAM?: boolean }) {
 
         const totalHours = parseDurationHours(durationStr);
 
-        if (!arrived) {
-          // Masih di perjalanan: hitung elapsed hours dari waktu keluar pool (Actual outpool) sampai SEKARANG
-          const departureTime = findExactOrInclude(points, ['keluar pool', 'outpool', 'Actual Exit Pool', 'Actual']);
-          if (departureTime && item.tanggal) {
-            const cleanTime = departureTime.trim().length === 5 ? `${departureTime.trim()}:00` : departureTime.trim();
-            const depDate = new Date(`${item.tanggal}T${cleanTime}`);
-            if (!isNaN(depDate.getTime())) {
-              const elapsedHours = (Date.now() - depDate.getTime()) / (1000 * 60 * 60);
-              return elapsedHours >= threshold ? 'Delay' : 'Belum Sampai';
-            }
-          }
-          return 'Belum Sampai';
-        }
+        // Belum sampai ke tujuan -> tidak masuk kategori delivery/backtopool
+        if (!arrived) return 'Unknown';
 
         // Sudah sampai
         if (totalHours === null) return 'Unknown';
@@ -320,7 +307,7 @@ export default function LeadTimePage({ isTAM = false }: { isTAM?: boolean }) {
     const totalRecords = baseData.length;
 
     const getStageStats = (stage: string, reasonKeywords: string[]) => {
-      const counts: Record<string, number> = { 'OnTime': 0, 'Delay': 0, 'Advance': 0, 'Belum Sampai': 0 };
+      const counts: Record<string, number> = { 'OnTime': 0, 'Delay': 0, 'Advance': 0 };
       let unknown = 0;
       const reasons: Record<string, number> = {};
 
@@ -339,7 +326,7 @@ export default function LeadTimePage({ isTAM = false }: { isTAM?: boolean }) {
       });
 
       // total = hanya yang punya data (exclude Unknown)
-      const total = counts.OnTime + counts.Delay + counts.Advance + counts['Belum Sampai'];
+      const total = counts.OnTime + counts.Delay + counts.Advance;
       const chartData = Object.entries(counts).map(([name, value]) => ({ 
         name, value, percentage: total > 0 ? ((value / total) * 100).toFixed(1) + '%' : '0%'
       }));
@@ -357,7 +344,7 @@ export default function LeadTimePage({ isTAM = false }: { isTAM?: boolean }) {
       const dailyData: Record<string, any> = {};
       baseData.forEach(item => {
         const date = new Date(item.tanggal).toLocaleDateString('id-ID', { day: '2-digit', month: 'short' });
-        if (!dailyData[date]) dailyData[date] = { date, OnTime: 0, Delay: 0, Advance: 0, 'Belum Sampai': 0, Total: 0 };
+        if (!dailyData[date]) dailyData[date] = { date, OnTime: 0, Delay: 0, Advance: 0, Total: 0 };
         const status = getRowStatus(item, stage);
         if (dailyData[date][status] !== undefined) dailyData[date][status]++;
         dailyData[date].Total++;
@@ -381,12 +368,12 @@ export default function LeadTimePage({ isTAM = false }: { isTAM?: boolean }) {
   const prevStats = useMemo(() => {
     if (prevData.length === 0) return null;
     const getStageStats = (stage: string) => {
-      const counts: Record<string, number> = { 'OnTime': 0, 'Delay': 0, 'Advance': 0, 'Belum Sampai': 0 };
+      const counts: Record<string, number> = { 'OnTime': 0, 'Delay': 0, 'Advance': 0 };
       prevData.forEach(item => {
         const status = getRowStatus(item, stage);
         if (counts[status] !== undefined) counts[status]++;
       });
-      const total = counts.OnTime + counts.Delay + counts.Advance + counts['Belum Sampai'];
+      const total = counts.OnTime + counts.Delay + counts.Advance;
       const chartData = Object.entries(counts).map(([name, value]) => ({ 
         name, value, percentage: total > 0 ? ((value / total) * 100).toFixed(1) + '%' : '0%'
       }));
@@ -1144,7 +1131,6 @@ function StageBox({ title, icon, stats, prevStats, eff, stage, activeFilter, set
   const onTimeData = stats?.chartData?.find((d: any) => d.name === 'OnTime');
   const delayData = stats?.chartData?.find((d: any) => d.name === 'Delay');
   const advanceData = stats?.chartData?.find((d: any) => d.name === 'Advance');
-  const pendingData = stats?.chartData?.find((d: any) => d.name === 'Belum Sampai');
   const isInPdc = title === 'IN-PDC';
   const total = stats?.totalRecords || 0;
   
@@ -1185,15 +1171,6 @@ function StageBox({ title, icon, stats, prevStats, eff, stage, activeFilter, set
           prevCount={prevStats?.chartData?.find((d: any) => d.name === 'Delay')?.value}
           prevPeriod={prevPeriod}
         />
-        <StatusCard 
-          active={activeFilter?.stage === stage && activeFilter?.status === 'Belum Sampai'}
-          onClick={() => setActiveFilter({stage, status: 'Belum Sampai'})}
-          type="Belum Sampai" 
-          eff={pendingData?.percentage || '0%'} 
-          count={pendingData?.value} 
-          prevCount={prevStats?.chartData?.find((d: any) => d.name === 'Belum Sampai')?.value}
-          prevPeriod={prevPeriod}
-        />
       </div>
       
       <div className="h-40 sm:h-64 relative flex items-center justify-center mt-auto overflow-hidden w-full max-w-full">
@@ -1204,7 +1181,6 @@ function StageBox({ title, icon, stats, prevStats, eff, stage, activeFilter, set
                 <Cell fill={STATUS_COLORS.ontime} cursor="pointer" onClick={() => setActiveFilter({stage, status: 'OnTime'})} />
                 <Cell fill={STATUS_COLORS.delay} cursor="pointer" onClick={() => setActiveFilter({stage, status: 'Delay'})} />
                 <Cell fill={STATUS_COLORS.advance} cursor="pointer" onClick={() => setActiveFilter({stage, status: 'Advance'})} />
-                <Cell fill={STATUS_COLORS.pending} cursor="pointer" onClick={() => setActiveFilter({stage, status: 'Belum Sampai'})} />
               </Pie>
             </PieChart>
           </ResponsiveContainer>
@@ -1222,22 +1198,21 @@ function StageBox({ title, icon, stats, prevStats, eff, stage, activeFilter, set
 function StatusCard({ onClick, active, type, eff, count, prevCount, prevPeriod }: any) {
   const isDelay = type === 'Delay';
   const isAdvance = type === 'Advance';
-  const isPending = type === 'Belum Sampai';
   const delta = (count || 0) - (prevCount || 0);
   const isUp = delta > 0;
-  const isGood = isDelay ? delta < 0 : (isPending ? delta < 0 : delta > 0);
-  const isBad = isDelay ? delta > 0 : (isPending ? delta > 0 : delta < 0);
+  const isGood = isDelay ? delta < 0 : delta > 0;
+  const isBad = isDelay ? delta > 0 : delta < 0;
   const percentage = !prevCount ? (count > 0 ? 100 : 0) : Math.abs((delta / prevCount) * 100);
 
   return (
     <button onClick={onClick} className={`w-full rounded-xl border transition-all text-left shadow-sm p-3 overflow-hidden shrink-0 ${
       active
-        ? (isDelay ? 'bg-rose-600 text-white border-rose-700' : isAdvance ? 'bg-amber-500 text-white border-amber-600' : isPending ? 'bg-blue-600 text-white border-blue-700' : 'bg-emerald-500 text-white border-emerald-600')
-        : (isDelay ? 'bg-rose-50 dark:bg-rose-500/5 border-rose-100 dark:border-rose-500/20' : isAdvance ? 'bg-amber-50 dark:bg-amber-500/5 border-amber-100 dark:border-amber-500/20' : isPending ? 'bg-blue-50 dark:bg-blue-500/5 border-blue-100 dark:border-blue-500/20' : 'bg-emerald-50 dark:bg-emerald-500/5 border-emerald-100 dark:border-emerald-500/20')
+        ? (isDelay ? 'bg-rose-600 text-white border-rose-700' : isAdvance ? 'bg-amber-500 text-white border-amber-600' : 'bg-emerald-500 text-white border-emerald-600')
+        : (isDelay ? 'bg-rose-50 dark:bg-rose-500/5 border-rose-100 dark:border-rose-500/20' : isAdvance ? 'bg-amber-50 dark:bg-amber-500/5 border-amber-100 dark:border-amber-500/20' : 'bg-emerald-50 dark:bg-emerald-500/5 border-emerald-100 dark:border-emerald-500/20')
     }`}>
       <div className="flex items-center justify-between mb-1">
         <span className={`block text-[6px] sm:text-[8px] font-black uppercase tracking-widest truncate ${
-          active ? 'opacity-90' : (isDelay ? 'text-rose-500' : isAdvance ? 'text-amber-500' : isPending ? 'text-blue-500' : 'text-emerald-600')
+          active ? 'opacity-90' : (isDelay ? 'text-rose-500' : isAdvance ? 'text-amber-500' : 'text-emerald-600')
         }`}>{type}</span>
         {prevCount !== undefined && (
           <div className={`flex items-center gap-0.5 text-[7px] font-black ${
@@ -1252,7 +1227,7 @@ function StatusCard({ onClick, active, type, eff, count, prevCount, prevPeriod }
       <div className="text-[14px] sm:text-2xl font-black tracking-tighter leading-none truncate">{count ?? 0}</div>
       {/* Efficiency % — small below */}
       <div className={`text-[8px] sm:text-[10px] font-bold mt-0.5 tracking-widest truncate ${
-        active ? 'opacity-80' : (isDelay ? 'text-rose-400' : isAdvance ? 'text-amber-400' : isPending ? 'text-blue-400' : 'text-emerald-500')
+        active ? 'opacity-80' : (isDelay ? 'text-rose-400' : isAdvance ? 'text-amber-400' : 'text-emerald-500')
       }`}>{eff || '0%'}</div>
       {prevCount !== undefined && (
         <div className="text-[6px] opacity-40 font-black uppercase tracking-tighter mt-1 truncate shrink-0">{prevPeriod || 'vs prev'}</div>
@@ -1265,9 +1240,8 @@ function StatusBadge({ status, label }: { status: string, label: string }) {
   const isSuccess = status === 'OnTime';
   const isWarning = status === 'Advance';
   const isDanger = status === 'Delay';
-  const isPending = status === 'Belum Sampai';
   return (
-    <div className={`inline-flex flex-col px-1.5 py-0.5 rounded-md text-[7px] sm:text-[10px] font-black tracking-widest border transition-all shadow-sm overflow-hidden ${isSuccess ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20' : isWarning ? 'bg-amber-500/10 text-amber-600 border-amber-500/20' : isDanger ? 'bg-rose-500/10 text-rose-600 border-rose-500/20' : isPending ? 'bg-sky-500/10 text-sky-600 border-sky-500/20' : 'bg-slate-100 text-slate-400 border-slate-200'}`}>
+    <div className={`inline-flex flex-col px-1.5 py-0.5 rounded-md text-[7px] sm:text-[10px] font-black tracking-widest border transition-all shadow-sm overflow-hidden ${isSuccess ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20' : isWarning ? 'bg-amber-500/10 text-amber-600 border-amber-500/20' : isDanger ? 'bg-rose-500/10 text-rose-600 border-rose-500/20' : 'bg-slate-100 text-slate-400 border-slate-200'}`}>
       <span className="uppercase truncate max-w-10 sm:max-w-none">{status}</span>
       <span className="text-[6px] sm:text-[8px] opacity-60 truncate max-w-10 sm:max-w-20 font-black uppercase mt-0.5">{label || '-'}</span>
     </div>

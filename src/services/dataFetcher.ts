@@ -412,10 +412,19 @@ export async function fetchFleetMonitoringData(date: string) {
           actual_out_pdc: fmtTime(t.actual_out_pdc),
           actual_unloading: fmtTime(t.actual_unloading),
           ritNo,
-          isDelayed: !t.actual_in_pdc && isLate(null, fmtTime(t.plan_dccp)),
+          isDelayed:
+            // Telat masuk PDC lewat jam plan -> potensi delay
+            isLate(fmtTime(t.actual_in_pdc), fmtTime(t.plan_dccp)),
           isChange
         };
       });
+
+      // Cascade: jika rit ke-N telat, ritase berikutnya ikut berpotensi delay (merembet)
+      let cascadeDelay = false;
+      for (const et of enrichedTrips) {
+        if (et.isDelayed) cascadeDelay = true;
+        if (cascadeDelay) et.isDelayed = true;
+      }
 
       if (currentTrip) {
         const curEnriched = enrichedTrips.find(t => t.id === currentTrip.id);
