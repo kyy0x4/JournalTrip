@@ -421,6 +421,17 @@ export async function fetchFleetMonitoringData(date: string) {
       });
       const project = (isTAM ? 'TAM' : 'TMMIN') as 'TAM' | 'TMMIN';
 
+      // ── Khusus TMMIN: deteksi delay berbasis WAKTU, bukan plan_dccp ──
+      // Deadline 13:30. RIT 1 dianggap ok jika sudah balik ke PDC (actual_in_pdc
+      // rit berikutnya terisi) sebelum 13:30; RIT 2 harus sudah sampai PDC.
+      // Night shift: deadline 13:30 berlaku BESOK (shift malam lewat tengah malam).
+      const now = new Date();
+      const TMMIN_DEADLINE_MIN = 13 * 60 + 30; // 13:30
+      let tmminDeadline = toLocalDate(date, TMMIN_DEADLINE_MIN);
+      if (project === 'TMMIN' && isNightShift(driverTrips[0]?.shift)) {
+        tmminDeadline = new Date(tmminDeadline.getTime() + 86400000);
+      }
+
       const enrichedTrips = driverTrips.map((t, index) => {
         const ritNo = index + 1;
         const shift = (t.shift || '').toUpperCase();
@@ -435,6 +446,24 @@ export async function fetchFleetMonitoringData(date: string) {
           isChange = inPdc > '05:00' && inPdc < '12:00'; 
         }
 
+        let isDelayed = false;
+        if (project === 'TMMIN') {
+          // Berbasis waktu (khusus TMMIN): aktif setelah lewat deadline 13:30
+          if (now > tmminDeadline) {
+            if (ritNo === 1) {
+              // RIT 1: ok jika sudah balik ke PDC (masuk PDC untuk rit berikutnya)
+              const nextTrip = driverTrips[index + 1];
+              isDelayed = !!nextTrip && !nextTrip.actual_in_pdc;
+            } else {
+              // RIT 2 dst: harus sudah sampai PDC sebelum deadline
+              isDelayed = !t.actual_in_pdc;
+            }
+          }
+        } else {
+          // Area lain (TAM): tetap berbasis plan_dccp
+          isDelayed = isLate(fmtTime(t.actual_in_pdc), fmtTime(t.plan_dccp), t.shift);
+        }
+
         return {
           ...t,
           plan_dccp: fmtTime(t.plan_dccp),
@@ -443,9 +472,7 @@ export async function fetchFleetMonitoringData(date: string) {
           actual_out_pdc: fmtTime(t.actual_out_pdc),
           actual_unloading: fmtTime(t.actual_unloading),
           ritNo,
-          isDelayed:
-            // Telat masuk PDC lewat jam plan -> potensi delay
-            isLate(fmtTime(t.actual_in_pdc), fmtTime(t.plan_dccp), t.shift),
+          isDelayed,
           isChange
         };
       });
