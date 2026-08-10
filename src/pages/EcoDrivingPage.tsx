@@ -132,7 +132,7 @@ export default function EcoDrivingPage({ isTAM = false }: { isTAM?: boolean }) {
       const fetchPhoto = async () => {
         setIsLoadingPhoto(true);
         try {
-          const { data } = await supabase.from('drivers').select('coaching_photo_url').eq('name', selectedCoachingDriver).single();
+          const { data } = await supabase.from('drivers').select('coaching_photo_url').eq('name', selectedCoachingDriver).limit(1).maybeSingle();
           if (data?.coaching_photo_url) {
              setCoachingPhotoUrl(data.coaching_photo_url);
           } else {

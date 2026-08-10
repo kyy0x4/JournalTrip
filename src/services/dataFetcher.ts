@@ -220,7 +220,7 @@ export async function fetchDriverProfile(driverId: string, month: string) { // m
         name: driverData.name,
         status: 'online' as 'online' | 'offline', // Placeholder
         avatar: driverData.avatar_url,
-        noPolisi: driverData.no_polisi,
+        noPolisi: monthTrips?.[0]?.no_polisi || driverData.no_polisi,
         simExpiry: driverData.sim_expiry,
         simPhotoUrl: driverData.sim_photo_url,
         simStatus: calculateSIMStatus(driverData.sim_expiry),
@@ -286,7 +286,7 @@ export async function fetchDashboardData(selectedDate: string, driverId: string,
         name: driverData.name,
         status: (ritases.some(r => r.status === 'active') ? 'online' : 'offline') as 'online' | 'offline',
         avatar: driverData.avatar_url,
-        noPolisi: driverData.no_polisi || filteredTrips[0]?.no_polisi,
+        noPolisi: filteredTrips[0]?.no_polisi || driverData.no_polisi,
         simExpiry: driverData.sim_expiry,
         simPhotoUrl: driverData.sim_photo_url,
         simStatus: calculateSIMStatus(driverData.sim_expiry)
@@ -527,7 +527,7 @@ export async function fetchFleetMonitoringData(date: string) {
       return {
         id: dId,
         driverName: driverInfo?.name || 'Unknown Driver',
-        nopol: driverInfo?.no_polisi || firstTrip.no_polisi || 'No Plat',
+        nopol: firstTrip.no_polisi || driverInfo?.no_polisi || 'No Plat',
         currentRitase: currentTrip ? (enrichedTrips.find(t => t.id === currentTrip.id)?.ritNo || 0) : 0,
         totalRitase: driverTrips.length,
         status,
