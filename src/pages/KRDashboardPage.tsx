@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import {
   ShieldCheck, Phone, Sun, Moon, ChevronLeft, ChevronRight, User, Calendar
 } from 'lucide-react';
+import DevelopmentNotice from '../components/common/DevelopmentNotice';
 
 // ── Types ──────────────────────────────────────────────────────
 type Shift = 'Pagi' | 'Malam' | '-';
@@ -201,6 +202,9 @@ export default function KRDashboardPage() {
       </div>
 
       <div className="max-w-6xl mx-auto px-4 md:px-6 py-8 space-y-8 mt-4">
+        {/* ── Development notice ── */}
+        <DevelopmentNotice message="Fitur Jadwal KR masih dalam tahap pengembangan. Data KR bersifat contoh & belum terhubung ke database." />
+
         {/* ── Today on duty ── */}
         {onDutyToday.length > 0 && (
           <div className="bg-gradient-to-r from-violet-500 to-indigo-600 rounded-3xl p-5 text-white shadow-lg shadow-violet-200 dark:shadow-violet-900/20">

@@ -14,6 +14,7 @@ import { Driver, P2HRecord } from '../types';
 import { TenkoRecord } from '../services/tenkoService';
 import Logo from '../image/Logo.png';
 import AuthModal from '../components/auth/AuthModal';
+import DevelopmentNotice from '../components/common/DevelopmentNotice';
 import { supabase } from '../lib/supabase';
 import { saveP2H, fetchP2HToday } from '../services/p2hService';
 import P2HDocument from '../components/pdf/P2HDocument';
@@ -389,6 +390,11 @@ export default function GatepassPage() {
             </button>
           </div>
         </div>
+      </div>
+
+      {/* ── DEVELOPMENT NOTICE ── */}
+      <div className="print:hidden">
+        <DevelopmentNotice />
       </div>
 
       {/* ── STATS SUMMARY ── */}

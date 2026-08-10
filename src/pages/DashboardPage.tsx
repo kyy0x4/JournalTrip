@@ -11,7 +11,7 @@ import {
   BarChart, Bar, LabelList
 } from 'recharts';
 import { supabase } from '../lib/supabase';
-import { fetchEcoViolations } from '../services/ecoDataFetcher';
+import { fetchEcoViolations, buildMonthFiltersForRange } from '../services/ecoDataFetcher';
 import { leadtimeService } from '../services/leadtimeService';
 import { fetchTenkoData } from '../services/tenkoService';
 
@@ -146,16 +146,7 @@ export default function DashboardPage({ isTAM = false }: DashboardProps) {
     setIsLoading(true);
     try {
       // ── Build month filters for eco (same approach as EcoDrivingPage) ──
-      const buildMonthFilter = (dateStr: string) => {
-        const MONTH_EN = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-        const [y, m] = dateStr.split('-');
-        const mon = MONTH_EN[parseInt(m) - 1];
-        const y2 = y.slice(-2);
-        return `%-${mon}-${y2}`;
-      };
-      const startFilter = buildMonthFilter(period.start);
-      const endFilter   = buildMonthFilter(period.end);
-      const monthFilters = [...new Set([startFilter, endFilter])];
+      const monthFilters = buildMonthFiltersForRange(period.start, period.end);
 
       const [lt, ...ecoChunks] = await Promise.all([
         leadtimeService.getLeadTimes(period.start, period.end),
@@ -173,8 +164,9 @@ export default function DashboardPage({ isTAM = false }: DashboardProps) {
         if (p.length !== 3) return null;
         const day = parseInt(p[0]);
         const mon = MONTH_MAP[p[1]];
-        const yr  = 2000 + parseInt(p[2]);
-        if (isNaN(day) || mon === undefined || isNaN(yr)) return null;
+        const rawYear = parseInt(p[2]);
+        if (isNaN(day) || mon === undefined || isNaN(rawYear)) return null;
+        const yr = rawYear < 100 ? 2000 + rawYear : rawYear;
         return new Date(yr, mon, day);
       };
       const pStart = new Date(period.start);

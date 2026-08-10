@@ -50,6 +50,34 @@ export interface EcoSummary {
   topDriverTotal: number;
 }
 
+// ─── BUILD MONTH FILTERS (handles mixed EN/ID + dash/space + 2/4-digit year) ──
+const ECO_MONTH_EN = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const ECO_MONTH_ID = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
+
+export function buildMonthFiltersForRange(startDate: string, endDate: string): string[] {
+  const filters: string[] = [];
+  const s = new Date(startDate);
+  const e = new Date(endDate);
+  if (isNaN(s.getTime()) || isNaN(e.getTime())) return filters;
+  let current = new Date(s.getFullYear(), s.getMonth(), 1);
+  const last = new Date(e.getFullYear(), e.getMonth(), 1);
+  while (current <= last) {
+    const y2 = current.getFullYear().toString().slice(-2);
+    const y4 = current.getFullYear().toString();
+    const mEN = ECO_MONTH_EN[current.getMonth()];
+    const mID = ECO_MONTH_ID[current.getMonth()];
+    filters.push(
+      `%-${mEN}-${y2}`, `%-${mID}-${y2}`,
+      `% ${mEN} ${y4}`, `% ${mID} ${y4}`,
+      `% ${mEN} ${y2}`, `% ${mID} ${y2}`,
+      `%${mEN}%${y4}`, `%${mID}%${y4}`,
+      `%${mEN}%${y2}`, `%${mID}%${y2}`,
+    );
+    current.setMonth(current.getMonth() + 1);
+  }
+  return [...new Set(filters)];
+}
+
 // ─── FETCH ALL VIOLATIONS (with optional filters) ─────────────────────────────
 export async function fetchEcoViolations(options?: {
   area?: string;

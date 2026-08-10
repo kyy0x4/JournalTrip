@@ -10,6 +10,7 @@ import { Driver, P2HRecord } from '../types';
 import { supabase } from '../lib/supabase';
 import { fetchP2HToday, saveP2H } from '../services/p2hService';
 import AuthModal from '../components/auth/AuthModal';
+import DevelopmentNotice from '../components/common/DevelopmentNotice';
 import { P2H_CATEGORIES } from '../constants/p2hItems';
 
 export default function P2HPage() {
@@ -189,6 +190,7 @@ export default function P2HPage() {
 
       {!selectedDriver ? (
         <>
+          <DevelopmentNotice />
           <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4 bg-white dark:bg-slate-900 p-6 rounded-[32px] border border-slate-200/50 dark:border-slate-800 shadow-sm">
             <div>
               <h1 className="text-2xl font-black text-slate-800 dark:text-white uppercase tracking-tight">Input P2H</h1>
