@@ -88,17 +88,25 @@ const KEY_MAP: Record<string, {actual: string[], plan: string[], stage: string}>
 };
 
 export default function LeadTimePage({ isTAM = false }: { isTAM?: boolean }) {
+  const [area, setArea] = useState(() => localStorage.getItem('leadtime_area') || 'ALL');
+  const [filterMode, setFilterMode] = useState<'month'|'range'>(() => (localStorage.getItem('leadtime_filter_mode') as any) || 'month');
+  const [selectedMonth, setSelectedMonth] = useState(() => {
+    const saved = localStorage.getItem('leadtime_selected_month');
+    if (saved) return saved;
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  });
   const [startDate, setStartDate] = useState(() => {
+    const saved = localStorage.getItem('leadtime_start_date');
+    if (saved) return saved;
     const d = new Date();
     d.setDate(d.getDate() - 7);
     return new Date(d.getTime() - (d.getTimezoneOffset() * 60000)).toISOString().split('T')[0];
   });
-  const [endDate, setEndDate] = useState(() => new Date(new Date().getTime() - (new Date().getTimezoneOffset() * 60000)).toISOString().split('T')[0]);
-  const [area, setArea] = useState('ALL');
-  const [filterMode, setFilterMode] = useState<'month'|'range'>('month');
-  const [selectedMonth, setSelectedMonth] = useState(() => {
-    const now = new Date();
-    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  const [endDate, setEndDate] = useState(() => {
+    const saved = localStorage.getItem('leadtime_end_date');
+    if (saved) return saved;
+    return new Date(new Date().getTime() - (new Date().getTimezoneOffset() * 60000)).toISOString().split('T')[0];
   });
   const [data, setData] = useState<LeadTimeData[]>([]);
   const [prevData, setPrevData] = useState<LeadTimeData[]>([]);
@@ -126,7 +134,12 @@ export default function LeadTimePage({ isTAM = false }: { isTAM?: boolean }) {
     if (delayPopup) setDelayPopup(null);
   }, !!selectedReason || !!delayPopup);
 
-  useEffect(() => {
+   useEffect(() => {
+    localStorage.setItem('leadtime_area', area);
+    localStorage.setItem('leadtime_filter_mode', filterMode);
+    localStorage.setItem('leadtime_selected_month', selectedMonth);
+    localStorage.setItem('leadtime_start_date', startDate);
+    localStorage.setItem('leadtime_end_date', endDate);
     loadData();
   }, [startDate, endDate, area, filterMode, selectedMonth]);
 
