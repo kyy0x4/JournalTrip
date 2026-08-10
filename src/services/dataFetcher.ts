@@ -412,7 +412,7 @@ export async function fetchFleetMonitoringData(date: string) {
           actual_out_pdc: fmtTime(t.actual_out_pdc),
           actual_unloading: fmtTime(t.actual_unloading),
           ritNo,
-          isDelayed: false, // Disabled
+          isDelayed: !t.actual_in_pdc && isLate(null, fmtTime(t.plan_dccp)),
           isChange
         };
       });
@@ -430,8 +430,12 @@ export async function fetchFleetMonitoringData(date: string) {
           changeRitase = curRitNo;
         }
 
-        // 2. Check for Potential Delay (any ritase) - Disabled
-        const delayedTrip = null;
+        // 2. Check for Potential Delay (any ritase) - unit belum masuk PDC melewati jam Plan DCCP
+        const delayedTrip = enrichedTrips.find(t => t.isDelayed);
+        if (delayedTrip) {
+          isDelayed = true;
+          delayRitase = delayedTrip.ritNo;
+        }
 
         if (currentTrip.actual_unloading) {
           status = 'At Destination';
@@ -443,10 +447,6 @@ export async function fetchFleetMonitoringData(date: string) {
             status = 'OTW PDC';
             origin = currentTrip.pdc_bongkar;
             destination = nextTrip?.pdc_muat || 'Plant';
-            if (false) { // Disabled delay check
-              isDelayed = true;
-              delayRitase = nextEnriched.ritNo;
-            }
           } else {
             status = 'Finished';
           }

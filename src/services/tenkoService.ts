@@ -134,7 +134,7 @@ export function classifySuhuRecord(r: TenkoRecord) {
 }
 
 export function classifyRestRecord(r: TenkoRecord) {
-  return Number(r.rest_time) >= 7 ? 'cukup' : 'kurang';
+  return Number(r.rest_time) >= 6 ? 'cukup' : 'kurang';
 }
 
 export function classifyNadiRecord(r: TenkoRecord) {
@@ -182,8 +182,8 @@ export const TENKO_HEALTH_METRICS: TenkoMetricConfig[] = [
     pieTitle: 'Istirahat Percentage',
     classify: classifyRestRecord,
     categories: [
-      { key: 'cukup', label: 'Cukup (≥7 Jam)', shortLabel: 'Cukup', color: '#10b981' },
-      { key: 'kurang', label: 'Kurang (<7 Jam)', shortLabel: 'Kurang', color: '#f59e0b' },
+      { key: 'cukup', label: 'Cukup (≥6 Jam)', shortLabel: 'Cukup', color: '#10b981' },
+      { key: 'kurang', label: 'Kurang (<6 Jam)', shortLabel: 'Kurang', color: '#f59e0b' },
     ],
   },
   {
