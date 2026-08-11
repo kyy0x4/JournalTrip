@@ -198,100 +198,7 @@ export default function App() {
 
   const sidebarWidth = isSidebarCollapsed ? 'md:ml-[100px]' : 'md:ml-[284px]';
 
-  const AnimatedRoutes = () => {
-    const location = useLocation();
-    const pathname = location.pathname;
 
-    // Keep-alive: cache rendered pages per pathname agar saat pindah tab
-    // & balik lagi tidak di-remount (tidak reload data/skeleton loading).
-    const cacheRef = useRef<Map<string, React.ReactNode>>(new Map());
-    cacheRef.current.set(pathname, (
-      <Routes location={location}>
-        <Route path="/" element={
-          <AnimatePresence mode="wait">
-            {isLoading && !selectedDriver ? (
-              <motion.div
-                key="skeleton"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                className="space-y-8 animate-pulse"
-              >
-                <div className="h-48 bg-white/50 dark:bg-white/[0.04] rounded-4xl border border-slate-200/40 dark:border-white/[0.06]" />
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                  <div className="lg:col-span-2 h-96 bg-white/50 dark:bg-white/[0.04] rounded-4xl border border-slate-200/40 dark:border-white/[0.06]" />
-                  <div className="h-96 bg-white/50 dark:bg-white/[0.04] rounded-4xl border border-slate-200/40 dark:border-white/[0.06]" />
-                </div>
-              </motion.div>
-            ) : (
-              <motion.div
-                key="content"
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
-                transition={{ duration: 0.3 }}
-              >
-                <Header
-                  driver={selectedDriver as any}
-                  selectedDate={selectedDate}
-                  onDateChange={setSelectedDate}
-                  selectedArea={selectedArea}
-                  onAreaChange={setSelectedArea}
-                  isTAM={isTAM}
-                />
-                <div className="mt-6">
-                  <RitaseTracking
-                    selectedDate={selectedDate}
-                    ritases={ritases}
-                    isLoading={isLoading}
-                  />
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        } />
-        <Route path="/dashboard" element={<DashboardPage isTAM={isTAM} />} />
-        <Route path="/monitoring" element={<FleetMonitoringPage isTAM={isTAM} />} />
-        <Route path="/leadtime" element={<LeadTimePage isTAM={isTAM} />} />
-        <Route path="/route-analytics" element={<RouteAnalyticsPage isTAM={isTAM} />} />
-        <Route path="/standar-leadtime" element={<StandarLeadtimePage />} />
-        <Route path="/eco" element={<EcoDrivingPage isTAM={isTAM} />} />
-        <Route path="/carbon" element={<CarbonNeutralPage />} />
-        <Route path="/tenko" element={<TenkoPage isTAM={isTAM} />} />
-        <Route path="/p2h" element={<P2HPage />} />
-        
-        <Route path="/gatepass" element={<GatepassPage />} />
-        <Route path="/drivers" element={<DriversPage />} />
-        <Route path="/drivers/:id" element={<DriverDetailPage />} />
-        <Route path="/training" element={<TrainingDashboardPage />} />
-        <Route path="/kr-schedule" element={<KRDashboardPage />} />
-        <Route path="/admin-drivers" element={isAdmin ? <AdminDriversPage /> : <Navigate to="/" replace />} />
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
-    ));
-
-    // Batasi cache agar tidak membengkak (paling baru, buang yang terlama)
-    if (cacheRef.current.size > 8) {
-      const oldest = cacheRef.current.keys().next().value;
-      if (oldest) cacheRef.current.delete(oldest);
-    }
-
-    return (
-      <>
-        {Array.from(cacheRef.current.entries()).map(([key, element]) => (
-          <motion.div
-            key={key}
-            initial={key === pathname ? { opacity: 0, y: 8 } : false}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.22, ease: 'easeOut' }}
-            className={key !== pathname ? 'hidden' : ''}
-          >
-            {element}
-          </motion.div>
-        ))}
-      </>
-    );
-  };
 
   return (
     <NotificationProvider>
@@ -339,7 +246,17 @@ export default function App() {
               <main id="pdf-export-content" className="pt-24 min-h-screen">
                 <div className="max-w-7xl mx-auto px-4 md:px-6 py-6">
                   <Suspense fallback={<LoadingScreen />}>
-                    <AnimatedRoutes />
+                    <AnimatedRoutes 
+                      isLoading={isLoading}
+                      selectedDriver={selectedDriver}
+                      selectedDate={selectedDate}
+                      setSelectedDate={setSelectedDate}
+                      selectedArea={selectedArea}
+                      setSelectedArea={setSelectedArea}
+                      isTAM={isTAM}
+                      ritases={ritases}
+                      isAdmin={isAdmin}
+                    />
                   </Suspense>
                 </div>
               </main>
@@ -348,7 +265,125 @@ export default function App() {
         <SpeedInsights />
       </div>
         <DelayNotificationStack />
-    </BrowserRouter>
+     </BrowserRouter>
     </NotificationProvider>
   );
 }
+
+interface AnimatedRoutesProps {
+  isLoading: boolean;
+  selectedDriver: any;
+  selectedDate: string;
+  setSelectedDate: (d: string) => void;
+  selectedArea: string;
+  setSelectedArea: (a: string) => void;
+  isTAM: boolean;
+  ritases: any[];
+  isAdmin: boolean;
+}
+
+const AnimatedRoutes = ({
+  isLoading,
+  selectedDriver,
+  selectedDate,
+  setSelectedDate,
+  selectedArea,
+  setSelectedArea,
+  isTAM,
+  ritases,
+  isAdmin
+}: AnimatedRoutesProps) => {
+  const location = useLocation();
+  const pathname = location.pathname;
+  const cacheRef = useRef<Map<string, React.ReactNode>>(new Map());
+
+  // Render the routes element
+  const element = (
+    <Routes location={location}>
+      <Route path="/" element={
+        <AnimatePresence mode="wait">
+          {isLoading && !selectedDriver ? (
+            <motion.div
+              key="skeleton"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="space-y-8 animate-pulse"
+            >
+              <div className="h-48 bg-white/50 dark:bg-white/[0.04] rounded-4xl border border-slate-200/40 dark:border-white/[0.06]" />
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                <div className="lg:col-span-2 h-96 bg-white/50 dark:bg-white/[0.04] rounded-4xl border border-slate-200/40 dark:border-white/[0.06]" />
+                <div className="h-96 bg-white/50 dark:bg-white/[0.04] rounded-4xl border border-slate-200/40 dark:border-white/[0.06]" />
+              </div>
+            </motion.div>
+          ) : (
+            <motion.div
+              key="content"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              transition={{ duration: 0.3 }}
+            >
+              <Header
+                driver={selectedDriver as any}
+                selectedDate={selectedDate}
+                onDateChange={setSelectedDate}
+                selectedArea={selectedArea}
+                onAreaChange={setSelectedArea}
+                isTAM={isTAM}
+              />
+              <div className="mt-6">
+                <RitaseTracking
+                  selectedDate={selectedDate}
+                  ritases={ritases}
+                  isLoading={isLoading}
+                />
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      } />
+      <Route path="/dashboard" element={<DashboardPage isTAM={isTAM} />} />
+      <Route path="/monitoring" element={<FleetMonitoringPage isTAM={isTAM} />} />
+      <Route path="/leadtime" element={<LeadTimePage isTAM={isTAM} />} />
+      <Route path="/route-analytics" element={<RouteAnalyticsPage isTAM={isTAM} />} />
+      <Route path="/standar-leadtime" element={<StandarLeadtimePage />} />
+      <Route path="/eco" element={<EcoDrivingPage isTAM={isTAM} />} />
+      <Route path="/carbon" element={<CarbonNeutralPage />} />
+      <Route path="/tenko" element={<TenkoPage isTAM={isTAM} />} />
+      <Route path="/p2h" element={<P2HPage />} />
+      
+      <Route path="/gatepass" element={<GatepassPage />} />
+      <Route path="/drivers" element={<DriversPage />} />
+      <Route path="/drivers/:id" element={<DriverDetailPage />} />
+      <Route path="/training" element={<TrainingDashboardPage />} />
+      <Route path="/kr-schedule" element={<KRDashboardPage />} />
+      <Route path="/admin-drivers" element={isAdmin ? <AdminDriversPage /> : <Navigate to="/" replace />} />
+      <Route path="*" element={<Navigate to="/" replace />} />
+    </Routes>
+  );
+
+  cacheRef.current.set(pathname, element);
+
+  // Batasi cache agar tidak membengkak
+  if (cacheRef.current.size > 8) {
+    const oldest = cacheRef.current.keys().next().value;
+    if (oldest) cacheRef.current.delete(oldest);
+  }
+
+  return (
+    <>
+      {Array.from(cacheRef.current.entries()).map(([key, item]) => (
+        <motion.div
+          key={key}
+          initial={key === pathname ? { opacity: 0, y: 8 } : false}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.22, ease: 'easeOut' }}
+          className={key !== pathname ? 'hidden' : ''}
+        >
+          {item}
+        </motion.div>
+      ))}
+    </>
+  );
+};
