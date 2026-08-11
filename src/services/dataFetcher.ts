@@ -471,13 +471,6 @@ export async function fetchFleetMonitoringData(date: string) {
         };
       });
 
-      // Cascade: jika rit ke-N telat, ritase berikutnya ikut berpotensi delay (merembet)
-      let cascadeDelay = false;
-      for (const et of enrichedTrips) {
-        if (et.isDelayed) cascadeDelay = true;
-        if (cascadeDelay) et.isDelayed = true;
-      }
-
       if (currentTrip) {
         const curEnriched = enrichedTrips.find(t => t.id === currentTrip.id);
         const curRitNo = curEnriched?.ritNo || 0;

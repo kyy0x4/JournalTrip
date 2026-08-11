@@ -634,12 +634,6 @@ export default function FleetMonitoringPage({ isTAM = false }: { isTAM?: boolean
                             <span className="text-slate-800 dark:text-slate-300">Change Shift:</span> Ditandai otomatis jika Day Shift muat &gt; 17:00 atau Night Shift muat &gt; 05:00 pagi.
                           </p>
                         </li>
-                        <li className="flex gap-3">
-                          <div className="w-1.5 h-1.5 rounded-full bg-blue-400 mt-1 shrink-0" />
-                          <p className="text-[10px] font-bold text-slate-500 leading-relaxed">
-                            <span className="text-slate-800 dark:text-slate-300">Cascading Effect:</span> Jika satu ritase berpotensi delay, ritase berikutnya ikut terpantau delay.
-                          </p>
-                        </li>
                       </ul>
                     </div>
                   </div>
