@@ -319,7 +319,7 @@ export default function FleetMonitoringPage({ isTAM = false }: { isTAM?: boolean
       {/* ── MONITORING TABLE (Desktop) & CARDS (Mobile) ── */}
       <div className="bg-white dark:bg-slate-900 rounded-4xl shadow-sm overflow-hidden border border-slate-200/60 dark:border-slate-800">
         <AnimatePresence mode="wait">
-          {isLoading ? (
+          {isLoading && fleetData.length === 0 ? (
             <motion.div 
               key="skeleton"
               initial={{ opacity: 0 }}
