@@ -70,7 +70,7 @@ export default function RitaseTracking({ selectedDate, ritases, isLoading }: Rit
         </div>
       </div>
 
-      {isLoading ? (
+      {isLoading && ritases.length === 0 ? (
         <motion.div 
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
