@@ -625,7 +625,7 @@ export default function FleetMonitoringPage({ isTAM = false }: { isTAM?: boolean
                         <li className="flex gap-3">
                           <div className="w-1.5 h-1.5 rounded-full bg-blue-400 mt-1 shrink-0" />
                           <p className="text-[10px] font-bold text-slate-500 leading-relaxed">
-                            <span className="text-slate-800 dark:text-slate-300">Potential Delay:</span> TMMIN — berbasis waktu, unit harus sudah masuk PDC sebelum trigger. Day shift: RIT 1 = 10:30, RIT 2 = 13:30. Night shift: RIT 1 = 22:30, RIT 2 = 02:30. TAM — melewati jam Plan DCCP.
+                            <span className="text-slate-800 dark:text-slate-300">Potential Delay:</span> TMMIN — RIT 1 tidak pernah delay. RIT 2 dst terpantau delay jika unit belum masuk PDC saat deadline: Day shift = 13:30, Night shift = 01:30. TAM — melewati jam Plan DCCP.
                           </p>
                         </li>
                         <li className="flex gap-3">
@@ -637,7 +637,7 @@ export default function FleetMonitoringPage({ isTAM = false }: { isTAM?: boolean
                         <li className="flex gap-3">
                           <div className="w-1.5 h-1.5 rounded-full bg-blue-400 mt-1 shrink-0" />
                           <p className="text-[10px] font-bold text-slate-500 leading-relaxed">
-                            <span className="text-slate-800 dark:text-slate-300">Cascading Effect:</span> Jika Rit 1 telat, status Rit berikutnya otomatis ikut terpantau delay.
+                            <span className="text-slate-800 dark:text-slate-300">Cascading Effect:</span> Jika satu ritase berpotensi delay, ritase berikutnya ikut terpantau delay.
                           </p>
                         </li>
                       </ul>
