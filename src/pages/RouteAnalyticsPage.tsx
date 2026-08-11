@@ -56,11 +56,44 @@ export default function RouteAnalyticsPage({ isTAM = false }: { isTAM?: boolean 
     loadData();
   }, [loadData]);
 
-  const timeToMin = (s?: string): number | null => {
+  // Parse "DD Mon YYYY HH:MM" or bare "HH:MM" → minutes since epoch (or since midnight for bare time).
+  const MONTH_ID: Record<string, number> = {
+    jan:0,feb:1,mar:2,apr:3,mei:4,may:4,jun:5,jul:6,agu:7,aug:7,
+    sep:8,okt:9,oct:9,nov:10,des:11,dec:11
+  };
+  const dateTimeToMs = (s?: string): number | null => {
     if (!s || typeof s !== 'string') return null;
-    const p = s.split(':').map(Number);
-    if (isNaN(p[0])) return null;
-    return p[0] * 60 + (p[1] || 0);
+    const t = s.trim();
+    // Format: "DD Mon YYYY HH:MM" or "DD Mon YYYY HH:MM:SS"
+    const dtMatch = t.match(/^(\d{1,2})\s+([A-Za-z]+)\s+(\d{4})\s+(\d{1,2}):(\d{2})/);
+    if (dtMatch) {
+      const [, dd, mon, yyyy, hh, mm] = dtMatch;
+      const monthIdx = MONTH_ID[mon.toLowerCase().slice(0,3)];
+      if (monthIdx === undefined) return null;
+      return new Date(Number(yyyy), monthIdx, Number(dd), Number(hh), Number(mm)).getTime();
+    }
+    // Format: bare "HH:MM" or "HH:MM:SS"
+    const timeMatch = t.match(/^(\d{1,2}):(\d{2})/);
+    if (timeMatch) {
+      const [, hh, mm] = timeMatch;
+      // Return minutes-since-midnight multiplied by 60000 to stay in ms domain
+      return (Number(hh) * 60 + Number(mm)) * 60_000;
+    }
+    return null;
+  };
+
+  const diffH = (a?: string, b?: string): number => {
+    const fa = dateTimeToMs(a), fb = dateTimeToMs(b);
+    if (fa === null || fb === null) return 0;
+    let diffMs = fb - fa;
+    // If both are bare HH:MM (no date), ms values are small (< 24h in ms).
+    // A negative diff means crossing midnight → add 24h.
+    const isBaretime = (s?: string) => !!(s && /^\d{1,2}:\d{2}/.test(s.trim()));
+    if (isBaretime(a) && isBaretime(b) && diffMs < 0) {
+      diffMs += 24 * 3_600_000;
+    }
+    if (diffMs < 0) return 0;
+    return parseFloat((diffMs / 3_600_000).toFixed(2));
   };
 
   // Format decimal hours → "X jam Y menit" (e.g. 2.5 → "2 jam 30 menit")
@@ -73,15 +106,6 @@ export default function RouteAnalyticsPage({ isTAM = false }: { isTAM?: boolean 
     if (jam === 0) return `${menit} menit`;
     if (menit === 0) return `${jam} jam`;
     return `${jam} jam ${menit} menit`;
-  };
-
-  // For segments that might cross midnight (long haul), compute delta carefully
-  const diffH = (a?: string, b?: string, allowCrossDay = true): number => {
-    const fa = timeToMin(a), fb = timeToMin(b);
-    if (fa === null || fb === null) return 0;
-    let d = fb - fa;
-    if (allowCrossDay && d < 0) d += 24 * 60;
-    return parseFloat((d / 60).toFixed(2));
   };
 
   // Normalize tujuan casing
@@ -118,15 +142,22 @@ export default function RouteAnalyticsPage({ isTAM = false }: { isTAM?: boolean 
 
         // Segment 3: Bakauheni → Tujuan (Delivery)
         // Try multiple checkpoint key names (data may vary)
-        const unloadingKey = ['UNLOADING PDC POLYGON', 'UNLOADING', 'PDC POLYGON', 'TIBA TUJUAN', 'SAMPAI TUJUAN', 'UNLOADING PDC (LAMPUNG,PALEMBANG,PEKANBARU)']
-          .find(k => cp[k]);
+        const unloadingKey = [
+          'UNLOADING PDC (LAMPUNG,PALEMBANG,PEKANBARU)',
+          'UNLOADING PDC POLYGON',
+          'UNLOADING PDC',
+          'UNLOADING',
+          'PDC POLYGON',
+          'TIBA TUJUAN',
+          'SAMPAI TUJUAN',
+        ].find(k => cp[k]);
         const destHours = unloadingKey
           ? diffH(cp['PELABUHAN BAKAUHENI'], cp[unloadingKey])
           : 0;
 
         // Segment 4: Tujuan → Pel. Bakauheni (PULANG) (Return leg starts)
-        const returnToPortHours = cp['PELABUHAN BAKAUHENI (PULANG)'] && cp['UNLOADING PDC POLYGON']
-          ? diffH(cp['UNLOADING PDC POLYGON'], cp['PELABUHAN BAKAUHENI (PULANG)'])
+        const returnToPortHours = cp['PELABUHAN BAKAUHENI (PULANG)'] && unloadingKey
+          ? diffH(cp[unloadingKey], cp['PELABUHAN BAKAUHENI (PULANG)'])
           : 0;
 
         // Segment 5: Pel. Bakauheni (PULANG) → Masuk Kapal (PULANG) (Nunggu Kapal Pulang)

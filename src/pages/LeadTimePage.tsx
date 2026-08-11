@@ -708,7 +708,7 @@ const reasonDelay = config.stage !== 'unknown' ? (getReasonDelay(item, config.st
                 <p className="text-[9px] sm:text-xs text-slate-400 font-bold uppercase tracking-widest mt-1 truncate">Klik DELAY untuk lihat rincian penyebab</p>
               </div>
             </div>
-            <div className={`grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 sm:gap-12 w-full max-w-full overflow-hidden`}>
+            <div className={`grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-8 w-full max-w-full overflow-hidden`}>
               <ReasonSection title="OUTPOOL DELAYS" stageStats={stats?.outpool} color="text-amber-500"
                 onClickDelay={() => setDelayPopup({ title: 'OUTPOOL DELAY REASONS', reasons: (stats?.outpool?.reasons || []).filter((r:any) => { const l=r.name.toLowerCase(); return !l.includes('delay')&&!l.includes('advance')&&!l.includes('ontime')&&l!=='ok'&&l!=='-'&&l!=='tidak ada'; }), delayCount: stats?.outpool?.chartData?.find((d:any)=>d.name==='Delay')?.value||0 })}
                 onSelect={(r: any) => { setReasonFilter(r.name); setCurrentPage(1); }}
@@ -1055,16 +1055,17 @@ function ReasonSection({ title, stageStats, color, onClickDelay, onSelect }: {
           </div>
           
           {actualReasons.length > 0 ? (
-            <div className="flex flex-col mt-2">
-              <div className="h-36 w-full relative -ml-2 sm:ml-0">
+            <div className="flex flex-row gap-4 mt-2 items-center">
+              {/* Pie Chart */}
+              <div className="h-48 w-48 shrink-0">
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart style={{ outline: 'none' }} className="focus:outline-none">
                     <Pie
                       data={actualReasons}
                       cx="50%"
                       cy="50%"
-                      innerRadius={25}
-                      outerRadius={40}
+                      innerRadius={32}
+                      outerRadius={52}
                       paddingAngle={2}
                       dataKey="value"
                       nameKey="name"
@@ -1081,7 +1082,7 @@ function ReasonSection({ title, stageStats, color, onClickDelay, onSelect }: {
                         if (active && payload && payload.length) {
                           const pct = totalReasons > 0 ? ((payload[0].value as number) / totalReasons * 100).toFixed(1) : '0';
                           return (
-                            <div className="bg-slate-900/95 backdrop-blur-md p-3 rounded-xl shadow-xl border border-slate-800 max-w-[200px]">
+                            <div className="bg-slate-900/95 backdrop-blur-md p-3 rounded-xl shadow-xl border border-slate-800 max-w-[220px]">
                               <p className="text-[10px] font-black text-white uppercase tracking-widest break-words">{payload[0].name}</p>
                               <div className="flex items-center gap-2 mt-1">
                                 <p className="text-xs font-black text-rose-400">{payload[0].value} Kasus</p>
@@ -1096,18 +1097,18 @@ function ReasonSection({ title, stageStats, color, onClickDelay, onSelect }: {
                   </PieChart>
                 </ResponsiveContainer>
               </div>
-              
-              {/* Legend Summary */}
-              <div className="flex flex-col gap-1.5 mt-2 overflow-y-auto max-h-32 pr-1 custom-scrollbar">
+
+              {/* Legend — full width, no truncate */}
+              <div className="flex flex-col gap-2 flex-1 overflow-y-auto max-h-48 pr-1 custom-scrollbar">
                 {actualReasons.map((r: any, idx: number) => {
                   const pct = totalReasons > 0 ? ((r.value / totalReasons) * 100).toFixed(1) : '0';
                   return (
-                    <div key={idx} className="flex justify-between items-center text-[9px] font-black tracking-widest uppercase">
-                      <div className="flex items-center gap-1.5 min-w-0 flex-1">
-                        <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: CHART_COLORS[idx % CHART_COLORS.length] }} />
-                        <span className="text-slate-400 truncate" title={r.name}>{r.name}</span>
+                    <div key={idx} className="flex justify-between items-start gap-3 text-[10px] font-black tracking-widest uppercase">
+                      <div className="flex items-start gap-2 min-w-0 flex-1">
+                        <div className="w-2.5 h-2.5 rounded-full shrink-0 mt-0.5" style={{ backgroundColor: CHART_COLORS[idx % CHART_COLORS.length] }} />
+                        <span className="text-slate-300 break-words leading-tight">{r.name}</span>
                       </div>
-                      <div className="flex items-center gap-2 shrink-0 ml-2">
+                      <div className="flex items-center gap-2 shrink-0">
                         <span className="text-slate-500 font-bold">{pct}%</span>
                         <span className="text-white min-w-[20px] text-right">{r.value}</span>
                       </div>
