@@ -328,7 +328,7 @@ export default function DashboardPage({ isTAM = false }: DashboardProps) {
         <StatCard label="Delivery On-Time" value={isLoading ? '—' : `${ltStats.rate}%`} sub={`${fmtNum(ltStats.ontime)} dari ${fmtNum(ltStats.total)} trips`} icon={<Truck className="w-5 h-5 text-blue-600" />} color="bg-blue-50 dark:bg-blue-500/10" to="/leadtime" />
         <StatCard label="Eco Violations" value={isLoading ? '—' : fmtNum(ecoStats.total)} sub={`Bulan ${period.label}`} icon={<Leaf className="w-5 h-5 text-emerald-600" />} color="bg-emerald-50 dark:bg-emerald-500/10" to="/eco" />
         <StatCard label="Tenko Normal" value={isLoading ? '—' : `${tenkoStats.rate}%`} sub={`${fmtNum(tenkoStats.normal)} / ${fmtNum(tenkoStats.total)} checkup`} icon={<Activity className="w-5 h-5 text-purple-600" />} color="bg-purple-50 dark:bg-purple-500/10" to="/tenko" />
-        <StatCard label="Check-up Hari Ini" value={isLoading ? '—' : fmtNum(checkinCount)} sub="Driver terdaftar hari ini" icon={<Shield className="w-5 h-5 text-amber-600" />} color="bg-amber-50 dark:bg-amber-500/10" to="/gatepass" />
+        <StatCard label="Check-up Hari Ini" value={isLoading ? '—' : fmtNum(checkinCount)} sub="Driver terdaftar hari ini" icon={<Shield className="w-5 h-5 text-amber-600" />} color="bg-amber-50 dark:bg-amber-500/10" to="/monitoring" />
       </div>
 
       {/* ── MAIN ROW: LeadTime Trend + Eco Pie ── */}
@@ -486,7 +486,7 @@ export default function DashboardPage({ isTAM = false }: DashboardProps) {
             { label: 'LeadTime', sub: 'Analytics', path: '/leadtime', icon: <Clock className="w-5 h-5" />, color: 'text-violet-600 dark:text-violet-400', bg: 'bg-violet-50 dark:bg-violet-500/10' },
             { label: 'Eco Driving', sub: 'Violations', path: '/eco', icon: <Leaf className="w-5 h-5" />, color: 'text-emerald-600 dark:text-emerald-400', bg: 'bg-emerald-50 dark:bg-emerald-500/10' },
             { label: 'Tenko', sub: 'Health Check', path: '/tenko', icon: <Activity className="w-5 h-5" />, color: 'text-purple-600 dark:text-purple-400', bg: 'bg-purple-50 dark:bg-purple-500/10' },
-            { label: 'Gatepass', sub: 'Control Room', path: '/gatepass', icon: <Shield className="w-5 h-5" />, color: 'text-amber-600 dark:text-amber-400', bg: 'bg-amber-50 dark:bg-amber-500/10' },
+            { label: 'Tenko', sub: 'Health Check', icon: <Shield className="w-5 h-5" />, color: 'text-amber-600 dark:text-amber-400', bg: 'bg-amber-50 dark:bg-amber-500/10' },
             { label: 'Carbon Neutral', sub: 'CO₂ Track', path: '/carbon', icon: <CheckCircle className="w-5 h-5" />, color: 'text-teal-600 dark:text-teal-400', bg: 'bg-teal-50 dark:bg-teal-500/10' },
           ].map((item) => (
             <Link key={item.path} to={item.path}

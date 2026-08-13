@@ -32,7 +32,7 @@ const PAGE_TITLES: Record<string, { title: string; sub: string }> = {
   '/': { title: 'Journal Trip', sub: 'Ritase & Driver Tracking' },
   '/monitoring': { title: 'Fleet Monitoring', sub: 'Live Status & Schedule' },
   '/tenko': { title: 'Tenko Health Check', sub: 'Driver Health Verification' },
-  '/gatepass': { title: 'Gatepass Control', sub: 'Dispatch & Fleet Readiness' },
+  '/driver-analytics': { title: 'Driver Analytics', sub: 'Violation & Coaching Report' },
   '/leadtime': { title: 'LeadTime Center', sub: 'Performance & Delay Analytics' },
   '/drivers': { title: 'Drivers Registry', sub: 'Data Master Pengemudi' },
   '/eco': { title: 'Monitoring Driving Behavior', sub: 'Safety Analytics Dashboard' },

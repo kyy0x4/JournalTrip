@@ -79,3 +79,25 @@ export interface TrainingMonthlyRecord {
   created_at: string;
   area?: string;
 }
+
+export interface DriverViolationMonth {
+  driver_id: string | null;
+  driver_name: string;
+  plat_nomor: string;
+  month: string; // 'YYYY-MM'
+  violation_count: number;
+  coaching_count: number;
+  last_violation_date?: string;
+  last_coaching_date?: string;
+}
+
+export interface DriverCoachingSession {
+  id: string;
+  driver_id: string;
+  violation_id: number;
+  violation_date: string;
+  coached_by: string | null;
+  notes: string | null;
+  status: 'pending' | 'completed' | 'cancelled';
+  created_at: string;
+}

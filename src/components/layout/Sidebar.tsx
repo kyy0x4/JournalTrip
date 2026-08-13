@@ -7,7 +7,7 @@ import {
   PanelLeftClose, PanelLeft,
   Route, BarChart3,
   Activity, Ticket, ClipboardCheck,
-  Timer, LayoutDashboard, GraduationCap, ShieldCheck
+  Timer, LayoutDashboard, GraduationCap, ShieldCheck, UserCheck
 } from 'lucide-react';
 import { Driver } from '../../types';
 import Logo from '../../image/Logo.png';
@@ -37,8 +37,7 @@ const NAV_ITEMS: { id: string; label: string; icon: ReactNode; sub?: string; pat
   { id: 'monitoring', label: 'Monitoring', icon: <BarChart3 className="w-5 h-5" />, sub: 'Fleet Status', path: '/monitoring' },
   { id: 'standar-leadtime', label: 'Standar Leadtime', icon: <Timer className="w-5 h-5" />, sub: 'Reference Guide', path: '/standar-leadtime' },
   { id: 'tenko', label: 'Tenko', icon: <Activity className="w-5 h-5" />, sub: 'Health Check', path: '/tenko' },
-  { id: 'p2h', label: 'P2H', icon: <ClipboardCheck className="w-5 h-5" />, sub: 'Checklist', path: '/p2h' },
-  { id: 'gatepass', label: 'Gatepass', icon: <Ticket className="w-5 h-5" />, sub: 'Control Room', path: '/gatepass' },
+  { id: 'driver-analytics', label: 'Driver Analytics', icon: <UserCheck className="w-5 h-5" />, sub: 'Violations & Coaching', path: '/driver-analytics' },
   { id: 'training', label: 'Training Center', icon: <GraduationCap className="w-5 h-5" />, sub: 'Analytics', path: '/training' },
   { id: 'kr-schedule', label: 'Jadwal KR', icon: <ShieldCheck className="w-5 h-5" />, sub: 'Operasional', path: '/kr-schedule' },
 ];

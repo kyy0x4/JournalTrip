@@ -17,14 +17,13 @@ const LeadTimePage = lazy(() => import('./pages/LeadTimePage'));
 const StandarLeadtimePage = lazy(() => import('./pages/StandarLeadtimePage'));
 const CarbonNeutralPage = lazy(() => import('./pages/CarbonNeutralPage'));
 const TenkoPage = lazy(() => import('./pages/TenkoPage'));
-const GatepassPage = lazy(() => import('./pages/GatepassPage'));
-const P2HPage = lazy(() => import('./pages/P2HPage'));
 const DashboardPage = lazy(() => import('./pages/DashboardPage'));
 const LoginPage = lazy(() => import('./pages/LoginPage'));
 const RouteAnalyticsPage = lazy(() => import('./pages/RouteAnalyticsPage'));
 const TrainingDashboardPage = lazy(() => import('./pages/TrainingDashboardPage'));
 const KRDashboardPage = lazy(() => import('./pages/KRDashboardPage'));
 const AdminDriversPage = lazy(() => import('./pages/AdminDriversPage'));
+const DriverAnalyticsPage = lazy(() => import('./pages/DriverAnalyticsPage'));
 
 import Footer from './components/layout/Footer';
 import { fetchDashboardData, fetchActiveDrivers, getDefaultOperationalShift } from './services/dataFetcher';
@@ -351,9 +350,8 @@ const AnimatedRoutes = ({
       <Route path="/eco" element={<EcoDrivingPage isTAM={isTAM} />} />
       <Route path="/carbon" element={<CarbonNeutralPage />} />
       <Route path="/tenko" element={<TenkoPage isTAM={isTAM} />} />
-      <Route path="/p2h" element={<P2HPage />} />
+      <Route path="/driver-analytics" element={<DriverAnalyticsPage isTAM={isTAM} />} />
       
-      <Route path="/gatepass" element={<GatepassPage />} />
       <Route path="/drivers" element={<DriversPage />} />
       <Route path="/drivers/:id" element={<DriverDetailPage />} />
       <Route path="/training" element={<TrainingDashboardPage />} />
