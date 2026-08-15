@@ -38,6 +38,40 @@ const SUMATERA_THRESHOLDS: Record<string, number> = {
   PEKANBARU: 72,
 };
 
+const MONTH_ID: Record<string, number> = {
+  jan:0,feb:1,mar:2,apr:3,mei:4,may:4,jun:5,jul:6,agu:7,aug:7,
+  sep:8,okt:9,oct:9,nov:10,des:11,dec:11
+};
+const dateTimeToMs = (s?: string): number | null => {
+  if (!s || typeof s !== 'string') return null;
+  const t = s.trim();
+  const dtMatch = t.match(/^(\d{1,2})\s+([A-Za-z]+)\s+(\d{4})\s+(\d{1,2}):(\d{2})/);
+  if (dtMatch) {
+    const [, dd, mon, yyyy, hh, mm] = dtMatch;
+    const monthIdx = MONTH_ID[mon.toLowerCase().slice(0,3)];
+    if (monthIdx === undefined) return null;
+    return new Date(Number(yyyy), monthIdx, Number(dd), Number(hh), Number(mm)).getTime();
+  }
+  const timeMatch = t.match(/^(\d{1,2}):(\d{2})/);
+  if (timeMatch) {
+    const [, hh, mm] = timeMatch;
+    return (Number(hh) * 60 + Number(mm)) * 60_000;
+  }
+  return null;
+};
+
+const diffH = (a?: string, b?: string): number => {
+  const fa = dateTimeToMs(a), fb = dateTimeToMs(b);
+  if (fa === null || fb === null) return 0;
+  let diffMs = fb - fa;
+  const isBaretime = (s?: string) => !!(s && /^\d{1,2}:\d{2}/.test(s.trim()));
+  if (isBaretime(a) && isBaretime(b) && diffMs < 0) {
+    diffMs += 24 * 3_600_000;
+  }
+  if (diffMs < 0) return 0;
+  return parseFloat((diffMs / 3_600_000).toFixed(2));
+};
+
 const parseDurationHours = (str?: string | null): number | null => {
   if (!str || String(str).trim().length < 2) return null;
   const text = String(str).trim();
@@ -289,6 +323,20 @@ export default function LeadTimePage({ isTAM = false }: { isTAM?: boolean }) {
       return 'Unknown';
     }
     if (stage === 'backtopool') {
+      if (areaName === 'SUMATERA') {
+        const destination = findExactOrInclude(info, ['Tujuan', 'Tujuan CC', 'Destination']).toUpperCase();
+        const thresholdKey = ['LAMPUNG', 'PALEMBANG', 'PEKANBARU'].find(d => destination.includes(d)) || '';
+        const threshold = SUMATERA_THRESHOLDS[thresholdKey] ?? 72;
+
+        const unloading = findExactOrInclude(points, ['UNLOADING PDC (LAMPUNG,PALEMBANG,PEKANBARU)', 'UNLOADING PDC POLYGON', 'UNLOADING PDC', 'UNLOADING', 'PDC POLYGON']);
+        const backToPool = findExactOrInclude(points, ['BACK TO POOL', 'Actual BackToPool']);
+        
+        if (!unloading || unloading === '-' || !backToPool || backToPool === '-') return 'Unknown';
+
+        const totalHours = diffH(unloading, backToPool);
+        return totalHours > threshold ? 'Delay' : 'OnTime';
+      }
+
       const val = findExactOrInclude(info, ['Status Leadtime Back To Pool', 'Actual BackToPool', 'Actual Back To Pool', 'Evaluasi Kembali Pool', 'Back To Pool']).toLowerCase();
       if (val.includes('delay')) return 'Delay';
       if (val.includes('ontime') || val.includes('on time') || val.includes('ok')) return 'OnTime';
@@ -1014,8 +1062,9 @@ function ReasonSection({ title, stageStats, color, onClickDelay, onSelect }: {
     '#f43f5e'  // rose-500
   ];
 
-  const renderPieLabel = ({ percent, x, y, cx }: any) => {
-    if (!percent || percent < 0.03) return null;
+  const renderPieLabel = ({ value, x, y, cx }: any) => {
+    const pct = totalReasons > 0 ? (value / totalReasons) * 100 : 0;
+    if (pct < 3) return null;
     try {
       return (
         <text
@@ -1027,7 +1076,7 @@ function ReasonSection({ title, stageStats, color, onClickDelay, onSelect }: {
           fontSize={8}
           fontWeight={900}
         >
-          {(percent * 100).toFixed(1)}%
+          {pct.toFixed(1)}%
         </text>
       );
     } catch { return null; }
@@ -1059,13 +1108,13 @@ function ReasonSection({ title, stageStats, color, onClickDelay, onSelect }: {
               {/* Pie Chart */}
               <div className="h-48 w-48 shrink-0">
                 <ResponsiveContainer width="100%" height="100%">
-                  <PieChart style={{ outline: 'none' }} className="focus:outline-none">
+                  <PieChart margin={{ top: 10, right: 50, bottom: 10, left: 50 }} style={{ outline: 'none' }} className="focus:outline-none">
                     <Pie
                       data={actualReasons}
                       cx="50%"
                       cy="50%"
-                      innerRadius={32}
-                      outerRadius={52}
+                      innerRadius={28}
+                      outerRadius={42}
                       paddingAngle={2}
                       dataKey="value"
                       nameKey="name"
