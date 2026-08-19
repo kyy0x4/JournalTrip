@@ -39,6 +39,7 @@ const PAGE_TITLES: Record<string, { title: string; sub: string }> = {
   '/carbon': { title: 'Carbon Neutral', sub: 'Carbon Footprint & Environmental Impact' },
   '/training': { title: 'Training Center', sub: 'Analytics & Driver Development' },
   '/kr-schedule': { title: 'Jadwal KR', sub: 'Schedule Keamanan & Ketertiban' },
+  '/kr-report': { title: 'Report KR', sub: 'Broken SOP, APD & Incident' },
   '/admin-drivers': { title: 'Admin Foto Driver', sub: 'Manajemen Foto & Dokumentasi' },
 };
 

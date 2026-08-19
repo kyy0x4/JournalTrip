@@ -40,6 +40,7 @@ const NAV_ITEMS: { id: string; label: string; icon: ReactNode; sub?: string; pat
   { id: 'driver-analytics', label: 'Driver Analytics', icon: <UserCheck className="w-5 h-5" />, sub: 'Violations & Coaching', path: '/driver-analytics' },
   { id: 'training', label: 'Training Center', icon: <GraduationCap className="w-5 h-5" />, sub: 'Analytics', path: '/training' },
   { id: 'kr-schedule', label: 'Jadwal KR', icon: <ShieldCheck className="w-5 h-5" />, sub: 'Operasional', path: '/kr-schedule' },
+  { id: 'kr-report', label: 'Report KR', icon: <ClipboardCheck className="w-5 h-5" />, sub: 'SOP, APD & Incident', path: '/kr-report' },
 ];
 
 
@@ -144,7 +145,7 @@ export default function Sidebar({
           {!isCollapsed && (
             <p className="text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest px-3 mb-3">Main Menu</p>
           )}
-          {NAV_ITEMS.filter(item => isTAM ? !['p2h', 'gatepass'].includes(item.id) : true).map(item => {
+          {NAV_ITEMS.filter(item => isTAM ? !['p2h', 'gatepass', 'kr-report'].includes(item.id) : true).map(item => {
             const active = item.path === '/'
               ? location.pathname === '/'
               : location.pathname.startsWith(item.path);

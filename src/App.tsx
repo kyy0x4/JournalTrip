@@ -22,6 +22,7 @@ const LoginPage = lazy(() => import('./pages/LoginPage'));
 const RouteAnalyticsPage = lazy(() => import('./pages/RouteAnalyticsPage'));
 const TrainingDashboardPage = lazy(() => import('./pages/TrainingDashboardPage'));
 const KRDashboardPage = lazy(() => import('./pages/KRDashboardPage'));
+const ReportKRPage = lazy(() => import('./pages/ReportKRPage'));
 const AdminDriversPage = lazy(() => import('./pages/AdminDriversPage'));
 const DriverAnalyticsPage = lazy(() => import('./pages/DriverAnalyticsPage'));
 
@@ -356,6 +357,7 @@ const AnimatedRoutes = ({
       <Route path="/drivers/:id" element={<DriverDetailPage />} />
       <Route path="/training" element={<TrainingDashboardPage />} />
       <Route path="/kr-schedule" element={<KRDashboardPage />} />
+      <Route path="/kr-report" element={isTAM ? <Navigate to="/" replace /> : <ReportKRPage />} />
       <Route path="/admin-drivers" element={isAdmin ? <AdminDriversPage /> : <Navigate to="/" replace />} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
