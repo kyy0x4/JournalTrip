@@ -3,7 +3,7 @@ import { useEscapeKey } from '../hooks/useEscapeKey';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import {
-  ClipboardCheck, Calendar, ChevronDown, ChevronLeft, ChevronRight,
+  ClipboardCheck, Calendar, ChevronLeft, ChevronRight,
   Download, X, FileText, Search, Loader2, ShieldAlert, HardHat,
   AlertTriangle, TrendingUp, CheckCircle2
 } from 'lucide-react';
@@ -17,15 +17,6 @@ import {
 } from '../services/krReportService';
 import { exportToCSV } from '../services/driverAnalyticsService';
 
-const AREAS = [
-  { val: 'ALL', label: 'Semua Area' },
-  { val: 'JBK', label: 'JBK' },
-  { val: 'NGORO', label: 'NGORO' },
-  { val: 'SUMATERA', label: 'SUMATERA' },
-  { val: 'PADANG', label: 'PADANG' },
-  { val: 'KALIMANTAN', label: 'KALIMANTAN' },
-];
-
 const CHART_COLORS = {
   broken_sop: '#ef4444',
   apd_ng: '#f59e0b',
@@ -35,13 +26,8 @@ const CHART_COLORS = {
 export default function ReportKRPage() {
   const now = new Date();
   const [selectedMonth, setSelectedMonth] = useState(`${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`);
-  const [selectedArea, setSelectedArea] = useState('ALL');
   const [rows, setRows] = useState<KRReportRow[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [areaDropdownOpen, setAreaDropdownOpen] = useState(false);
-  const [areaPos, setAreaPos] = useState({ top: 0, left: 0, width: 0 });
-  const areaBtnRef = useRef<HTMLButtonElement>(null);
-  const areaDropdownRef = useRef<HTMLDivElement>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [page, setPage] = useState(1);
   const perPage = 12;
@@ -58,7 +44,7 @@ export default function ReportKRPage() {
   const loadData = async () => {
     setIsLoading(true);
     try {
-      const data = await fetchKRReports(selectedMonth, { area: selectedArea });
+      const data = await fetchKRReports(selectedMonth);
       setRows(data);
     } catch (e) {
       console.error(e);
@@ -69,18 +55,7 @@ export default function ReportKRPage() {
 
   useEffect(() => {
     loadData();
-  }, [selectedMonth, selectedArea]);
-
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      const target = event.target as Node;
-      if (areaDropdownOpen && areaDropdownRef.current && !areaDropdownRef.current.contains(target) && areaBtnRef.current && !areaBtnRef.current.contains(target)) {
-        setAreaDropdownOpen(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [areaDropdownOpen]);
+  }, [selectedMonth]);
 
   useEscapeKey(() => setDetailKR(null), !!detailKR);
 
@@ -184,53 +159,6 @@ export default function ReportKRPage() {
                 onChange={(e) => setSelectedMonth(e.target.value)}
                 className="w-full pl-9 pr-3 py-2 bg-slate-50 dark:bg-slate-800 hover:bg-white dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-black text-slate-700 dark:text-slate-300 focus:ring-2 focus:ring-red-500/50 outline-none uppercase tracking-widest transition-all cursor-pointer shadow-sm select-none"
               />
-            </div>
-
-            <div className="relative group w-full sm:w-36">
-              <button
-                ref={areaBtnRef}
-                onClick={() => {
-                  if (areaBtnRef.current) {
-                    const r = areaBtnRef.current.getBoundingClientRect();
-                    const isMob = window.innerWidth < 640;
-                    setAreaPos({
-                      top: r.bottom + 8,
-                      left: isMob ? Math.max(8, r.left) : r.left,
-                      width: Math.max(r.width, isMob ? window.innerWidth - 16 : 160),
-                    });
-                  }
-                  setAreaDropdownOpen(!areaDropdownOpen);
-                }}
-                className="w-full flex items-center justify-between pl-4 pr-3 py-2 bg-slate-50 dark:bg-slate-800 hover:bg-white dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 rounded-xl text-[10px] font-black text-slate-700 dark:text-slate-300 outline-none uppercase tracking-widest transition-all shadow-sm"
-              >
-                <span className="truncate">{selectedArea === 'ALL' ? 'Area' : selectedArea}</span>
-                <ChevronDown className="w-4 h-4 text-slate-400 shrink-0 ml-2" />
-              </button>
-              {areaDropdownOpen && createPortal(
-                <div className="fixed inset-0 z-11000 pointer-events-none">
-                  <AnimatePresence>
-                    <motion.div
-                      ref={areaDropdownRef}
-                      initial={{ opacity: 0, y: 5 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: 5 }}
-                      style={{ position: 'fixed', top: areaPos.top, left: areaPos.left, width: areaPos.width, maxWidth: 320 }}
-                      className="bg-white dark:bg-slate-800 rounded-xl shadow-xl border border-slate-100 dark:border-slate-700 overflow-hidden pointer-events-auto py-1"
-                    >
-                      {AREAS.map(opt => (
-                        <button
-                          key={opt.val}
-                          onClick={() => { setSelectedArea(opt.val); setAreaDropdownOpen(false); }}
-                          className={`w-full text-left px-4 py-2.5 text-xs font-bold uppercase tracking-widest transition-colors ${selectedArea === opt.val ? 'bg-rose-50 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400' : 'text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700'}`}
-                        >
-                          {opt.label}
-                        </button>
-                      ))}
-                    </motion.div>
-                  </AnimatePresence>
-                </div>,
-                document.body
-              )}
             </div>
 
             <button
