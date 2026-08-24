@@ -1188,7 +1188,7 @@ export default function DriverDetailPage() {
 
                 {/* History Table */}
                 <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Historical Events</h4>
-                <div className="bg-slate-50 dark:bg-slate-800/30 rounded-4xl overflow-hidden border border-slate-100 dark:border-slate-800 mb-6">
+                <div className="bg-slate-50 dark:bg-slate-800/30 rounded-4xl overflow-x-auto border border-slate-100 dark:border-slate-800 mb-6">
                   <table className="w-full text-left text-xs border-collapse">
                     <thead>
                       <tr className="bg-slate-100 dark:bg-slate-800">

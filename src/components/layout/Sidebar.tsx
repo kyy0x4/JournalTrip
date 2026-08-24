@@ -6,8 +6,7 @@ import {
   X, User, Search,
   PanelLeftClose, PanelLeft,
   Route, BarChart3,
-  Activity, Ticket, ClipboardCheck,
-  Timer, LayoutDashboard, GraduationCap, ShieldCheck, UserCheck
+  Activity, LayoutDashboard, UserCheck
 } from 'lucide-react';
 import { Driver } from '../../types';
 import Logo from '../../image/Logo.png';
@@ -30,17 +29,13 @@ interface SidebarProps {
   isAdmin?: boolean;
 }
 
-// Core Operations only — Analytics & Master Data are in the Navbar App Launcher
+// Core Operations only — Analytics, Reference & Master Data are in the Navbar App Launcher
 const NAV_ITEMS: { id: string; label: string; icon: ReactNode; sub?: string; path: string }[] = [
   { id: 'dashboard-overview', label: 'Dashboard', icon: <LayoutDashboard className="w-5 h-5" />, sub: 'Overview', path: '/dashboard' },
   { id: 'dashboard', label: 'Journal Trip', icon: <Route className="w-5 h-5" />, sub: 'Ritase Tracking', path: '/' },
   { id: 'monitoring', label: 'Monitoring', icon: <BarChart3 className="w-5 h-5" />, sub: 'Fleet Status', path: '/monitoring' },
-  { id: 'standar-leadtime', label: 'Standar Leadtime', icon: <Timer className="w-5 h-5" />, sub: 'Reference Guide', path: '/standar-leadtime' },
   { id: 'tenko', label: 'Tenko', icon: <Activity className="w-5 h-5" />, sub: 'Health Check', path: '/tenko' },
   { id: 'driver-analytics', label: 'Driver Analytics', icon: <UserCheck className="w-5 h-5" />, sub: 'Violations & Coaching', path: '/driver-analytics' },
-  { id: 'training', label: 'Training Center', icon: <GraduationCap className="w-5 h-5" />, sub: 'Analytics', path: '/training' },
-  { id: 'kr-schedule', label: 'Jadwal KR', icon: <ShieldCheck className="w-5 h-5" />, sub: 'Operasional', path: '/kr-schedule' },
-  { id: 'kr-report', label: 'Report KR', icon: <ClipboardCheck className="w-5 h-5" />, sub: 'SOP, APD & Incident', path: '/kr-report' },
 ];
 
 
@@ -141,11 +136,11 @@ export default function Sidebar({
         </div>
 
         {/* ── MAIN NAVIGATION ── */}
-        <nav className="px-3 pt-4 pb-2 space-y-1 shrink-0">
+        <nav className="px-3 pt-4 pb-2 space-y-1 min-h-0 overflow-y-auto driver-list-scrollbar">
           {!isCollapsed && (
             <p className="text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest px-3 mb-3">Main Menu</p>
           )}
-          {NAV_ITEMS.filter(item => isTAM ? !['p2h', 'gatepass', 'kr-report'].includes(item.id) : true).map(item => {
+          {NAV_ITEMS.map(item => {
             const active = item.path === '/'
               ? location.pathname === '/'
               : location.pathname.startsWith(item.path);

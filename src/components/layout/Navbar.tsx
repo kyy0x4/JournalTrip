@@ -4,7 +4,8 @@ import { Link, useLocation } from 'react-router-dom';
 import {
   Calendar as CalendarIcon, Menu, X, Sun, Moon,
   ChevronDown, Download, LogOut,
-  Clock, Leaf, TreePine, Users, LayoutGrid, MapPin, ShieldCheck, ClipboardList
+  Clock, Leaf, TreePine, Users, LayoutGrid, MapPin, ShieldCheck, ClipboardList,
+  Timer, GraduationCap, ClipboardCheck
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { supabase } from '../../lib/supabase';
@@ -110,6 +111,50 @@ const LAUNCHER_ITEMS = [
     glow: 'shadow-sky-500/20',
     bg: 'bg-sky-50 dark:bg-sky-500/10',
     text: 'text-sky-600 dark:text-sky-400',
+  },
+  {
+    id: 'standar-leadtime',
+    label: 'Standar Leadtime',
+    sub: 'Reference Guide',
+    path: '/standar-leadtime',
+    icon: <Timer className="w-6 h-6" />,
+    gradient: 'from-violet-500 to-purple-600',
+    glow: 'shadow-violet-500/20',
+    bg: 'bg-violet-50 dark:bg-violet-500/10',
+    text: 'text-violet-600 dark:text-violet-400',
+  },
+  {
+    id: 'training',
+    label: 'Training Center',
+    sub: 'Analytics',
+    path: '/training',
+    icon: <GraduationCap className="w-6 h-6" />,
+    gradient: 'from-fuchsia-500 to-purple-600',
+    glow: 'shadow-fuchsia-500/20',
+    bg: 'bg-fuchsia-50 dark:bg-fuchsia-500/10',
+    text: 'text-fuchsia-600 dark:text-fuchsia-400',
+  },
+  {
+    id: 'kr-schedule',
+    label: 'Jadwal KR',
+    sub: 'Operasional',
+    path: '/kr-schedule',
+    icon: <ShieldCheck className="w-6 h-6" />,
+    gradient: 'from-cyan-500 to-teal-600',
+    glow: 'shadow-cyan-500/20',
+    bg: 'bg-cyan-50 dark:bg-cyan-500/10',
+    text: 'text-cyan-600 dark:text-cyan-400',
+  },
+  {
+    id: 'kr-report',
+    label: 'Report KR',
+    sub: 'SOP, APD & Incident',
+    path: '/kr-report',
+    icon: <ClipboardCheck className="w-6 h-6" />,
+    gradient: 'from-rose-500 to-red-600',
+    glow: 'shadow-rose-500/20',
+    bg: 'bg-rose-50 dark:bg-rose-500/10',
+    text: 'text-rose-600 dark:text-rose-400',
   },
 ];
 
@@ -435,7 +480,7 @@ export default function Navbar({
                 animate={{ opacity: 1, scale: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.93, y: -10 }}
                 transition={{ type: 'spring', stiffness: 420, damping: 30 }}
-                className="absolute top-full right-0 mt-3 w-[300px] sm:w-[320px] bg-white/95 dark:bg-slate-900/95 backdrop-blur-2xl border border-slate-200/60 dark:border-slate-700/60 rounded-3xl shadow-2xl shadow-slate-900/15 dark:shadow-black/50 z-[200] overflow-hidden"
+                className="absolute top-full right-0 mt-3 w-[300px] sm:w-[320px] max-w-[calc(100vw-2rem)] max-h-[70vh] overflow-y-auto bg-white/95 dark:bg-slate-900/95 backdrop-blur-2xl border border-slate-200/60 dark:border-slate-700/60 rounded-3xl shadow-2xl shadow-slate-900/15 dark:shadow-black/50 z-[200] overflow-x-hidden"
               >
                 {/* Header */}
                 <div className="px-5 pt-4 pb-3 border-b border-slate-100 dark:border-slate-800">
@@ -445,7 +490,7 @@ export default function Navbar({
 
                 {/* Grid Items */}
                 <div className="p-3 grid grid-cols-2 gap-2">
-                  {LAUNCHER_ITEMS.filter(item => isTAM ? !['carbon', 'drivers'].includes(item.id) : true).map((item, i) => (
+                  {LAUNCHER_ITEMS.filter(item => isTAM ? !['carbon', 'drivers', 'kr-report'].includes(item.id) : true).map((item, i) => (
                     <motion.div
                       key={item.id}
                       initial={{ opacity: 0, y: 8 }}

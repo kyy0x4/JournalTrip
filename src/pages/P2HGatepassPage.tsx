@@ -28,14 +28,14 @@ const TOTAL_P2H_ITEMS = P2H_CATEGORIES.reduce((acc, cat) => acc + cat.items.leng
 
 // ─── Tema Claude Amber ───
 const T = {
-  card: 'bg-white border border-[#E8E6DC]',
-  panel: 'bg-[#F0EEE6]',
-  heading: 'text-[#29261B]',
-  body: 'text-[#3D3929]',
-  muted: 'text-[#83827D]',
-  input: 'bg-white border border-[#E8E6DC] rounded-xl text-sm text-[#3D3929] placeholder-[#B3B0A6] focus:outline-none focus:border-[#D97757]/60',
+  card: 'bg-white dark:bg-[#201A16] border border-[#E8E6DC] dark:border-[#352C25]',
+  panel: 'bg-[#F0EEE6] dark:bg-[#26201B]',
+  heading: 'text-[#29261B] dark:text-[#F5F0EC]',
+  body: 'text-[#3D3929] dark:text-[#D8CFC7]',
+  muted: 'text-[#83827D] dark:text-[#96897E]',
+  input: 'bg-white dark:bg-[#201A16] border border-[#E8E6DC] dark:border-[#352C25] rounded-xl text-sm text-[#3D3929] dark:text-[#D8CFC7] placeholder-[#B3B0A6] dark:placeholder-[#5E554C] focus:outline-none focus:border-[#D97757]/60',
   primaryBtn: 'bg-[#D97757] hover:bg-[#C15F3C] text-white',
-  ghostBtn: 'bg-[#F0EEE6] hover:bg-[#E8E6DC] text-[#3D3929]',
+  ghostBtn: 'bg-[#F0EEE6] dark:bg-[#26201B] hover:bg-[#E8E6DC] dark:hover:bg-[#3A2F28] text-[#3D3929] dark:text-[#D8CFC7]',
 };
 
 type GateStatus = 'READY' | 'PENDING' | 'BLOCKED';
@@ -90,7 +90,7 @@ function DriverAvatar({ name, avatar, size = 'w-7 h-7' }: { name: string; avatar
   if (avatar && !error) {
     return (
       <img src={avatar} alt={name} onError={() => setError(true)}
-        className={`${size} rounded-full object-cover shrink-0 border border-[#E8E6DC] bg-[#F0EEE6]`} />
+        className={`${size} rounded-full object-cover shrink-0 border border-[#E8E6DC] dark:border-[#352C25] bg-[#F0EEE6] dark:bg-[#26201B]`} />
     );
   }
   return (
@@ -253,36 +253,36 @@ function P2HTab() {
 
   return (
     <div className="space-y-5">
-      <div className="grid grid-cols-4 gap-3">
-        {[{ label: 'Total Jadwal', value: stats.total, chip: 'bg-[#D97757]/10 text-[#C15F3C]', icon: <FileText className="w-4 h-4" /> },
-          { label: 'Belum Dicek', value: stats.belum, chip: 'bg-slate-100 text-slate-500', icon: <Clock className="w-4 h-4" /> },
-          { label: 'OK', value: stats.ok, chip: 'bg-emerald-100 text-emerald-700', icon: <CheckCircle2 className="w-4 h-4" /> },
-          { label: 'NG', value: stats.ng, chip: 'bg-red-100 text-red-700', icon: <XCircle className="w-4 h-4" /> }].map(s => (
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        {[{ label: 'Total Jadwal', value: stats.total, chip: 'bg-[#D97757]/10 text-[#C15F3C] dark:bg-[#D97757]/15 dark:text-[#DF8260]', icon: <FileText className="w-4 h-4" /> },
+          { label: 'Belum Dicek', value: stats.belum, chip: 'bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400', icon: <Clock className="w-4 h-4" /> },
+          { label: 'OK', value: stats.ok, chip: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-400', icon: <CheckCircle2 className="w-4 h-4" /> },
+          { label: 'NG', value: stats.ng, chip: 'bg-red-100 text-red-700 dark:bg-red-500/15 dark:text-red-400', icon: <XCircle className="w-4 h-4" /> }].map(s => (
           <div key={s.label} className={`${T.card} rounded-2xl p-4 flex items-center gap-3`}>
             <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${s.chip}`}>{s.icon}</div>
-            <div><div className={`text-xl font-black ${T.heading}`}>{s.value}</div><div className="text-[10px] font-bold text-[#83827D] uppercase tracking-widest">{s.label}</div></div>
+            <div><div className={`text-xl font-black ${T.heading}`}>{s.value}</div><div className="text-[10px] font-bold text-[#83827D] dark:text-[#96897E] uppercase tracking-widest">{s.label}</div></div>
           </div>
         ))}
       </div>
 
       <div className="flex flex-wrap gap-3 items-center">
         <div className="relative flex-1 min-w-[160px]">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#B3B0A6]" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#B3B0A6] dark:text-[#5E554C]" />
           <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Cari driver / nopol…"
             className={`w-full pl-9 pr-4 py-2 ${T.input}`} />
         </div>
         <div className="flex gap-2">
           {(['ALL', 'BELUM', 'OK', 'NG'] as const).map(s => (
             <button key={s} onClick={() => setFilterStatus(s)}
-              className={`px-3 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${filterStatus === s ? (s === 'OK' ? 'bg-emerald-600 text-white' : s === 'NG' ? 'bg-red-600 text-white' : s === 'BELUM' ? 'bg-slate-500 text-white' : `${T.primaryBtn}`) : `${T.ghostBtn} text-[#83827D]`}`}>{s}</button>
+              className={`px-3 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${filterStatus === s ? (s === 'OK' ? 'bg-emerald-600 text-white' : s === 'NG' ? 'bg-red-600 text-white' : s === 'BELUM' ? 'bg-slate-500 text-white' : `${T.primaryBtn}`) : `${T.ghostBtn} text-[#83827D] dark:text-[#96897E]`}`}>{s}</button>
           ))}
         </div>
         <div className="relative">
-          <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#B3B0A6]" />
+          <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#B3B0A6] dark:text-[#5E554C]" />
           <input type="date" value={selectedDate} onChange={e => setSelectedDate(e.target.value)}
             className={`pl-9 pr-3 py-2 ${T.input}`} />
         </div>
-        <button onClick={load} title="Refresh" className={`p-2 rounded-xl ${T.ghostBtn} text-[#83827D] transition-colors`}><RefreshCcw className="w-4 h-4" /></button>
+        <button onClick={load} title="Refresh" className={`p-2 rounded-xl ${T.ghostBtn} text-[#83827D] dark:text-[#96897E] transition-colors`}><RefreshCcw className="w-4 h-4" /></button>
       </div>
 
       <div className={`${T.card} rounded-2xl overflow-hidden`}>
@@ -292,48 +292,49 @@ function P2HTab() {
           </div>
         ) : paginated.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 gap-3">
-            <ClipboardList className="w-10 h-10 text-[#DDD9CE]" />
-            <p className="text-sm text-[#83827D]">Tidak ada jadwal driver untuk {fmtDate(selectedDate)}</p>
+            <ClipboardList className="w-10 h-10 text-[#DDD9CE] dark:text-[#3A3029]" />
+            <p className="text-sm text-[#83827D] dark:text-[#96897E]">Tidak ada jadwal driver untuk {fmtDate(selectedDate)}</p>
           </div>
         ) : (
+          <div className="overflow-x-auto">
           <table className="w-full text-sm">
-            <thead><tr className="border-b border-[#E8E6DC] bg-[#FAF9F5]">
-              {['#', 'Driver', 'Nopol', 'Shift', 'Status P2H', 'Dicek Oleh', 'Jam', ''].map(h => (
-                <th key={h} className={`text-left px-4 py-3 text-[10px] font-black text-[#83827D] uppercase tracking-widest ${h === '' ? 'text-right' : ''}`}>{h}</th>
+            <thead><tr className="border-b border-[#E8E6DC] dark:border-[#352C25] bg-[#FAF9F5] dark:bg-[#191411]">
+              {['No', 'Driver', 'Nopol', 'Shift', 'Status P2H', 'Dicek Oleh', 'Jam', ''].map(h => (
+                <th key={h} className={`text-left px-4 py-3 text-[10px] font-black text-[#83827D] dark:text-[#96897E] uppercase tracking-widest ${h === '' ? 'text-right' : ''}`}>{h}</th>
               ))}
             </tr></thead>
-            <tbody className="divide-y divide-[#F0EEE6]">
+            <tbody className="divide-y divide-[#F0EEE6] dark:divide-[#26201B]">
               {paginated.map((d, i) => {
                 const rec = p2hMap[d.id];
                 return (
-                  <tr key={d.id} className="hover:bg-[#FAF9F5] transition-colors">
-                    <td className="px-4 py-3 text-[#B3B0A6] text-xs">{(page - 1) * ITEMS_PER_PAGE + i + 1}</td>
+                  <tr key={d.id} className="hover:bg-[#FAF9F5] dark:bg-[#191411] transition-colors dark:hover:bg-[#1A1512]">
+                    <td className="px-4 py-3 text-[#B3B0A6] dark:text-[#5E554C] text-xs">{(page - 1) * ITEMS_PER_PAGE + i + 1}</td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2">
                         <DriverAvatar name={d.name} avatar={d.avatar} />
                         <div>
                           <span className={`font-medium text-xs block ${T.body}`}>{d.name || '-'}</span>
-                          <span className="text-[9px] font-bold text-[#83827D] uppercase tracking-wider">{d.area || '-'}</span>
+                          <span className="text-[9px] font-bold text-[#83827D] dark:text-[#96897E] uppercase tracking-wider">{d.area || '-'}</span>
                         </div>
                       </div>
                     </td>
                     <td className={`px-4 py-3 text-xs font-mono ${T.body}`}>{d.nopol || '-'}</td>
                     <td className="px-4 py-3">
-                      <span className={`px-2 py-0.5 rounded-lg text-[10px] font-black uppercase ${d.shift.includes('NIGHT') ? 'bg-indigo-100 text-indigo-700' : 'bg-blue-100 text-blue-700'}`}>{d.shift || '-'}</span>
+                      <span className={`px-2 py-0.5 rounded-lg text-[10px] font-black uppercase ${d.shift.includes('NIGHT') ? 'bg-indigo-100 text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-300' : 'bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-300'}`}>{d.shift || '-'}</span>
                     </td>
                     <td className="px-4 py-3">
-                      {!rec ? <span className="text-[10px] font-black text-[#B3B0A6] uppercase">Belum Dicek</span>
+                      {!rec ? <span className="text-[10px] font-black text-[#B3B0A6] dark:text-[#5E554C] uppercase">Belum Dicek</span>
                         : rec.status === 'OK'
-                          ? <span className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-emerald-100 text-emerald-700 text-[10px] font-black uppercase"><CheckCircle2 className="w-3 h-3" />OK</span>
-                          : <span className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-red-100 text-red-700 text-[10px] font-black uppercase"><XCircle className="w-3 h-3" />NG</span>}
+                          ? <span className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-400 text-[10px] font-black uppercase"><CheckCircle2 className="w-3 h-3" />OK</span>
+                          : <span className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-red-100 text-red-700 dark:bg-red-500/15 dark:text-red-400 text-[10px] font-black uppercase"><XCircle className="w-3 h-3" />NG</span>}
                     </td>
-                    <td className="px-4 py-3 text-xs text-[#83827D]">{rec?.checked_by || '-'}</td>
-                    <td className="px-4 py-3 text-xs text-[#83827D]">{rec?.created_at ? new Date(rec.created_at).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) : '-'}</td>
+                    <td className="px-4 py-3 text-xs text-[#83827D] dark:text-[#96897E]">{rec?.checked_by || '-'}</td>
+                    <td className="px-4 py-3 text-xs text-[#83827D] dark:text-[#96897E]">{rec?.created_at ? new Date(rec.created_at).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) : '-'}</td>
                     <td className="px-4 py-3">
                       <div className="flex items-center justify-end gap-1.5">
                         {rec && rec.checklist && Object.keys(rec.checklist).length > 0 && (
                           <button onClick={() => setDetail({ ...rec, name: d.name })} title="Lihat detail checklist"
-                            className="p-1.5 rounded-lg bg-[#F0EEE6] hover:bg-[#E8E6DC] text-[#83827D] transition-colors"><Info className="w-3.5 h-3.5" /></button>
+                            className="p-1.5 rounded-lg bg-[#F0EEE6] dark:bg-[#26201B] hover:bg-[#E8E6DC] dark:hover:bg-[#3A2F28] text-[#83827D] dark:text-[#96897E] transition-colors"><Info className="w-3.5 h-3.5" /></button>
                         )}
                         <button onClick={() => openInput(d)} disabled={saving}
                           className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[10px] font-black uppercase transition-colors disabled:opacity-40 ${rec ? `${T.ghostBtn}` : `${T.primaryBtn}`}`}>
@@ -346,16 +347,17 @@ function P2HTab() {
               })}
             </tbody>
           </table>
+          </div>
         )}
       </div>
 
       {totalPages > 1 && (
         <div className="flex items-center justify-between">
-          <span className="text-xs text-[#83827D]">{filtered.length} driver</span>
+          <span className="text-xs text-[#83827D] dark:text-[#96897E]">{filtered.length} driver</span>
           <div className="flex items-center gap-2">
-            <button disabled={page === 1} onClick={() => setPage(p => p - 1)} className={`p-1.5 rounded-lg border border-[#E8E6DC] text-[#83827D] disabled:opacity-30`}><ChevronLeft className="w-4 h-4" /></button>
+            <button disabled={page === 1} onClick={() => setPage(p => p - 1)} className={`p-1.5 rounded-lg border border-[#E8E6DC] dark:border-[#352C25] text-[#83827D] dark:text-[#96897E] disabled:opacity-30`}><ChevronLeft className="w-4 h-4" /></button>
             <span className={`text-xs font-bold ${T.body}`}>{page}/{totalPages}</span>
-            <button disabled={page === totalPages} onClick={() => setPage(p => p + 1)} className={`p-1.5 rounded-lg border border-[#E8E6DC] text-[#83827D] disabled:opacity-30`}><ChevronRight className="w-4 h-4" /></button>
+            <button disabled={page === totalPages} onClick={() => setPage(p => p + 1)} className={`p-1.5 rounded-lg border border-[#E8E6DC] dark:border-[#352C25] text-[#83827D] dark:text-[#96897E] disabled:opacity-30`}><ChevronRight className="w-4 h-4" /></button>
           </div>
         </div>
       )}
@@ -364,26 +366,26 @@ function P2HTab() {
       <AnimatePresence>
         {editing && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center bg-[#29261B]/40 backdrop-blur-sm p-4" onClick={() => setEditing(null)}>
+            className="fixed inset-0 z-50 flex items-center justify-center bg-[#29261B]/40 backdrop-blur-sm dark:bg-black/60 p-4" onClick={() => setEditing(null)}>
             <motion.div initial={{ scale: 0.95 }} animate={{ scale: 1 }} exit={{ scale: 0.95 }} onClick={e => e.stopPropagation()}
-              className="bg-white border border-[#E8E6DC] rounded-2xl w-full max-w-2xl shadow-2xl flex flex-col max-h-[92vh]">
+              className="bg-white dark:bg-[#201A16] border border-[#E8E6DC] dark:border-[#352C25] rounded-2xl w-full max-w-2xl shadow-2xl flex flex-col max-h-[92vh]">
               {/* Header */}
-              <div className="flex items-start justify-between p-5 pb-4 border-b border-[#F0EEE6] shrink-0">
+              <div className="flex items-start justify-between p-5 pb-4 border-b border-[#F0EEE6] dark:border-[#352C25] shrink-0">
                 <div>
-                  <p className="text-[9px] font-black uppercase tracking-widest text-[#83827D] mb-0.5">
+                  <p className="text-[9px] font-black uppercase tracking-widest text-[#83827D] dark:text-[#96897E] mb-0.5">
                     {editingRecord ? 'Edit P2H' : 'Input P2H'} • {fmtDate(selectedDate)}
                   </p>
                   <h3 className={`text-base font-black ${T.heading}`}>{editing.name}</h3>
-                  <p className="text-xs text-[#83827D] font-mono mt-0.5">{editing.nopol} • {editing.area} • {editing.shift}</p>
+                  <p className="text-xs text-[#83827D] dark:text-[#96897E] font-mono mt-0.5">{editing.nopol} • {editing.area} • {editing.shift}</p>
                 </div>
                 <div className="flex items-center gap-3">
                   <div className="text-right">
-                    <div className="text-[10px] font-bold text-[#83827D] uppercase tracking-widest">Terisi {filledCount}/{TOTAL_P2H_ITEMS}</div>
-                    <div className="w-24 h-1.5 bg-[#F0EEE6] rounded-full mt-1 overflow-hidden">
+                    <div className="text-[10px] font-bold text-[#83827D] dark:text-[#96897E] uppercase tracking-widest">Terisi {filledCount}/{TOTAL_P2H_ITEMS}</div>
+                    <div className="w-24 h-1.5 bg-[#F0EEE6] dark:bg-[#26201B] rounded-full mt-1 overflow-hidden">
                       <motion.div animate={{ width: `${progress}%` }} className={`h-full rounded-full ${progress === 100 ? 'bg-emerald-500' : 'bg-[#D97757]'}`} />
                     </div>
                   </div>
-                  <button onClick={() => setEditing(null)} className="p-1.5 rounded-lg text-[#83827D] hover:bg-[#F0EEE6]"><X className="w-4 h-4" /></button>
+                  <button onClick={() => setEditing(null)} className="p-1.5 rounded-lg text-[#83827D] dark:text-[#96897E] hover:bg-[#F0EEE6] dark:bg-[#26201B]"><X className="w-4 h-4" /></button>
                 </div>
               </div>
 
@@ -394,22 +396,22 @@ function P2HTab() {
                   return (
                     <div key={cat.id}>
                       <div className="flex items-center justify-between mb-2">
-                        <h4 className="text-[11px] font-black uppercase tracking-wider text-[#29261B]">{cat.title}</h4>
+                        <h4 className="text-[11px] font-black uppercase tracking-wider text-[#29261B] dark:text-[#F5F0EC]">{cat.title}</h4>
                         <button onClick={() => setChecklist(prev => {
                           const next = { ...prev };
                           cat.items.forEach(it => { next[it.id] = 'OK'; });
                           return next;
                         })}
-                          className={`text-[9px] font-black uppercase tracking-widest px-2 py-1 rounded-lg transition-colors ${allOK ? 'bg-emerald-100 text-emerald-700' : 'bg-[#F0EEE6] text-[#83827D] hover:bg-[#E8E6DC]'}`}>
+                          className={`text-[9px] font-black uppercase tracking-widest px-2 py-1 rounded-lg transition-colors ${allOK ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-400' : 'bg-[#F0EEE6] dark:bg-[#26201B] text-[#83827D] dark:text-[#96897E] hover:bg-[#E8E6DC] dark:hover:bg-[#3A2F28]'}`}>
                           {allOK ? '✓ Semua OK' : 'Set Semua OK'}
                         </button>
                       </div>
                       <div className="space-y-1.5">
                         {cat.items.map(item => (
-                          <div key={item.id} className="flex items-start justify-between gap-3 p-2.5 rounded-xl bg-[#FAF9F5] border border-[#F0EEE6]">
+                          <div key={item.id} className="flex items-start justify-between gap-3 p-2.5 rounded-xl bg-[#FAF9F5] dark:bg-[#191411] border border-[#F0EEE6]">
                             <div className="flex-1 min-w-0">
-                              <p className="text-xs font-bold text-[#3D3929] leading-snug">{item.item}</p>
-                              <p className="text-[10px] text-[#83827D] leading-snug mt-0.5 italic">{item.syarat}</p>
+                              <p className="text-xs font-bold text-[#3D3929] dark:text-[#D8CFC7] leading-snug">{item.item}</p>
+                              <p className="text-[10px] text-[#83827D] dark:text-[#96897E] leading-snug mt-0.5 italic">{item.syarat}</p>
                             </div>
                             <div className="flex gap-1 shrink-0">
                               {(['OK', 'NG'] as const).map(v => {
@@ -418,7 +420,7 @@ function P2HTab() {
                                   <button key={v} onClick={() => setChecklist(prev => ({ ...prev, [item.id]: v }))}
                                     className={`w-10 py-1 rounded-lg text-[10px] font-black uppercase transition-all ${active
                                       ? v === 'OK' ? 'bg-emerald-600 text-white' : 'bg-red-600 text-white'
-                                      : 'bg-white border border-[#E8E6DC] text-[#B3B0A6] hover:border-[#D97757]/50'}`}>
+                                      : 'bg-white dark:bg-[#26201B] border border-[#E8E6DC] dark:border-[#352C25] text-[#B3B0A6] dark:text-[#5E554C] hover:border-[#D97757]/50'}`}>
                                     {v}
                                   </button>
                                 );
@@ -432,7 +434,7 @@ function P2HTab() {
                 })}
 
                 <div>
-                  <h4 className="text-[11px] font-black uppercase tracking-wider text-[#29261B] mb-2">Catatan Temuan</h4>
+                  <h4 className="text-[11px] font-black uppercase tracking-wider text-[#29261B] dark:text-[#F5F0EC] mb-2">Catatan Temuan</h4>
                   <textarea value={catatan} onChange={e => setCatatan(e.target.value)} rows={2}
                     placeholder="Wajib diisi jika ada item NG (deskripsi temuan)…"
                     className={`w-full ${T.input} resize-none`} />
@@ -440,12 +442,12 @@ function P2HTab() {
               </div>
 
               {/* Footer */}
-              <div className="flex items-center justify-between gap-3 p-4 border-t border-[#F0EEE6] shrink-0">
-                <p className="text-[10px] text-[#83827D] font-semibold">
+              <div className="flex items-center justify-between gap-3 p-4 border-t border-[#F0EEE6] dark:border-[#352C25] shrink-0">
+                <p className="text-[10px] text-[#83827D] dark:text-[#96897E] font-semibold">
                   {Object.values(checklist).includes('NG') ? 'Ada item NG → status P2H otomatis NG' : 'Semua item OK → status P2H otomatis OK'}
                 </p>
                 <div className="flex gap-2">
-                  <button onClick={() => setEditing(null)} className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest ${T.ghostBtn} text-[#83827D]`}>Batal</button>
+                  <button onClick={() => setEditing(null)} className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest ${T.ghostBtn} text-[#83827D] dark:text-[#96897E]`}>Batal</button>
                   <button onClick={handleSave} disabled={saving || filledCount < TOTAL_P2H_ITEMS}
                     className={`inline-flex items-center gap-2 px-5 py-2 rounded-xl text-xs font-black uppercase tracking-widest ${T.primaryBtn} disabled:opacity-40 transition-colors`}>
                     <ClipboardList className="w-3.5 h-3.5" />{saving ? 'Menyimpan…' : 'Simpan P2H'}
@@ -461,19 +463,19 @@ function P2HTab() {
       <AnimatePresence>
         {detail && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center bg-[#29261B]/40 backdrop-blur-sm p-4" onClick={() => setDetail(null)}>
+            className="fixed inset-0 z-50 flex items-center justify-center bg-[#29261B]/40 backdrop-blur-sm dark:bg-black/60 p-4" onClick={() => setDetail(null)}>
             <motion.div initial={{ scale: 0.92 }} animate={{ scale: 1 }} exit={{ scale: 0.92 }} onClick={e => e.stopPropagation()}
-              className="bg-white border border-[#E8E6DC] rounded-2xl p-6 w-full max-w-md shadow-2xl">
+              className="bg-white dark:bg-[#201A16] border border-[#E8E6DC] dark:border-[#352C25] rounded-2xl p-6 w-full max-w-md shadow-2xl">
               <div className="flex items-center justify-between mb-1">
                 <h3 className={`text-sm font-black uppercase tracking-widest ${T.heading}`}>Detail Checklist P2H</h3>
-                <button onClick={() => setDetail(null)} className="p-1.5 rounded-lg text-[#83827D] hover:bg-[#F0EEE6]"><X className="w-4 h-4" /></button>
+                <button onClick={() => setDetail(null)} className="p-1.5 rounded-lg text-[#83827D] dark:text-[#96897E] hover:bg-[#F0EEE6] dark:bg-[#26201B]"><X className="w-4 h-4" /></button>
               </div>
-              <p className="text-xs text-[#83827D] mb-4">{detail.name} • {detail.nopol} • dicek oleh {detail.checked_by || '-'}</p>
+              <p className="text-xs text-[#83827D] dark:text-[#96897E] mb-4">{detail.name} • {detail.nopol} • dicek oleh {detail.checked_by || '-'}</p>
               <div className="space-y-1.5 max-h-[60vh] overflow-y-auto pr-1">
                 {detail.checklist && Object.entries(detail.checklist).map(([k, v]) => (
-                  <div key={k} className="flex items-center justify-between p-2.5 rounded-xl bg-[#FAF9F5] border border-[#F0EEE6]">
-                    <span className="text-xs font-medium text-[#3D3929]">{k}</span>
-                    <span className={`text-[10px] font-black px-2 py-0.5 rounded-lg ${v === 'OK' ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}`}>{v}</span>
+                  <div key={k} className="flex items-center justify-between p-2.5 rounded-xl bg-[#FAF9F5] dark:bg-[#191411] border border-[#F0EEE6]">
+                    <span className="text-xs font-medium text-[#3D3929] dark:text-[#D8CFC7]">{k}</span>
+                    <span className={`text-[10px] font-black px-2 py-0.5 rounded-lg ${v === 'OK' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-400' : 'bg-red-100 text-red-700 dark:bg-red-500/15 dark:text-red-400'}`}>{v}</span>
                   </div>
                 ))}
               </div>
@@ -662,43 +664,43 @@ function GatepassTab() {
   const docNumber = `KRW/GP/${selectedDate.replace(/-/g, '')}/${String(printSeq).padStart(3, '0')}`;
 
   const statusBadge = (s: GateStatus) => {
-    if (s === 'READY') return <span className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-emerald-100 text-emerald-700 text-[10px] font-black uppercase"><ShieldCheck className="w-3 h-3" />Boleh Jalan</span>;
-    if (s === 'BLOCKED') return <span className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-red-100 text-red-700 text-[10px] font-black uppercase"><XCircle className="w-3 h-3" />Tidak Lolos</span>;
-    return <span className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-amber-100 text-amber-700 text-[10px] font-black uppercase"><Clock className="w-3 h-3" />Pending</span>;
+    if (s === 'READY') return <span className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-400 text-[10px] font-black uppercase"><ShieldCheck className="w-3 h-3" />Boleh Jalan</span>;
+    if (s === 'BLOCKED') return <span className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-red-100 text-red-700 dark:bg-red-500/15 dark:text-red-400 text-[10px] font-black uppercase"><XCircle className="w-3 h-3" />Tidak Lolos</span>;
+    return <span className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-400 text-[10px] font-black uppercase"><Clock className="w-3 h-3" />Pending</span>;
   };
 
   return (
     <div className="space-y-5">
-      <div className="grid grid-cols-4 gap-3">
-        {[{ label: 'Total Jadwal', value: stats.total, chip: 'bg-[#D97757]/10 text-[#C15F3C]', icon: <FileText className="w-4 h-4" /> },
-          { label: 'Siap Jalan', value: stats.ready, chip: 'bg-emerald-100 text-emerald-700', icon: <CheckCircle2 className="w-4 h-4" /> },
-          { label: 'Pending', value: stats.pending, chip: 'bg-amber-100 text-amber-700', icon: <Clock className="w-4 h-4" /> },
-          { label: 'Tidak Lolos', value: stats.blocked, chip: 'bg-red-100 text-red-700', icon: <XCircle className="w-4 h-4" /> }].map(s => (
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        {[{ label: 'Total Jadwal', value: stats.total, chip: 'bg-[#D97757]/10 text-[#C15F3C] dark:bg-[#D97757]/15 dark:text-[#DF8260]', icon: <FileText className="w-4 h-4" /> },
+          { label: 'Siap Jalan', value: stats.ready, chip: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-400', icon: <CheckCircle2 className="w-4 h-4" /> },
+          { label: 'Pending', value: stats.pending, chip: 'bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-400', icon: <Clock className="w-4 h-4" /> },
+          { label: 'Tidak Lolos', value: stats.blocked, chip: 'bg-red-100 text-red-700 dark:bg-red-500/15 dark:text-red-400', icon: <XCircle className="w-4 h-4" /> }].map(s => (
           <div key={s.label} className={`${T.card} rounded-2xl p-4 flex items-center gap-3`}>
             <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${s.chip}`}>{s.icon}</div>
-            <div><div className={`text-xl font-black ${T.heading}`}>{s.value}</div><div className="text-[10px] font-bold text-[#83827D] uppercase tracking-widest">{s.label}</div></div>
+            <div><div className={`text-xl font-black ${T.heading}`}>{s.value}</div><div className="text-[10px] font-bold text-[#83827D] dark:text-[#96897E] uppercase tracking-widest">{s.label}</div></div>
           </div>
         ))}
       </div>
 
       <div className="flex flex-wrap gap-3 items-center">
         <div className="relative flex-1 min-w-[160px]">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#B3B0A6]" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#B3B0A6] dark:text-[#5E554C]" />
           <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Cari driver / nopol…"
             className={`w-full pl-9 pr-4 py-2 ${T.input}`} />
         </div>
         <div className="flex gap-2">
           {(['ALL', 'READY', 'PENDING', 'BLOCKED'] as const).map(s => (
             <button key={s} onClick={() => setFilterStatus(s)}
-              className={`px-3 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${filterStatus === s ? (s === 'READY' ? 'bg-emerald-600 text-white' : s === 'BLOCKED' ? 'bg-red-600 text-white' : s === 'PENDING' ? 'bg-amber-500 text-white' : `${T.primaryBtn}`) : `${T.ghostBtn} text-[#83827D]`}`}>{s === 'BLOCKED' ? 'NG' : s}</button>
+              className={`px-3 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${filterStatus === s ? (s === 'READY' ? 'bg-emerald-600 text-white' : s === 'BLOCKED' ? 'bg-red-600 text-white' : s === 'PENDING' ? 'bg-amber-500 text-white' : `${T.primaryBtn}`) : `${T.ghostBtn} text-[#83827D] dark:text-[#96897E]`}`}>{s === 'BLOCKED' ? 'NG' : s}</button>
           ))}
         </div>
         <div className="relative">
-          <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#B3B0A6]" />
+          <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#B3B0A6] dark:text-[#5E554C]" />
           <input type="date" value={selectedDate} onChange={e => setSelectedDate(e.target.value)}
             className={`pl-9 pr-3 py-2 ${T.input}`} />
         </div>
-        <button onClick={load} title="Refresh" className={`p-2 rounded-xl ${T.ghostBtn} text-[#83827D] transition-colors`}><RefreshCcw className="w-4 h-4" /></button>
+        <button onClick={load} title="Refresh" className={`p-2 rounded-xl ${T.ghostBtn} text-[#83827D] dark:text-[#96897E] transition-colors`}><RefreshCcw className="w-4 h-4" /></button>
       </div>
 
       <div className={`${T.card} rounded-2xl overflow-hidden`}>
@@ -708,45 +710,46 @@ function GatepassTab() {
           </div>
         ) : paginated.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 gap-3">
-            <Shield className="w-10 h-10 text-[#DDD9CE]" />
-            <p className="text-sm text-[#83827D]">Tidak ada jadwal driver untuk {fmtDate(selectedDate)}</p>
+            <Shield className="w-10 h-10 text-[#DDD9CE] dark:text-[#3A3029]" />
+            <p className="text-sm text-[#83827D] dark:text-[#96897E]">Tidak ada jadwal driver untuk {fmtDate(selectedDate)}</p>
           </div>
         ) : (
+          <div className="overflow-x-auto">
           <table className="w-full text-sm">
-            <thead><tr className="border-b border-[#E8E6DC] bg-[#FAF9F5]">
-              {['#', 'Driver', 'Nopol', 'Shift', 'Tenko', 'P2H', 'Gatepass', ''].map(h => (
-                <th key={h} className={`text-left px-4 py-3 text-[10px] font-black text-[#83827D] uppercase tracking-widest ${h === '' ? 'text-right' : ''}`}>{h}</th>
+            <thead><tr className="border-b border-[#E8E6DC] dark:border-[#352C25] bg-[#FAF9F5] dark:bg-[#191411]">
+              {['No', 'Driver', 'Nopol', 'Shift', 'Tenko', 'P2H', 'Gatepass', ''].map(h => (
+                <th key={h} className={`text-left px-4 py-3 text-[10px] font-black text-[#83827D] dark:text-[#96897E] uppercase tracking-widest ${h === '' ? 'text-right' : ''}`}>{h}</th>
               ))}
             </tr></thead>
-            <tbody className="divide-y divide-[#F0EEE6]">
+            <tbody className="divide-y divide-[#F0EEE6] dark:divide-[#26201B]">
               {paginated.map((d, i) => {
                 const chk = checkFor(d);
                 return (
-                  <tr key={d.id} className="hover:bg-[#FAF9F5] transition-colors">
-                    <td className="px-4 py-3 text-[#B3B0A6] text-xs">{(page - 1) * ITEMS_PER_PAGE + i + 1}</td>
+                  <tr key={d.id} className="hover:bg-[#FAF9F5] dark:bg-[#191411] transition-colors dark:hover:bg-[#1A1512]">
+                    <td className="px-4 py-3 text-[#B3B0A6] dark:text-[#5E554C] text-xs">{(page - 1) * ITEMS_PER_PAGE + i + 1}</td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2">
                         <DriverAvatar name={d.name} avatar={d.avatar} />
                         <div>
                           <span className={`font-medium text-xs block ${T.body}`}>{d.name || '-'}</span>
-                          <span className="text-[9px] font-bold text-[#83827D] uppercase tracking-wider">{d.area || '-'}</span>
+                          <span className="text-[9px] font-bold text-[#83827D] dark:text-[#96897E] uppercase tracking-wider">{d.area || '-'}</span>
                         </div>
                       </div>
                     </td>
                     <td className={`px-4 py-3 text-xs font-mono ${T.body}`}>{d.nopol || '-'}</td>
                     <td className="px-4 py-3">
-                      <span className={`px-2 py-0.5 rounded-lg text-[10px] font-black uppercase ${d.shift.includes('NIGHT') ? 'bg-indigo-100 text-indigo-700' : 'bg-blue-100 text-blue-700'}`}>{d.shift || '-'}</span>
+                      <span className={`px-2 py-0.5 rounded-lg text-[10px] font-black uppercase ${d.shift.includes('NIGHT') ? 'bg-indigo-100 text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-300' : 'bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-300'}`}>{d.shift || '-'}</span>
                     </td>
                     <td className="px-4 py-3">
-                      {!chk.tenko ? <span className="text-[10px] font-black text-[#B3B0A6] uppercase">Belum</span>
+                      {!chk.tenko ? <span className="text-[10px] font-black text-[#B3B0A6] dark:text-[#5E554C] uppercase">Belum</span>
                         : getTenkoHealth(chk.tenko).ok
-                          ? <span className="inline-flex items-center gap-1 text-[10px] font-black text-emerald-700 uppercase"><CheckCircle2 className="w-3 h-3" />OK</span>
+                          ? <span className="inline-flex items-center gap-1 text-[10px] font-black text-emerald-700 dark:text-emerald-400 uppercase"><CheckCircle2 className="w-3 h-3" />OK</span>
                           : <span title={getTenkoHealth(chk.tenko).reason}><XCircle className="w-3.5 h-3.5 text-red-500" /></span>}
                     </td>
                     <td className="px-4 py-3">
-                      {!chk.p2h ? <span className="text-[10px] font-black text-[#B3B0A6] uppercase">Belum</span>
+                      {!chk.p2h ? <span className="text-[10px] font-black text-[#B3B0A6] dark:text-[#5E554C] uppercase">Belum</span>
                         : chk.p2h.status === 'OK'
-                          ? <span className="inline-flex items-center gap-1 text-[10px] font-black text-emerald-700 uppercase"><CheckCircle2 className="w-3 h-3" />OK</span>
+                          ? <span className="inline-flex items-center gap-1 text-[10px] font-black text-emerald-700 dark:text-emerald-400 uppercase"><CheckCircle2 className="w-3 h-3" />OK</span>
                           : <span title={chk.p2h.catatan || 'P2H NG'}><XCircle className="w-3.5 h-3.5 text-red-500" /></span>}
                     </td>
                     <td className="px-4 py-3">{statusBadge(chk.status)}</td>
@@ -767,7 +770,7 @@ function GatepassTab() {
                               className={`px-2 py-1.5 rounded-lg text-[10px] font-black uppercase transition-colors disabled:opacity-40 ${T.ghostBtn}`}>P2H</button>
                           </>
                         ) : (
-                          <span className="text-[9px] font-bold text-[#B3B0A6] uppercase tracking-wider" title={chk.reason}>
+                          <span className="text-[9px] font-bold text-[#B3B0A6] dark:text-[#5E554C] uppercase tracking-wider" title={chk.reason}>
                             {chk.reason}
                           </span>
                         )}
@@ -778,16 +781,17 @@ function GatepassTab() {
               })}
             </tbody>
           </table>
+          </div>
         )}
       </div>
 
       {totalPages > 1 && (
         <div className="flex items-center justify-between">
-          <span className="text-xs text-[#83827D]">{filtered.length} driver</span>
+          <span className="text-xs text-[#83827D] dark:text-[#96897E]">{filtered.length} driver</span>
           <div className="flex items-center gap-2">
-            <button disabled={page === 1} onClick={() => setPage(p => p - 1)} className={`p-1.5 rounded-lg border border-[#E8E6DC] text-[#83827D] disabled:opacity-30`}><ChevronLeft className="w-4 h-4" /></button>
+            <button disabled={page === 1} onClick={() => setPage(p => p - 1)} className={`p-1.5 rounded-lg border border-[#E8E6DC] dark:border-[#352C25] text-[#83827D] dark:text-[#96897E] disabled:opacity-30`}><ChevronLeft className="w-4 h-4" /></button>
             <span className={`text-xs font-bold ${T.body}`}>{page}/{totalPages}</span>
-            <button disabled={page === totalPages} onClick={() => setPage(p => p + 1)} className={`p-1.5 rounded-lg border border-[#E8E6DC] text-[#83827D] disabled:opacity-30`}><ChevronRight className="w-4 h-4" /></button>
+            <button disabled={page === totalPages} onClick={() => setPage(p => p + 1)} className={`p-1.5 rounded-lg border border-[#E8E6DC] dark:border-[#352C25] text-[#83827D] dark:text-[#96897E] disabled:opacity-30`}><ChevronRight className="w-4 h-4" /></button>
           </div>
         </div>
       )}
@@ -796,7 +800,7 @@ function GatepassTab() {
       <AnimatePresence>
         {printJob && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-[#29261B]/50 backdrop-blur-sm">
+            className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-[#29261B]/50 backdrop-blur-sm dark:bg-black/70">
             <motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}>
               <RefreshCcw className="w-8 h-8 text-[#D97757] mb-4" />
             </motion.div>
@@ -853,23 +857,23 @@ export default function P2HGatepassPage() {
   ];
 
   return (
-    <div className="min-h-screen bg-[#FAF9F5] text-[#3D3929] px-4 py-6 md:px-8">
+    <div className="min-h-screen bg-[#FAF9F5] dark:bg-[#191411] text-[#3D3929] dark:text-[#D8CFC7] px-4 py-6 md:px-8">
       <div className="mb-6">
         <div className="flex items-center gap-3 mb-1">
           <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-[#D97757] to-[#C15F3C] flex items-center justify-center shadow-lg shadow-[#D97757]/25">
             <ClipboardList className="w-5 h-5 text-white" />
           </div>
           <div>
-            <h1 className="text-xl font-black text-[#29261B] tracking-tight">P2H &amp; Gatepass</h1>
-            <p className="text-[11px] text-[#83827D] font-medium uppercase tracking-widest">Pemeriksaan &amp; Dokumentasi Keberangkatan</p>
+            <h1 className="text-xl font-black text-[#29261B] dark:text-[#F5F0EC] tracking-tight">P2H &amp; Gatepass</h1>
+            <p className="text-[11px] text-[#83827D] dark:text-[#96897E] font-medium uppercase tracking-widest">Pemeriksaan &amp; Dokumentasi Keberangkatan</p>
           </div>
         </div>
       </div>
 
-      <div className="flex gap-2 mb-6 bg-[#F0EEE6] border border-[#E8E6DC] rounded-2xl p-1.5 w-fit">
+      <div className="flex gap-2 mb-6 bg-[#F0EEE6] dark:bg-[#26201B] border border-[#E8E6DC] dark:border-[#352C25] rounded-2xl p-1.5 w-fit">
         {TABS.map(t => (
           <button key={t.id} onClick={() => setActiveTab(t.id)}
-            className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all duration-200 ${activeTab === t.id ? 'bg-gradient-to-r from-[#D97757] to-[#C15F3C] text-white shadow-md shadow-[#D97757]/25' : 'text-[#83827D] hover:text-[#3D3929]'}`}>
+            className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all duration-200 ${activeTab === t.id ? 'bg-gradient-to-r from-[#D97757] to-[#C15F3C] text-white shadow-md shadow-[#D97757]/25' : 'text-[#83827D] hover:text-[#3D3929] dark:text-[#96897E] dark:hover:text-[#F5F0EC]'}`}>
             {t.icon}{t.label}
           </button>
         ))}
