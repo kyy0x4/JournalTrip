@@ -1,7 +1,7 @@
 @import "tailwindcss";
 
 /* Kembalikan mesin dark mode sakti Tailwind v4 */
-@variant dark (&:where(.dark, .dark *, [data-theme="dark"], [data-theme="dark"] *));
+@custom-variant dark (&:where(.dark, .dark *, [data-theme="dark"], [data-theme="dark"] *));
 
 /*
   Claude Amber Theme

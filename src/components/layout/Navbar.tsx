@@ -4,7 +4,7 @@ import { Link, useLocation } from 'react-router-dom';
 import {
   Calendar as CalendarIcon, Menu, X, Sun, Moon,
   ChevronDown, Download, LogOut,
-  Clock, Leaf, TreePine, Users, LayoutGrid, MapPin, ShieldCheck
+  Clock, Leaf, TreePine, Users, LayoutGrid, MapPin, ShieldCheck, ClipboardList
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { supabase } from '../../lib/supabase';
@@ -99,6 +99,17 @@ const LAUNCHER_ITEMS = [
     glow: 'shadow-blue-500/20',
     bg: 'bg-blue-50 dark:bg-blue-500/10',
     text: 'text-blue-600 dark:text-blue-400',
+  },
+  {
+    id: 'p2h',
+    label: 'P2H & Gatepass',
+    sub: 'Pemeriksaan Kendaraan',
+    path: '/p2h',
+    icon: <ClipboardList className="w-6 h-6" />,
+    gradient: 'from-sky-500 to-blue-600',
+    glow: 'shadow-sky-500/20',
+    bg: 'bg-sky-50 dark:bg-sky-500/10',
+    text: 'text-sky-600 dark:text-sky-400',
   },
 ];
 

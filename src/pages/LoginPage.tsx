@@ -328,7 +328,7 @@ export default function LoginPage() {
               initial={{ opacity: 0, y: -16 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.8, duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
-              className="absolute top-1/3 -right-8 glass-card rounded-2xl px-4 py-3 flex items-center gap-3 shadow-xl hidden xl:flex"
+              className="absolute top-1/3 -right-8 glass-card rounded-2xl px-4 py-3 items-center gap-3 shadow-xl hidden xl:flex"
             >
               <div className="relative w-9 h-9 rounded-xl bg-blue-500/15 flex items-center justify-center">
                 <Activity className="w-4 h-4 text-blue-500" />

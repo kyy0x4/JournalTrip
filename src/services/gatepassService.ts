@@ -90,45 +90,77 @@ export async function getP2HRecordsByDate(tanggal: string): Promise<P2HRecord[]>
 }
 
 /**
+ * Simpan/upsert P2H tanpa bergantung pada unique constraint di database.
+ * Cek dulu record existing (driver_id + tanggal), lalu update atau insert.
+ */
+export async function upsertP2HRecord(
+  record: Omit<P2HRecord, 'id' | 'created_at'> & Partial<Pick<P2HRecord, 'id' | 'created_at'>>
+): Promise<{ data?: P2HRecord; error?: any }> {
+  try {
+    const { data: existing, error: selErr } = await supabase
+      .from('p2h')
+      .select('id')
+      .eq('driver_id', record.driver_id)
+      .eq('tanggal', record.tanggal)
+      .order('created_at', { ascending: false })
+      .limit(1);
+    if (selErr) throw selErr;
+
+    const payload = { ...record, created_at: new Date().toISOString() };
+
+    if (existing && existing.length > 0) {
+      const { data, error } = await supabase
+        .from('p2h')
+        .update(payload)
+        .eq('id', existing[0].id)
+        .select()
+        .maybeSingle();
+      if (error) throw error;
+      return { data: (data as P2HRecord) || undefined };
+    }
+
+    const { data, error } = await supabase
+      .from('p2h')
+      .insert([payload])
+      .select()
+      .maybeSingle();
+    if (error) throw error;
+    return { data: (data as P2HRecord) || undefined };
+  } catch (error) {
+    return { error };
+  }
+}
+
+/**
  * Menyimpan data P2H (OK/NG) ke database Supabase atau LocalStorage
  */
 export async function saveP2HRecord(record: P2HRecord): Promise<{ success: boolean; data?: P2HRecord; error?: any }> {
   try {
-    const recordToSave = {
-      ...record,
-      created_at: new Date().toISOString()
-    };
-
-    // Coba simpan ke Supabase menggunakan upsert
-    const { data, error } = await supabase
-      .from('p2h')
-      .upsert(recordToSave, { onConflict: 'driver_id,tanggal' })
-      .select()
-      .maybeSingle();
-
+    const { data, error } = await upsertP2HRecord(record);
     if (error) throw error;
-    return { success: true, data: data as P2HRecord };
+    if (data) return { success: true, data };
+    throw new Error('Data tidak tersimpan');
   } catch (dbError: any) {
     console.warn('Supabase p2h save failed, saving to localStorage. Error:', dbError?.message || dbError);
-    
+
     // Fallback ke LocalStorage
     const localData = getLocalP2H();
     const filtered = localData.filter(r => !(r.driver_id === record.driver_id && r.tanggal === record.tanggal));
-    
+
     const newRecord: P2HRecord = {
       ...record,
       id: record.id || `local-${Math.random().toString(36).substr(2, 9)}`,
       created_at: new Date().toISOString()
     };
-    
+
     filtered.push(newRecord);
     saveLocalP2H(filtered);
-    
+
     return { success: true, data: newRecord };
   }
 }
 
-function matchResilientName(tenkoName: string | null | undefined, driverName: string | null | undefined): boolean {
+export function matchResilientName(tenkoName: string | null | undefined, driverName: string | null | undefined): boolean {
   if (!tenkoName || !driverName) return false;
   
   const tNorm = tenkoName.trim().toLowerCase().replace(/[^a-z0-9]/g, '');
@@ -194,6 +226,26 @@ export async function getTenkoForDriverToday(driverId: string, driverName: strin
   );
 
   return manualFound || null;
+}
+
+/**
+ * Mengambil semua data Tenko pada tanggal tertentu (untuk matching massal di halaman gatepass)
+ */
+export async function getTenkoRecordsByDate(tanggal: string): Promise<TenkoRecord[]> {
+  try {
+    const { data, error } = await supabase
+      .from('tenko')
+      .select('*')
+      .eq('tanggal', tanggal)
+      .limit(500);
+
+    if (error) throw error;
+    return (data || []) as TenkoRecord[];
+  } catch (dbError) {
+    console.warn('Error querying tenko database:', dbError);
+    const localManual = getLocalManualTenko();
+    return localManual.filter(r => r.tanggal === tanggal);
+  }
 }
 
 /**

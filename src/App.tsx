@@ -25,6 +25,7 @@ const KRDashboardPage = lazy(() => import('./pages/KRDashboardPage'));
 const ReportKRPage = lazy(() => import('./pages/ReportKRPage'));
 const AdminDriversPage = lazy(() => import('./pages/AdminDriversPage'));
 const DriverAnalyticsPage = lazy(() => import('./pages/DriverAnalyticsPage'));
+const P2HGatepassPage = lazy(() => import('./pages/P2HGatepassPage'));
 
 import Footer from './components/layout/Footer';
 import { fetchDashboardData, fetchActiveDrivers, getDefaultOperationalShift } from './services/dataFetcher';
@@ -359,6 +360,7 @@ const AnimatedRoutes = ({
       <Route path="/kr-schedule" element={<KRDashboardPage />} />
       <Route path="/kr-report" element={isTAM ? <Navigate to="/" replace /> : <ReportKRPage />} />
       <Route path="/admin-drivers" element={isAdmin ? <AdminDriversPage /> : <Navigate to="/" replace />} />
+      <Route path="/p2h" element={<P2HGatepassPage />} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
