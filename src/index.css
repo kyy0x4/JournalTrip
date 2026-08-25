@@ -1,5 +1,22 @@
 @import "tailwindcss";
 
+/* ── Anthropic Serif (font asli Claude) ── */
+/* Text cut — untuk teks serif */
+@font-face { font-family: 'Anthropic Serif'; src: url('./image/anthropic-serif/AnthropicSerif-Text-Regular-Static.otf') format('opentype'); font-weight: 400; font-style: normal; font-display: swap; }
+@font-face { font-family: 'Anthropic Serif'; src: url('./image/anthropic-serif/AnthropicSerif-Text-RegularItalic-Static.otf') format('opentype'); font-weight: 400; font-style: italic; font-display: swap; }
+@font-face { font-family: 'Anthropic Serif'; src: url('./image/anthropic-serif/AnthropicSerif-Text-Medium-Static.otf') format('opentype'); font-weight: 500; font-style: normal; font-display: swap; }
+@font-face { font-family: 'Anthropic Serif'; src: url('./image/anthropic-serif/AnthropicSerif-Text-MediumItalic-Static.otf') format('opentype'); font-weight: 500; font-style: italic; font-display: swap; }
+@font-face { font-family: 'Anthropic Serif'; src: url('./image/anthropic-serif/AnthropicSerif-Text-Semibold-Static.otf') format('opentype'); font-weight: 600; font-style: normal; font-display: swap; }
+@font-face { font-family: 'Anthropic Serif'; src: url('./image/anthropic-serif/AnthropicSerif-Text-SemiboldItalic-Static.otf') format('opentype'); font-weight: 600; font-style: italic; font-display: swap; }
+@font-face { font-family: 'Anthropic Serif'; src: url('./image/anthropic-serif/AnthropicSerif-Text-Bold-Static.otf') format('opentype'); font-weight: 700; font-style: normal; font-display: swap; }
+@font-face { font-family: 'Anthropic Serif'; src: url('./image/anthropic-serif/AnthropicSerif-Text-BoldItalic-Static.otf') format('opentype'); font-weight: 700; font-style: italic; font-display: swap; }
+@font-face { font-family: 'Anthropic Serif'; src: url('./image/anthropic-serif/AnthropicSerif-Text-Extrabold-Static.otf') format('opentype'); font-weight: 800; font-style: normal; font-display: swap; }
+/* Display cut — khusus heading */
+@font-face { font-family: 'Anthropic Serif Display'; src: url('./image/anthropic-serif/AnthropicSerif-Display-Regular-Static.otf') format('opentype'); font-weight: 400; font-style: normal; font-display: swap; }
+@font-face { font-family: 'Anthropic Serif Display'; src: url('./image/anthropic-serif/AnthropicSerif-Display-Semibold-Static.otf') format('opentype'); font-weight: 600; font-style: normal; font-display: swap; }
+@font-face { font-family: 'Anthropic Serif Display'; src: url('./image/anthropic-serif/AnthropicSerif-Display-Bold-Static.otf') format('opentype'); font-weight: 700; font-style: normal; font-display: swap; }
+@font-face { font-family: 'Anthropic Serif Display'; src: url('./image/anthropic-serif/AnthropicSerif-Display-Extrabold-Static.otf') format('opentype'); font-weight: 800; font-style: normal; font-display: swap; }
+
 /* Kembalikan mesin dark mode sakti Tailwind v4 */
 @custom-variant dark (&:where(.dark, .dark *, [data-theme="dark"], [data-theme="dark"] *));
 
@@ -74,7 +91,7 @@
 
 :root {
   --font-sans: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
-  --font-serif: "Source Serif 4", Georgia, "Times New Roman", serif;
+  --font-serif: "Anthropic Serif", "Source Serif 4", Georgia, "Times New Roman", serif;
 
   --bg-app: #faf9f5;
   --text-main: #181c23;
@@ -87,9 +104,9 @@
 }
 
 @layer base {
-  /* Claude chat vibe — heading pakai serif (kecuali micro-label uppercase) */
+  /* Claude chat vibe — heading pakai serif display asli Anthropic (kecuali micro-label uppercase) */
   h1:not(.uppercase), h2:not(.uppercase) {
-    font-family: var(--font-serif);
+    font-family: "Anthropic Serif Display", var(--font-serif);
     letter-spacing: -0.01em;
   }
 
