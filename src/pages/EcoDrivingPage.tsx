@@ -822,7 +822,10 @@ export default function EcoDrivingPage({ isTAM = false }: { isTAM?: boolean }) {
                         tickLine={false} 
                         tick={{ fontSize: 10, fontWeight: 900, fill: '#94a3b8' }}
                         tickFormatter={(val) => {
-                          if (chartIsMonthly) return val; // already "Jun 26" etc
+                          if (chartIsMonthly) return val;
+                          // Format DB bisa "25-Jul-26" atau "03 Agu 2026" (bulan Indonesia) — ambil angka hari langsung
+                          const dayMatch = String(val).match(/^(\d{1,2})\b/);
+                          if (dayMatch) return parseInt(dayMatch[1], 10).toString();
                           const d = new Date(val);
                           return isNaN(d.getTime()) ? val : d.getDate().toString();
                         }}
