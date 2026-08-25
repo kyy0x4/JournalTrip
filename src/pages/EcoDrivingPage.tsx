@@ -598,8 +598,13 @@ export default function EcoDrivingPage({ isTAM = false }: { isTAM?: boolean }) {
                           }}
                           className="bg-white dark:bg-slate-800 rounded-xl shadow-xl border border-slate-100 dark:border-slate-700 overflow-hidden pointer-events-auto py-1"
                         >
-                          {[{ val: 'ALL', label: 'Semua Cabang' }, { val: 'KARAWANG', label: 'KARAWANG' }].map(opt => (
-                            <button key={opt.val} onClick={() => { setSelectedCabang(opt.val); setCabangDropdownOpen(false); }} className={`w-full text-left px-4 py-2.5 text-xs font-bold uppercase tracking-widest transition-colors ${selectedCabang === opt.val ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' : 'text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700'}`}>{opt.label}</button>
+                          {[
+                            { val: 'ALL', label: 'Semua Cabang' },
+                            { val: 'KARAWANG', label: 'KARAWANG' },
+                            // Cabang SULAWESI disembunyikan dari akun TAM (toyotaastra@kmdi.co.id)
+                            ...(isTAM ? [] : [{ val: 'SULAWESI', label: 'SULAWESI' }]),
+                          ].map(opt => (
+                            <button key={opt.val} onClick={() => { setSelectedCabang(opt.val); setSelectedArea('ALL'); setCabangDropdownOpen(false); }} className={`w-full text-left px-4 py-2.5 text-xs font-bold uppercase tracking-widest transition-colors ${selectedCabang === opt.val ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' : 'text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700'}`}>{opt.label}</button>
                           ))}
                         </motion.div>
                       </AnimatePresence>

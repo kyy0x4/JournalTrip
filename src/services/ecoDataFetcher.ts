@@ -103,8 +103,12 @@ export async function fetchEcoViolations(options?: {
   if (options?.customer && options.customer !== 'ALL') countQuery = countQuery.eq('Customer', options.customer);
   if (options?.monthFilter) countQuery = countQuery.ilike('Tanggal', options.monthFilter);
   if (options?.cabang && options.cabang !== 'ALL') {
-    if (options.cabang === 'KARAWANG') {
-      // KARAWANG branch filtering
+    if (options.cabang === 'SULAWESI') {
+      // SULAWESI adalah cabang tersendiri
+      countQuery = countQuery.ilike('Area', '%SULAWESI%');
+    } else if (options.cabang === 'KARAWANG') {
+      // Cabang KARAWANG = semua area kecuali SULAWESI
+      countQuery = countQuery.not('Area', 'ilike', '%SULAWESI%');
     }
   }
 
@@ -137,8 +141,11 @@ export async function fetchEcoViolations(options?: {
     if (options?.customer && options.customer !== 'ALL') query = query.eq('Customer', options.customer);
     if (options?.monthFilter) query = query.ilike('Tanggal', options.monthFilter);
     if (options?.cabang && options.cabang !== 'ALL') {
-      if (options.cabang === 'KARAWANG') {
-        // KARAWANG branch filtering
+      if (options.cabang === 'SULAWESI') {
+        query = query.ilike('Area', '%SULAWESI%');
+      } else if (options.cabang === 'KARAWANG') {
+        // Cabang KARAWANG = semua area kecuali SULAWESI
+        query = query.not('Area', 'ilike', '%SULAWESI%');
       }
     }
 
