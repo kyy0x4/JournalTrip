@@ -338,6 +338,16 @@
   filter: grayscale(80%) brightness(1.3) contrast(0.85);
 }
 
+/* ── CLUSTER MARKER POP-IN ── */
+@keyframes clusterPop {
+  0% { transform: scale(0); opacity: 0; }
+  60% { transform: scale(1.15); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
+}
+.custom-marker-cluster div {
+  animation: clusterPop 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
 /* prefers-reduced-motion: matikan animasi untuk aksesibilitas */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {

@@ -25,22 +25,78 @@ L.Icon.Default.mergeOptions({
   shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
 });
 
+const TYPE_COLORS: Record<string, string> = {
+  'Akselerasi': '#3b82f6',      // Blue
+  'Perlambatan': '#f59e0b',     // Amber
+  'Kecepatan': '#ef4444',       // Red
+  'Tikungan': '#8b5cf6',        // Purple
+  'default': '#64748b',         // slate-500
+};
+
+// Pilih warna berdasarkan jenis peringatan
+const getViolationColor = (jenis: string | undefined): string => {
+  if (!jenis) return TYPE_COLORS['default'];
+  if (jenis.includes('Akselerasi')) return TYPE_COLORS['Akselerasi'];
+  if (jenis.includes('Perlambatan')) return TYPE_COLORS['Perlambatan'];
+  if (jenis.includes('Kecepatan')) return TYPE_COLORS['Kecepatan'];
+  if (jenis.includes('Tikungan')) return TYPE_COLORS['Tikungan'];
+  return TYPE_COLORS['default'];
+};
+
 // Custom Marker Icons for different violation types
 const createCustomIcon = (color: string) => {
-  return new L.DivIcon({
+  const icon = new L.DivIcon({
     className: 'custom-div-icon',
     html: `<div style="background-color: ${color}; width: 12px; height: 12px; border-radius: 50%; border: 2px solid white; box-shadow: 0 0 4px rgba(0,0,0,0.5);"></div>`,
     iconSize: [12, 12],
     iconAnchor: [6, 6]
   });
+  // Simpan warna untuk dibaca oleh cluster iconCreateFunction
+  (icon as any).options.color = color;
+  return icon;
 };
 
 const iconMap = {
-  'Akselerasi Mendadak': createCustomIcon('#3b82f6'), // Blue
-  'Perlambatan Mendadak': createCustomIcon('#f59e0b'), // Amber
-  'Kecepatan Melebihi Batas': createCustomIcon('#ef4444'), // Red
-  'Tikungan Tajam': createCustomIcon('#8b5cf6'), // Purple
-  'default': createCustomIcon('#64748b'), // slate-500
+  'Akselerasi Mendadak': createCustomIcon(TYPE_COLORS['Akselerasi']),
+  'Perlambatan Mendadak': createCustomIcon(TYPE_COLORS['Perlambatan']),
+  'Kecepatan Melebihi Batas': createCustomIcon(TYPE_COLORS['Kecepatan']),
+  'Tikungan Tajam': createCustomIcon(TYPE_COLORS['Tikungan']),
+  'default': createCustomIcon(TYPE_COLORS['default']),
+};
+
+// Convert hex color to rgba with opacity
+const hexToRgba = (hex: string, alpha: number) => {
+  const h = hex.replace('#', '');
+  const r = parseInt(h.substring(0, 2), 16);
+  const g = parseInt(h.substring(2, 4), 16);
+  const b = parseInt(h.substring(4, 6), 16);
+  return `rgba(${r},${g},${b},${alpha})`;
+};
+
+// Render bulatan cluster dengan warna dari jenis peringatan yang paling banyak di lokasi tsb.
+// Kalau double/tumpuk peringatan, ambil warna dengan jumlah terbanyak.
+const createClusterIcon = (cluster: any) => {
+  const markers = cluster.getAllChildMarkers();
+  const colorCount: Record<string, number> = {};
+  markers.forEach((m: any) => {
+    const c = m?.options?.icon?.options?.color;
+    if (c) colorCount[c] = (colorCount[c] || 0) + 1;
+  });
+
+  let color = TYPE_COLORS['default'];
+  let max = 0;
+  Object.entries(colorCount).forEach(([k, v]) => {
+    if (v > max) { max = v; color = k; }
+  });
+
+  const bgColor = hexToRgba(color, 0.65);
+  const count = cluster.getChildCount();
+  const size = count >= 100 ? 36 : count >= 10 ? 30 : 24;
+  return L.divIcon({
+    className: 'custom-marker-cluster',
+    html: `<div style="width:${size}px;height:${size}px;background-color:${bgColor};border-radius:50%;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,0.3);"><span style="color:#fff;font-weight:800;font-size:${size >= 36 ? 11 : size >= 30 ? 10 : 9}px;text-shadow:0 1px 2px rgba(0,0,0,0.4);line-height:1;">${count}</span></div>`,
+    iconSize: L.point(size, size)
+  });
 };
 
 // Map Bounds Updater Component
@@ -864,6 +920,7 @@ export default function EcoDrivingPage({ isTAM = false }: { isTAM?: boolean }) {
                       />
                       <Bar 
                         dataKey="akselerasi" name="Akselerasi" stackId="a" radius={[0, 0, 0, 0]} activeBar={false}
+                        isAnimationActive={true} animationDuration={900} animationEasing="ease-out"
                         onClick={(data: any) => setCfDate(cfDate === data.payload.date ? null : data.payload.date)} 
                       >
                         {dateTrend.map((entry, index) => (
@@ -872,6 +929,7 @@ export default function EcoDrivingPage({ isTAM = false }: { isTAM?: boolean }) {
                       </Bar>
                       <Bar 
                         dataKey="perlambatan" name="Perlambatan" stackId="a" radius={[0, 0, 0, 0]} activeBar={false}
+                        isAnimationActive={true} animationDuration={900} animationEasing="ease-out"
                         onClick={(data: any) => setCfDate(cfDate === data.payload.date ? null : data.payload.date)} 
                       >
                         {dateTrend.map((entry, index) => (
@@ -880,6 +938,7 @@ export default function EcoDrivingPage({ isTAM = false }: { isTAM?: boolean }) {
                       </Bar>
                       <Bar 
                         dataKey="kecepatan" name="Kecepatan" stackId="a" radius={[0, 0, 0, 0]} activeBar={false}
+                        isAnimationActive={true} animationDuration={900} animationEasing="ease-out"
                         onClick={(data: any) => setCfDate(cfDate === data.payload.date ? null : data.payload.date)} 
                       >
                         {dateTrend.map((entry, index) => (
@@ -888,6 +947,7 @@ export default function EcoDrivingPage({ isTAM = false }: { isTAM?: boolean }) {
                       </Bar>
                       <Bar 
                         dataKey="tikungan" name="Tikungan" stackId="a" radius={[4, 4, 0, 0]} activeBar={false}
+                        isAnimationActive={true} animationDuration={900} animationEasing="ease-out"
                         onClick={(data: any) => setCfDate(cfDate === data.payload.date ? null : data.payload.date)} 
                       >
                         {dateTrend.map((entry, index) => (
@@ -991,6 +1051,7 @@ export default function EcoDrivingPage({ isTAM = false }: { isTAM?: boolean }) {
                       chunkedLoading
                       maxClusterRadius={40}
                       showCoverageOnHover={false}
+                      iconCreateFunction={createClusterIcon}
                     >
                       {activeViolations.slice(0, 1000).map((v, i) => {
                         if (!v.koordinat) return null;
@@ -1254,6 +1315,7 @@ export default function EcoDrivingPage({ isTAM = false }: { isTAM?: boolean }) {
                       dataKey="total" 
                       radius={[0, 6, 6, 0]} 
                       activeBar={false}
+                      isAnimationActive={true} animationDuration={900} animationEasing="ease-out"
                       onClick={(data: any) => setCfDriver(cfDriver === data.fullName ? null : data.fullName)}
                       className="cursor-pointer focus:outline-none"
                       style={{ outline: 'none' }}
