@@ -48,7 +48,7 @@ function fmtTime(t: string | null | undefined): string | null {
   return t.length >= 5 ? t.substring(0, 5) : t;
 }
 
-function calculateDuration(start: string | null, end: string | null, area: string = 'JBK'): string {
+function calculateDuration(start: string | null, end: string | null): string {
   if (!start || !end || start === '--:--' || end === '--:--') return '--';
   try {
     const s = start.split(':').map(Number);
@@ -57,11 +57,6 @@ function calculateDuration(start: string | null, end: string | null, area: strin
     
     // Handle cross-midnight
     if (diff < 0) diff += 1440;
-    
-    // Handle Long Haul Cross-Day (>20h)
-    if (area !== 'JBK' && diff < 900) {
-      diff += 1440;
-    }
     
     return `${Math.floor(diff / 60)}h ${diff % 60}m`;
   } catch (e) { return '--'; }
@@ -204,7 +199,7 @@ export async function fetchDriverProfile(driverId: string, month: string) { // m
         route: `${row.pdc_muat || '---'} → ${row.pdc_bongkar || '---'}`, 
         status: (isFinished ? 'finished' : (isActive ? 'active' : 'locked')) as any,
         type: (isFinished ? 'completed' : (isActive ? 'active' : 'locked')) as any,
-        duration: calculateDuration(row.actual_in_pdc, row.actual_unloading, row.area),
+        duration: calculateDuration(row.actual_in_pdc, row.actual_unloading),
         timeline: [
           { label: 'OUTPOOL', actual: fmtTime(row.actual_outpool) || '--:--', type: (row.actual_outpool ? 'completed' : 'pending') as any },
           { label: 'IN PDC', plan: fmtTime(row.plan_dccp) || '--:--', actual: fmtTime(row.actual_in_pdc) || '--:--', type: (row.actual_in_pdc ? 'completed' : (isActive ? 'active' : 'pending')) as any },
@@ -268,7 +263,7 @@ export async function fetchDashboardData(selectedDate: string, driverId: string,
         route: `${row.pdc_muat || '---'} → ${row.pdc_bongkar || '---'}`, 
         status: (isFinished ? 'finished' : (isActive ? 'active' : 'locked')) as any,
         type: (isFinished ? 'completed' : (isActive ? 'active' : 'locked')) as any,
-        duration: calculateDuration(row.actual_in_pdc, row.actual_unloading, resolveTripJournalArea(row)),
+        duration: calculateDuration(row.actual_in_pdc, row.actual_unloading),
         timeline: [
           { label: 'OUTPOOL', actual: fmtTime(row.actual_outpool) || '--:--', type: (row.actual_outpool ? 'completed' : 'pending') as any },
           { label: 'IN PDC', plan: fmtTime(row.plan_dccp) || '--:--', actual: fmtTime(row.actual_in_pdc) || '--:--', type: (row.actual_in_pdc ? 'completed' : (isActive ? 'active' : 'pending')) as any },
