@@ -44,7 +44,7 @@ export default function MobileNav({ open, onClose, groups }: MobileNavProps) {
           >
             {/* Header */}
             <div className="h-14 shrink-0 flex items-center gap-3 px-4 border-b border-slate-200/40 dark:border-white/[0.06]">
-              <img src={Logo} alt="KMDI" className="h-9 object-contain" />
+              <img src={Logo} alt="KMDI" className="h-7 object-contain" />
               <button
                 onClick={onClose}
                 className="ml-auto p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-lg hover:bg-slate-100 dark:hover:bg-white/[0.06] transition-colors"

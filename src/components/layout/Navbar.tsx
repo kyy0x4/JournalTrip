@@ -179,7 +179,7 @@ export default function Navbar({
 
         {/* ── Brand ── */}
         <Link to="/dashboard" className="flex items-center shrink-0">
-          <img src={Logo} alt="KMDI" className="h-9 object-contain" />
+          <img src={Logo} alt="KMDI" className="h-7 object-contain" />
         </Link>
 
         {/* ── Users button (mobile, only on Journal Trip) ── */}
