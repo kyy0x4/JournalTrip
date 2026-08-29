@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-route
 import { motion, AnimatePresence } from 'motion/react';
 import Navbar from './components/layout/Navbar';
 import Sidebar from './components/layout/Sidebar';
+import JournalTripControls from './components/dashboard/JournalTripControls';
 import Header from './components/dashboard/Header';
 import RitaseTracking from './components/dashboard/RitaseTracking';
 import LoadingScreen from './components/common/LoadingScreen';
@@ -340,6 +341,8 @@ function AppShell({
                 isTAM={isTAM}
                 ritases={ritases}
                 isAdmin={isAdmin}
+                selectedShift={selectedShift}
+                setSelectedShift={onShiftChange}
               />
             </Suspense>
           </div>
@@ -361,6 +364,8 @@ interface AnimatedRoutesProps {
   isTAM: boolean;
   ritases: any[];
   isAdmin: boolean;
+  selectedShift: 'Day' | 'Night';
+  setSelectedShift: (s: 'Day' | 'Night') => void;
 }
 
 const AnimatedRoutes = ({
@@ -372,7 +377,9 @@ const AnimatedRoutes = ({
   setSelectedArea,
   isTAM,
   ritases,
-  isAdmin
+  isAdmin,
+  selectedShift,
+  setSelectedShift,
 }: AnimatedRoutesProps) => {
   const location = useLocation();
   const pathname = location.pathname;
@@ -407,6 +414,15 @@ const AnimatedRoutes = ({
               exit={{ opacity: 0, y: -10 }}
               transition={{ duration: 0.3 }}
             >
+              {/* Date & Shift — khusus mobile; di desktop ada di navbar */}
+              <div className="md:hidden mb-4">
+                <JournalTripControls
+                  selectedDate={selectedDate}
+                  onDateChange={setSelectedDate}
+                  selectedShift={selectedShift}
+                  onShiftChange={setSelectedShift}
+                />
+              </div>
               <Header
                 driver={selectedDriver as any}
                 selectedDate={selectedDate}
