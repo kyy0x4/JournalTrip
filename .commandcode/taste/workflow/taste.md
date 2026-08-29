@@ -1,0 +1,13 @@
+# Workflow
+
+- Prefers requiring login/authentication before allowing data edits or changes on the web app. Confidence: 0.7
+- Prefers the web UI to allow direct input of new data fields as soon as the corresponding column exists in the database (keeps web forms in sync with DB schema). Confidence: 0.6
+- Verifies behavior by refreshing the page in the browser; data that doesn't persist across refresh is treated as a real bug (save-to-DB issue) to fix. Confidence: 0.6
+- Expects the agent to first explore and understand the project structure/codebase (config files, folders, data layer, routing) before working on tasks. Confidence: 0.5
+- Uses multiple AI coding tools (Command Code, OpenCode) and wants to reuse a single subscription/credits across them via provider API instead of paying separately. Confidence: 0.8
+- Cost-conscious about AI subscriptions: wants exact, verified billing details (e.g., whether a limit is a shared pool across all models vs. per model, rolling usage caps) before making decisions, not rough summaries; also asks for quantitative value conversions (e.g., how many million tokens a $70/month plan buys for a given model). Confidence: 0.7
+- When updating scripts that process per-year Google Sheets, wants the update to keep covering all existing sheets/years (e.g., sync 2025 and 2026 in one run via a loop) rather than swapping a single constant and silently dropping coverage of the other sheet. Confidence: 0.6
+- Uses GitHub as the remote for the project; issues short commands like "oke push" / "oke push ke github" and expects the agent to run the full git workflow (status check, staged commit with clear message, push) end-to-end without further instruction. Confidence: 0.75
+- Approves/triggers offered actions with terse informal commands ("gas update", "oke push") and expects the agent to just execute the change immediately without asking for further confirmation. Confidence: 0.6
+- When a displayed metric or chart looks wrong (e.g., a trip duration, a valley in a trend line), asks the agent to double-check ("coba di cek lagi" / "masih ada lembah... coba cek") and expects root-cause investigation — verifying against actual source data or the underlying library behavior — before fixing, plus re-verification that the reported symptom is truly gone afterward, following up again if the issue persists. Confidence: 0.7
+- When a fix/experiment turns out unsatisfying, prefers abandoning it and reverting the working-tree changes back to the original state via git (e.g., "gajadi dah balikin kaya awal aja") rather than continuing to iterate; already-committed/pushed work is kept untouched. Confidence: 0.7

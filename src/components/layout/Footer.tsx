@@ -23,7 +23,7 @@ export default function Footer() {
           <div className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 dark:bg-slate-800/50 rounded-full border border-slate-200/50 dark:border-slate-700/50 transition-all group-hover:border-red-500/30 group-hover:bg-red-50/30 dark:group-hover:bg-red-500/5">
             <Code2 className="w-3 h-3 text-slate-400 group-hover:text-red-500 transition-colors" />
             <span className="text-[9px] font-bold text-slate-500 dark:text-slate-400 group-hover:text-slate-700 dark:group-hover:text-slate-200 transition-colors uppercase tracking-wider">
-              Developed &amp; Maintained by <span className="text-red-600 dark:text-red-400 font-black">K Line (MCC Team)</span>
+              Developed &amp; Maintained by <span className="text-red-600 dark:text-red-400 font-black">KMDI (MCC Team)</span>
             </span>
           </div>
           

@@ -197,77 +197,157 @@ export default function App() {
     localStorage.setItem('manual-theme-set', 'true');
   };
 
-  const sidebarWidth = isSidebarCollapsed ? 'md:ml-[100px]' : 'md:ml-[284px]';
-
-
-
   return (
     <NotificationProvider>
       <BrowserRouter>
-        <div
-          data-theme={theme}
-          className={`flex min-h-screen bg-(--bg-app) text-(--text-main) transition-colors duration-300 ${theme === 'dark' ? 'dark' : ''}`}
-        >
-        {/* Ambient aurora background */}
-        <div className="aurora-bg" aria-hidden="true" />
-
-        <Sidebar
+        <AppShell
           drivers={drivers}
           selectedDriverId={selectedDriverId}
           onDriverSelect={setSelectedDriverId}
-          isOpen={isSidebarOpen}
-          onClose={() => setIsSidebarOpen(false)}
-          isCollapsed={isSidebarCollapsed}
+          isSidebarOpen={isSidebarOpen}
+          onCloseSidebar={() => setIsSidebarOpen(false)}
+          onToggleSidebar={() => setIsSidebarOpen(o => !o)}
+          isSidebarCollapsed={isSidebarCollapsed}
           onToggleCollapse={() => setIsSidebarCollapsed(c => !c)}
           isLoading={isDriversLoading}
           theme={theme}
+          onThemeToggle={toggleTheme}
           selectedShift={selectedShift}
           onShiftChange={setSelectedShift}
           selectedArea={selectedArea}
+          session={session}
+          isTAM={isTAM}
+          isAdmin={isAdmin}
+          selectedDate={selectedDate}
+          setSelectedDate={setSelectedDate}
+          isLoadingData={isLoading}
+          selectedDriver={selectedDriver}
+          ritases={ritases}
+          setSelectedArea={setSelectedArea}
+        />
+        <DelayNotificationStack />
+      </BrowserRouter>
+    </NotificationProvider>
+  );
+}
+
+interface AppShellProps {
+  drivers: Driver[];
+  selectedDriverId: string;
+  onDriverSelect: (id: string) => void;
+  isSidebarOpen: boolean;
+  onCloseSidebar: () => void;
+  onToggleSidebar: () => void;
+  isSidebarCollapsed: boolean;
+  onToggleCollapse: () => void;
+  isLoading: boolean;
+  theme: 'light' | 'dark';
+  onThemeToggle: () => void;
+  selectedShift: 'Day' | 'Night';
+  onShiftChange: (shift: 'Day' | 'Night') => void;
+  selectedArea: string;
+  session: any;
+  isTAM: boolean;
+  isAdmin: boolean;
+  selectedDate: string;
+  setSelectedDate: (d: string) => void;
+  isLoadingData: boolean;
+  selectedDriver: Driver | undefined;
+  ritases: Ritase[];
+  setSelectedArea: (a: string) => void;
+}
+
+function AppShell({
+  drivers,
+  selectedDriverId,
+  onDriverSelect,
+  isSidebarOpen,
+  onCloseSidebar,
+  onToggleSidebar,
+  isSidebarCollapsed,
+  onToggleCollapse,
+  isLoading,
+  theme,
+  onThemeToggle,
+  selectedShift,
+  onShiftChange,
+  selectedArea,
+  session,
+  isTAM,
+  isAdmin,
+  selectedDate,
+  setSelectedDate,
+  isLoadingData,
+  selectedDriver,
+  ritases,
+  setSelectedArea,
+}: AppShellProps) {
+  const location = useLocation();
+  const isJournalTrip = location.pathname === '/journal-trip';
+  const contentMargin = isJournalTrip ? 'md:ml-[76px]' : 'md:ml-0';
+
+  return (
+    <div
+      data-theme={theme}
+      className={`flex min-h-screen bg-(--bg-app) text-(--text-main) transition-colors duration-300 ${theme === 'dark' ? 'dark' : ''}`}
+    >
+      {/* Ambient aurora background */}
+      <div className="aurora-bg" aria-hidden="true" />
+
+      {isJournalTrip && (
+        <Sidebar
+          drivers={drivers}
+          selectedDriverId={selectedDriverId}
+          onDriverSelect={onDriverSelect}
+          isOpen={isSidebarOpen}
+          onClose={onCloseSidebar}
+          isCollapsed={isSidebarCollapsed}
+          onToggleCollapse={onToggleCollapse}
+          isLoading={isLoading}
+          theme={theme}
+          selectedShift={selectedShift}
+          onShiftChange={onShiftChange}
+          selectedArea={selectedArea}
+        />
+      )}
+
+      <div className={`flex-1 flex flex-col transition-all duration-300 ${contentMargin} overflow-x-hidden`}>
+        <Navbar
+          selectedDate={selectedDate}
+          onDateChange={setSelectedDate}
+          selectedShift={selectedShift}
+          onShiftChange={onShiftChange}
+          isSidebarOpen={isSidebarOpen}
+          onToggleSidebar={onToggleSidebar}
+          isSidebarCollapsed={isSidebarCollapsed}
+          theme={theme}
+          onThemeToggle={onThemeToggle}
+          session={session}
           isTAM={isTAM}
           isAdmin={isAdmin}
         />
 
-        <div className={`flex-1 flex flex-col transition-all duration-300 ${sidebarWidth} overflow-x-hidden`}>
-          <Navbar
+        <main id="pdf-export-content" className="pt-16 min-h-screen">
+          <div className="max-w-7xl mx-auto px-4 md:px-6 py-6">
+            <Suspense fallback={<LoadingScreen />}>
+              <AnimatedRoutes
+                isLoading={isLoadingData}
+                selectedDriver={selectedDriver}
                 selectedDate={selectedDate}
-                onDateChange={setSelectedDate}
-                selectedShift={selectedShift}
-                onShiftChange={setSelectedShift}
-                isSidebarOpen={isSidebarOpen}
-                onToggleSidebar={() => setIsSidebarOpen(o => !o)}
-                isSidebarCollapsed={isSidebarCollapsed}
-                theme={theme}
-                onThemeToggle={toggleTheme}
-                session={session}
+                setSelectedDate={setSelectedDate}
+                selectedArea={selectedArea}
+                setSelectedArea={setSelectedArea}
                 isTAM={isTAM}
+                ritases={ritases}
                 isAdmin={isAdmin}
               />
-
-              <main id="pdf-export-content" className="pt-24 min-h-screen">
-                <div className="max-w-7xl mx-auto px-4 md:px-6 py-6">
-                  <Suspense fallback={<LoadingScreen />}>
-                    <AnimatedRoutes 
-                      isLoading={isLoading}
-                      selectedDriver={selectedDriver}
-                      selectedDate={selectedDate}
-                      setSelectedDate={setSelectedDate}
-                      selectedArea={selectedArea}
-                      setSelectedArea={setSelectedArea}
-                      isTAM={isTAM}
-                      ritases={ritases}
-                      isAdmin={isAdmin}
-                    />
-                  </Suspense>
-                </div>
-              </main>
-              <Footer />
-            </div>
-        <SpeedInsights />
+            </Suspense>
+          </div>
+        </main>
+        <Footer />
       </div>
-        <DelayNotificationStack />
-     </BrowserRouter>
-    </NotificationProvider>
+      <SpeedInsights />
+    </div>
   );
 }
 
@@ -301,7 +381,9 @@ const AnimatedRoutes = ({
   // Render the routes element
   const element = (
     <Routes location={location}>
-      <Route path="/" element={
+      <Route path="/dashboard" element={<DashboardPage isTAM={isTAM} />} />
+      <Route path="/" element={<Navigate to="/dashboard" replace />} />
+      <Route path="/journal-trip" element={
         <AnimatePresence mode="wait">
           {isLoading && !selectedDriver ? (
             <motion.div
@@ -344,7 +426,6 @@ const AnimatedRoutes = ({
           )}
         </AnimatePresence>
       } />
-      <Route path="/dashboard" element={<DashboardPage isTAM={isTAM} />} />
       <Route path="/monitoring" element={<FleetMonitoringPage isTAM={isTAM} />} />
       <Route path="/leadtime" element={<LeadTimePage isTAM={isTAM} />} />
       <Route path="/route-analytics" element={<RouteAnalyticsPage isTAM={isTAM} />} />
@@ -358,10 +439,10 @@ const AnimatedRoutes = ({
       <Route path="/drivers/:id" element={<DriverDetailPage />} />
       <Route path="/training" element={<TrainingDashboardPage />} />
       <Route path="/kr-schedule" element={<KRDashboardPage />} />
-      <Route path="/kr-report" element={isTAM ? <Navigate to="/" replace /> : <ReportKRPage />} />
-      <Route path="/admin-drivers" element={isAdmin ? <AdminDriversPage /> : <Navigate to="/" replace />} />
+      <Route path="/kr-report" element={isTAM ? <Navigate to="/dashboard" replace /> : <ReportKRPage />} />
+      <Route path="/admin-drivers" element={isAdmin ? <AdminDriversPage /> : <Navigate to="/dashboard" replace />} />
       <Route path="/p2h" element={<P2HGatepassPage />} />
-      <Route path="*" element={<Navigate to="/" replace />} />
+      <Route path="*" element={<Navigate to="/dashboard" replace />} />
     </Routes>
   );
 

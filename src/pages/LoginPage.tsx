@@ -44,7 +44,7 @@ export default function LoginPage() {
 
       if (error) throw error;
 
-      navigate('/', { replace: true });
+      navigate('/dashboard', { replace: true });
     } catch (err: any) {
       setError(err.message || 'Gagal login, periksa kembali email & password Anda.');
     } finally {
@@ -74,7 +74,7 @@ export default function LoginPage() {
             transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
             className="flex flex-col items-center mb-10"
           >
-            <img src={Logo} alt="K Line" className="h-11 object-contain mb-2" />
+            <img src={Logo} alt="KMDI" className="h-11 object-contain mb-2" />
             <p className="text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.28em]">
               Fleet Monitoring
             </p>
