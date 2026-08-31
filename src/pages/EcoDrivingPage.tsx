@@ -7,7 +7,7 @@ import {
   Shield, Activity, Calendar, MapPin, Map as MapIcon, Leaf, ChevronDown, ChevronUp,
   ChevronLeft, ChevronRight, BarChart3, AlertTriangle, AlertCircle, Filter, FilterX, Route, Clock, RefreshCw, X, Upload, Camera, Loader2
 } from 'lucide-react';
-import { 
+import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell, Legend
 } from 'recharts';
@@ -516,6 +516,39 @@ export default function EcoDrivingPage({ isTAM = false }: { isTAM?: boolean }) {
   // For Driver Rankings / Top 10 (ignores cfDriver so context remains)
   const driverViolations = useMemo(() => violations.filter(v => checkFilter(v, false, true, true)), [violations, cfType, cfDate]);
   const rankings = useMemo(() => computeDriverRankings(driverViolations), [driverViolations]);
+
+  // Avatar cache untuk ranking driver: match by driver_id, fallback by name
+  const [driverAvatars, setDriverAvatars] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    if (rankings.length === 0) return;
+
+    let cancelled = false;
+    (async () => {
+      const { data } = await supabase
+        .from('drivers')
+        .select('id, name, avatar_url');
+      if (cancelled || !data) return;
+
+      const byId: Record<string, string> = {};
+      const byName: Record<string, string> = {};
+      for (const d of data) {
+        if (!d.avatar_url) continue;
+        if (d.id) byId[d.id] = d.avatar_url;
+        if (d.name) byName[d.name.trim().toLowerCase()] = d.avatar_url;
+      }
+
+      const map: Record<string, string> = {};
+      for (const r of rankings) {
+        const idKey = r.driver_id;
+        const nameKey = (r.driver || '').trim().toLowerCase();
+        if (idKey && byId[idKey]) map[idKey] = byId[idKey];
+        else if (byName[nameKey]) map[nameKey] = byName[nameKey];
+      }
+      setDriverAvatars(map);
+    })();
+    return () => { cancelled = true; };
+  }, [rankings]);
   
   // For Daily Trend Chart (ignores cfDate so context remains)
   const dateViolations = useMemo(() => violations.filter(v => checkFilter(v, true, true, false)), [violations, cfDriver, cfType]);
@@ -1148,13 +1181,31 @@ export default function EcoDrivingPage({ isTAM = false }: { isTAM?: boolean }) {
                                 </span>
                               </td>
                               <td className="px-4 py-3">
-                                <p 
-                                  className={`font-black truncate max-w-30 cursor-pointer hover:underline ${cfDriver === r.driver ? 'text-emerald-700 dark:text-emerald-400' : 'text-slate-900 dark:text-white'}`}
-                                  onClick={(e) => { e.stopPropagation(); setSelectedCoachingDriver(r.driver); }}
-                                >
-                                  {r.driver}
-                                </p>
-                                <p className="text-[10px] text-slate-400 font-bold uppercase">{r.plat}</p>
+                                <div className="flex items-center gap-2.5">
+                                  {(() => {
+                                    const avatarUrl = (r.driver_id && driverAvatars[r.driver_id]) || driverAvatars[(r.driver || '').trim().toLowerCase()];
+                                    return avatarUrl ? (
+                                      <img
+                                        src={avatarUrl}
+                                        alt={r.driver}
+                                        className="w-7 h-7 rounded-full object-cover shrink-0 border border-slate-100 dark:border-slate-700 bg-slate-100 dark:bg-slate-800"
+                                      />
+                                    ) : (
+                                      <div className="w-7 h-7 rounded-full bg-gradient-to-br from-emerald-400 to-emerald-600 flex items-center justify-center text-white text-[11px] font-black shrink-0">
+                                        {(r.driver || '?').charAt(0).toUpperCase()}
+                                      </div>
+                                    );
+                                  })()}
+                                  <div className="min-w-0">
+                                    <p 
+                                      className={`font-black truncate max-w-30 cursor-pointer hover:underline ${cfDriver === r.driver ? 'text-emerald-700 dark:text-emerald-400' : 'text-slate-900 dark:text-white'}`}
+                                      onClick={(e) => { e.stopPropagation(); setSelectedCoachingDriver(r.driver); }}
+                                    >
+                                      {r.driver}
+                                    </p>
+                                    <p className="text-[10px] text-slate-400 font-bold uppercase">{r.plat}</p>
+                                  </div>
+                                </div>
                               </td>
                               <td className="px-4 py-3 text-right">
                                 <span className="font-black text-slate-900 dark:text-white text-sm">{r.total}</span>

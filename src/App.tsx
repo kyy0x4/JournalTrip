@@ -41,6 +41,7 @@ export default function App() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [selectedShift, setSelectedShift] = useState<'Day' | 'Night'>(getDefaultOperationalShift);
+  const requestedShiftRef = useRef<'Day' | 'Night'>(selectedShift);
   const [ritases, setRitases] = useState<Ritase[]>([]);
   const [selectedDriver, setSelectedDriver] = useState<Driver | undefined>();
   const [drivers, setDrivers] = useState<Driver[]>([]);
@@ -80,18 +81,13 @@ export default function App() {
 
   const loadDrivers = useCallback(async () => {
     setIsDriversLoading(true);
+    const reqShift = selectedShift;
+    requestedShiftRef.current = reqShift;
     try {
-      let data = await fetchActiveDrivers(selectedDate, selectedArea, selectedShift);
+      const data = await fetchActiveDrivers(selectedDate, selectedArea, reqShift);
 
-      // Jika shift aktif kosong, coba shift alternatif (umum di NGORO: data Night tapi filter Day)
-      if (data.length === 0) {
-        const altShift = selectedShift === 'Day' ? 'Night' : 'Day';
-        const altData = await fetchActiveDrivers(selectedDate, selectedArea, altShift);
-        if (altData.length > 0) {
-          data = altData;
-          setSelectedShift(altShift);
-        }
-      }
+      // Abaikan response basi jika shift/date/area sudah berubah sejak fetch dimulai
+      if (requestedShiftRef.current !== reqShift) return;
 
       setDrivers(data);
 

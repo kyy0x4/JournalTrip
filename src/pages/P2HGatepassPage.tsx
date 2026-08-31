@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import {
   ClipboardList, Shield, ShieldCheck, Search, Calendar, CheckCircle2, XCircle,
   RefreshCcw, Clock, Info, ChevronLeft, ChevronRight, FileText, X, Printer,
-  Pencil, AlertTriangle, User
+  Pencil, AlertTriangle, User, Sun, Moon
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { P2HRecord } from '../types';
@@ -83,6 +83,16 @@ async function fetchScheduledDrivers(selectedDate: string): Promise<ScheduledDri
     });
   }
   return Array.from(unique.values());
+}
+
+function ShiftBadge({ shift }: { shift: string }) {
+  const isNight = shift.toUpperCase().includes('NIGHT');
+  return (
+    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10px] font-black uppercase whitespace-nowrap ${isNight ? 'bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-300' : 'bg-orange-100 text-orange-700 dark:bg-orange-500/20 dark:text-orange-300'}`}>
+      {isNight ? <Moon className="w-3 h-3" /> : <Sun className="w-3 h-3" />}
+      {isNight ? 'Night' : 'Day'}
+    </span>
+  );
 }
 
 function DriverAvatar({ name, avatar, size = 'w-7 h-7' }: { name: string; avatar?: string | null; size?: string }) {
@@ -320,7 +330,7 @@ function P2HTab() {
                     </td>
                     <td className={`px-4 py-3 text-xs font-mono ${T.body}`}>{d.nopol || '-'}</td>
                     <td className="px-4 py-3">
-                      <span className={`px-2 py-0.5 rounded-lg text-[10px] font-black uppercase ${d.shift.includes('NIGHT') ? 'bg-indigo-100 text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-300' : 'bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-300'}`}>{d.shift || '-'}</span>
+                      <ShiftBadge shift={d.shift} />
                     </td>
                     <td className="px-4 py-3">
                       {!rec ? <span className="text-[10px] font-black text-[#B3B0A6] dark:text-[#5E554C] uppercase">Belum Dicek</span>
@@ -738,7 +748,7 @@ function GatepassTab() {
                     </td>
                     <td className={`px-4 py-3 text-xs font-mono ${T.body}`}>{d.nopol || '-'}</td>
                     <td className="px-4 py-3">
-                      <span className={`px-2 py-0.5 rounded-lg text-[10px] font-black uppercase ${d.shift.includes('NIGHT') ? 'bg-indigo-100 text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-300' : 'bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-300'}`}>{d.shift || '-'}</span>
+                      <ShiftBadge shift={d.shift} />
                     </td>
                     <td className="px-4 py-3">
                       {!chk.tenko ? <span className="text-[10px] font-black text-[#B3B0A6] dark:text-[#5E554C] uppercase">Belum</span>
