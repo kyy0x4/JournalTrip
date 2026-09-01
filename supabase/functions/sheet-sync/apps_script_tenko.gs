@@ -118,6 +118,10 @@ function syncTenkoFinal() {
         const sis = parseInt(row[m.sis]) || (parseInt(String(row[m.tensi_str]).split('/')[0]) || 0);
         const dia = parseInt(row[m.dia]) || (parseInt(String(row[m.tensi_str]).split('/')[1]) || 0);
         
+        // Validasi: kalau tensi nggak ada (0/0), skip baris — jangan diisi default.
+        // Data Tenko yang nggak lengkap misleading (di gatepass bakal dianggap sehat).
+        if (!sis || !dia) continue;
+
         // Logika Duplikat: Tanggal + Nama + Sis + Dia sama persis → skip
         const duplicateKey = `${tgl}-${row[m.driver]}-${sis}-${dia}`;
         if (seen.has(duplicateKey)) continue;
