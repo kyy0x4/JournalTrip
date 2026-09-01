@@ -25,9 +25,9 @@ export interface NavItem {
   sub: string;
   path: string;
   icon: LucideIcon;
-  /** Hanya tampil untuk user admin (kmdimcc@gmail.com) */
+  /** Hanya tampil untuk user admin — email diatur di constants/roles.ts */
   adminOnly?: boolean;
-  /** Disembunyikan untuk user TAM (toyotaastra@kmdi.co.id) */
+  /** Disembunyikan untuk user TAM — email diatur di constants/roles.ts */
   tamHidden?: boolean;
 }
 

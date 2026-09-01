@@ -290,6 +290,11 @@ export default function DriverAnalyticsPage({ isTAM = false }: { isTAM?: boolean
   };
 
   const exportDriverPDF = async (driver: DriverViolationMonth) => {
+    // Escape HTML entities biar nilai dari DB (nama driver, plat, dll) nggak
+    // bisa dieksploitasi jadi injeksi HTML/script pas dirender ke innerHTML.
+    const esc = (v: any) => String(v ?? '').replace(/[&<>"']/g, c => ({
+      '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
+    }[c] as string));
     const holder = document.createElement('div');
     holder.style.position = 'fixed';
     holder.style.left = '-9999px';
@@ -305,13 +310,13 @@ export default function DriverAnalyticsPage({ isTAM = false }: { isTAM?: boolean
           <div style="font-size:20px;font-weight:900;">Driver Analytics</div>
           <div style="font-size:10px;color:#64748b;font-weight:700;letter-spacing:2px;text-transform:uppercase;">Laporan Bulanan</div>
         </div>
-        <div style="text-align:right;font-size:11px;color:#64748b;font-weight:700;">${monthLabel}<br>K Line Fleet Monitoring</div>
+        <div style="text-align:right;font-size:11px;color:#64748b;font-weight:700;">${esc(monthLabel)}<br>K Line Fleet Monitoring</div>
       </div>
       <div style="display:flex;gap:12px;margin-bottom:18px;">
         <div style="flex:1;border:1px solid #e2e8f0;border-radius:12px;padding:12px 16px;">
           <div style="font-size:9px;color:#94a3b8;font-weight:900;letter-spacing:1px;">DRIVER</div>
-          <div style="font-size:15px;font-weight:900;margin-top:4px;">${driver.driver_name}</div>
-          <div style="font-size:11px;color:#c15f3c;font-weight:800;margin-top:2px;">${driver.plat_nomor || '-'}</div>
+          <div style="font-size:15px;font-weight:900;margin-top:4px;">${esc(driver.driver_name)}</div>
+          <div style="font-size:11px;color:#c15f3c;font-weight:800;margin-top:2px;">${esc(driver.plat_nomor || '-')}</div>
         </div>
         <div style="flex:1;border:1px solid #e2e8f0;border-radius:12px;padding:12px 16px;">
           <div style="font-size:9px;color:#94a3b8;font-weight:900;letter-spacing:1px;">PELANGGARAN</div>
@@ -333,8 +338,8 @@ export default function DriverAnalyticsPage({ isTAM = false }: { isTAM?: boolean
         </tr>
         <tr><td style="padding:8px 10px;border:1px solid #e2e8f0;">Total Pelanggaran</td><td style="padding:8px 10px;border:1px solid #e2e8f0;font-weight:900;">${driver.violation_count}</td></tr>
         <tr><td style="padding:8px 10px;border:1px solid #e2e8f0;">Total Sesi Coaching</td><td style="padding:8px 10px;border:1px solid #e2e8f0;font-weight:900;">${driver.coaching_count}</td></tr>
-        <tr><td style="padding:8px 10px;border:1px solid #e2e8f0;">Pelanggaran Terakhir</td><td style="padding:8px 10px;border:1px solid #e2e8f0;font-weight:900;">${driver.last_violation_date || '-'}</td></tr>
-        <tr><td style="padding:8px 10px;border:1px solid #e2e8f0;">Coaching Terakhir</td><td style="padding:8px 10px;border:1px solid #e2e8f0;font-weight:900;">${driver.last_coaching_date || '-'}</td></tr>
+        <tr><td style="padding:8px 10px;border:1px solid #e2e8f0;">Pelanggaran Terakhir</td><td style="padding:8px 10px;border:1px solid #e2e8f0;font-weight:900;">${esc(driver.last_violation_date || '-')}</td></tr>
+        <tr><td style="padding:8px 10px;border:1px solid #e2e8f0;">Coaching Terakhir</td><td style="padding:8px 10px;border:1px solid #e2e8f0;font-weight:900;">${esc(driver.last_coaching_date || '-')}</td></tr>
       </table>
     `;
     document.body.appendChild(holder);

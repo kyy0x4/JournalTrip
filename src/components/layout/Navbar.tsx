@@ -7,8 +7,6 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { supabase } from '../../lib/supabase';
-import { jsPDF } from 'jspdf';
-import * as htmlToImage from 'html-to-image';
 import Logo from '../../image/Logo.png';
 import NotificationBell from './NotificationBell';
 import MobileNav from './MobileNav';
@@ -122,6 +120,12 @@ export default function Navbar({
         (sidebarElement as HTMLElement).style.height = `${appElement.scrollHeight}px`;
       }
       await new Promise(resolve => setTimeout(resolve, 800));
+      // Dynamic import: library PDF baru di-load pas user klik export,
+      // biar nggak ikut di bundle awal (jspdf + html2canvas ~500 KB)
+      const [htmlToImage, { jsPDF }] = await Promise.all([
+        import('html-to-image'),
+        import('jspdf'),
+      ]);
       const dataUrl = await htmlToImage.toJpeg(appElement, {
         quality: 0.8,
         backgroundColor: '#ffffff',

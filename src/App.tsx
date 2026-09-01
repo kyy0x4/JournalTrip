@@ -32,6 +32,7 @@ import Footer from './components/layout/Footer';
 import { fetchDashboardData, fetchActiveDrivers, getDefaultOperationalShift } from './services/dataFetcher';
 import { Ritase, Driver } from './types';
 import { supabase } from './lib/supabase';
+import { isTAMUser, isAdminUser } from './constants/roles';
 import { SpeedInsights } from "@vercel/speed-insights/react"
 
 export default function App() {
@@ -60,8 +61,8 @@ export default function App() {
     return 'light';
   });
 
-  const isTAM = session?.user?.email === 'toyotaastra@kmdi.co.id';
-  const isAdmin = session?.user?.email === 'kmdimcc@gmail.com';
+  const isTAM = isTAMUser(session?.user?.email);
+  const isAdmin = isAdminUser(session?.user?.email);
 
   useEffect(() => {
     const root = window.document.documentElement;
@@ -130,24 +131,38 @@ export default function App() {
     loadData();
   }, [loadData]);
 
+  // Debounce realtime refresh: saat Apps Script sync (delete+insert ribuan baris),
+  // event realtime bisa datang puluhan kali per detik. Debounce 1.5s biar
+  // loadData/loadDrivers cuma jalan sekali setelah batch selesai.
+  const realtimeTimerRef = useRef<number | null>(null);
+  const scheduleRealtimeRefresh = useCallback(() => {
+    if (realtimeTimerRef.current !== null) window.clearTimeout(realtimeTimerRef.current);
+    realtimeTimerRef.current = window.setTimeout(() => {
+      realtimeTimerRef.current = null;
+      loadData();
+      loadDrivers();
+    }, 1500);
+  }, [loadData, loadDrivers]);
+
   useEffect(() => {
     const channel = supabase
       .channel('realtime-dashboard')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'trips' }, () => {
-        loadData();
-        loadDrivers();
+        scheduleRealtimeRefresh();
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'drivers' }, () => {
-        loadData();
-        loadDrivers();
+        scheduleRealtimeRefresh();
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'leadtimes' }, () => {
         // LeadTimePage handles its own fetching, but we could trigger global refresh if needed
       })
       .subscribe();
 
-    return () => { supabase.removeChannel(channel); };
-  }, [loadData, loadDrivers]);
+    return () => {
+      supabase.removeChannel(channel);
+      if (realtimeTimerRef.current !== null) window.clearTimeout(realtimeTimerRef.current);
+    };
+  }, [scheduleRealtimeRefresh]);
 
   // Auth Effect
   useEffect(() => {

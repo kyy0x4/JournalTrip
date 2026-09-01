@@ -15,6 +15,21 @@ export default defineConfig(({mode}) => {
         '@': path.resolve(__dirname, '.'),
       },
     },
+    build: {
+      // Pisahkan library besar ke chunk sendiri biar:
+      //  1. File utama (index) jadi kecil → first load lebih cepat
+      //  2. Browser bisa cache library yang jarang berubah (gak download ulang tiap deploy)
+      rollupOptions: {
+        output: {
+          manualChunks: {
+            react: ['react', 'react-dom', 'react-router-dom'],
+            recharts: ['recharts'],
+            motion: ['motion'],
+            leaflet: ['leaflet', 'react-leaflet', 'react-leaflet-cluster'],
+          },
+        },
+      },
+    },
     server: {
       // HMR is disabled in AI Studio via DISABLE_HMR env var.
       // Do not modifyâfile watching is disabled to prevent flickering during agent edits.

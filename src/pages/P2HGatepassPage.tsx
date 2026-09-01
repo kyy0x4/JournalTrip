@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import {
   ClipboardList, Shield, ShieldCheck, Search, Calendar, CheckCircle2, XCircle,
   RefreshCcw, Clock, Info, ChevronLeft, ChevronRight, FileText, X, Printer,
-  Pencil, AlertTriangle, User, Sun, Moon
+  Pencil, AlertTriangle, Sun, Moon
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { P2HRecord } from '../types';
@@ -11,6 +11,7 @@ import { TenkoRecord } from '../services/tenkoService';
 import { getP2HRecordsByDate, getTenkoRecordsByDate, matchResilientName, upsertP2HRecord } from '../services/gatepassService';
 import { P2H_CATEGORIES } from '../constants/p2hItems';
 import AuthModal from '../components/auth/AuthModal';
+import Avatar from '../components/common/Avatar';
 import P2HDocument from '../components/pdf/P2HDocument';
 import TenkoDocument from '../components/pdf/TenkoDocument';
 import GatepassDocument from '../components/pdf/GatepassDocument';
@@ -92,21 +93,6 @@ function ShiftBadge({ shift }: { shift: string }) {
       {isNight ? <Moon className="w-3 h-3" /> : <Sun className="w-3 h-3" />}
       {isNight ? 'Night' : 'Day'}
     </span>
-  );
-}
-
-function DriverAvatar({ name, avatar, size = 'w-7 h-7' }: { name: string; avatar?: string | null; size?: string }) {
-  const [error, setError] = useState(false);
-  if (avatar && !error) {
-    return (
-      <img src={avatar} alt={name} onError={() => setError(true)}
-        className={`${size} rounded-full object-cover shrink-0 border border-[#E8E6DC] dark:border-[#352C25] bg-[#F0EEE6] dark:bg-[#26201B]`} />
-    );
-  }
-  return (
-    <div className={`${size} rounded-full bg-gradient-to-br from-[#D97757] to-[#C15F3C] flex items-center justify-center text-white shrink-0`}>
-      <User className="w-4 h-4" />
-    </div>
   );
 }
 
@@ -321,7 +307,7 @@ function P2HTab() {
                     <td className="px-4 py-3 text-[#B3B0A6] dark:text-[#5E554C] text-xs">{(page - 1) * ITEMS_PER_PAGE + i + 1}</td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2">
-                        <DriverAvatar name={d.name} avatar={d.avatar} />
+                        <Avatar name={d.name} src={d.avatar} />
                         <div>
                           <span className={`font-medium text-xs block ${T.body}`}>{d.name || '-'}</span>
                           <span className="text-[9px] font-bold text-[#83827D] dark:text-[#96897E] uppercase tracking-wider">{d.area || '-'}</span>
@@ -739,7 +725,7 @@ function GatepassTab() {
                     <td className="px-4 py-3 text-[#B3B0A6] dark:text-[#5E554C] text-xs">{(page - 1) * ITEMS_PER_PAGE + i + 1}</td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2">
-                        <DriverAvatar name={d.name} avatar={d.avatar} />
+                        <Avatar name={d.name} src={d.avatar} />
                         <div>
                           <span className={`font-medium text-xs block ${T.body}`}>{d.name || '-'}</span>
                           <span className="text-[9px] font-bold text-[#83827D] dark:text-[#96897E] uppercase tracking-wider">{d.area || '-'}</span>

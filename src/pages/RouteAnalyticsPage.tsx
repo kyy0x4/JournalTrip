@@ -82,13 +82,14 @@ export default function RouteAnalyticsPage({ isTAM = false }: { isTAM?: boolean 
     return null;
   };
 
+  const isBaretime = (s?: string) => !!(s && /^\d{1,2}:\d{2}/.test(s.trim()));
+
   const diffH = (a?: string, b?: string): number => {
     const fa = dateTimeToMs(a), fb = dateTimeToMs(b);
     if (fa === null || fb === null) return 0;
     let diffMs = fb - fa;
     // If both are bare HH:MM (no date), ms values are small (< 24h in ms).
     // A negative diff means crossing midnight → add 24h.
-    const isBaretime = (s?: string) => !!(s && /^\d{1,2}:\d{2}/.test(s.trim()));
     if (isBaretime(a) && isBaretime(b) && diffMs < 0) {
       diffMs += 24 * 3_600_000;
     }
@@ -122,6 +123,95 @@ export default function RouteAnalyticsPage({ isTAM = false }: { isTAM?: boolean 
     return activeTujuan === 'ALL' || tujuan === activeTujuan;
   });
 
+  // ── Resolve timeline absolut untuk row SUMATERA ────────────────────────────
+  // Checkpoint tersimpan sebagai bare "HH:MM" tanpa tanggal. Urutkan kronologis:
+  // jam turun dari checkpoint sebelumnya = lewat tengah malam → +1 hari.
+  // Untuk unloading, koreksi pakai kolom "LeadTime Delivery (...)" (durasi dari
+  // Out PDC) karena jeda Bakauheni→tujuan bisa lebih dari 24 jam.
+  const resolveSumatraTimeline = (cp: Record<string, any>, rowDate: string): Record<string, number> => {
+    const result: Record<string, number> = {};
+    const rowStart = new Date(rowDate + 'T00:00:00').getTime();
+
+    const toBareMins = (raw: any): number | null => {
+      const dt = dateTimeToMs(raw);
+      if (dt === null) return null;
+      if (isBaretime(raw)) return dt / 60000;
+      return null;
+    };
+
+    const steps = (keys: (string | null)[]) => {
+      let dayOffset = 0;
+      let prevMin: number | null = null;
+      for (const key of keys) {
+        if (!key || !cp[key]) continue;
+        const raw = cp[key];
+        if (isBaretime(raw)) {
+          const mins = toBareMins(raw);
+          if (mins === null) continue;
+          if (prevMin !== null && mins < prevMin) dayOffset += 1;
+          result[key] = rowStart + dayOffset * 86_400_000 + mins * 60_000;
+          prevMin = mins;
+        } else {
+          const dt = dateTimeToMs(raw);
+          if (dt === null) continue;
+          result[key] = dt;
+          const h = new Date(dt);
+          prevMin = h.getHours() * 60 + h.getMinutes();
+          dayOffset = Math.max(0, Math.floor((dt - rowStart) / 86_400_000));
+        }
+      }
+    };
+
+    const unloadingKeys = [
+      'UNLOADING PDC (LAMPUNG,PALEMBANG,PEKANBARU)',
+      'UNLOADING PDC POLYGON',
+      'UNLOADING PDC',
+      'UNLOADING',
+      'PDC POLYGON',
+      'TIBA TUJUAN',
+      'SAMPAI TUJUAN',
+    ];
+    const unloadingKey = unloadingKeys.find(k => cp[k]) || null;
+
+    // Pass 1: leg berangkat (sampai unloading)
+    steps(['Out PDC', 'PELABUHAN MERAK', 'MASUK KAPAL', 'PELABUHAN BAKAUHENI', unloadingKey]);
+
+    // Koreksi unloading pakai leadtime delivery (durasi dari Out PDC)
+    if (unloadingKey && result['Out PDC']) {
+      const ltKey = Object.keys(cp).find(k => k.startsWith('LeadTime Delivery'));
+      if (ltKey) {
+        const m = String(cp[ltKey]).match(/(\d+)\s*hari\s*(\d+)\s*jam\s*(\d+)\s*menit/);
+        if (m) {
+          const durMs = ((Number(m[1]) * 24 + Number(m[2])) * 60 + Number(m[3])) * 60_000;
+          const corrected = result['Out PDC'] + durMs;
+          if (corrected > (result['PELABUHAN BAKAUHENI'] || 0)) {
+            result[unloadingKey] = corrected;
+          }
+        }
+      }
+    }
+
+    // Pass 2: leg pulang, anchor di unloading (atau checkpoint terakhir yang ada)
+    const anchorKey = (unloadingKey && result[unloadingKey]) ? unloadingKey
+      : (result['PELABUHAN BAKAUHENI'] ? 'PELABUHAN BAKAUHENI' : 'Out PDC');
+    const anchorMs = result[anchorKey];
+    if (anchorMs !== undefined) {
+      const anchorDate = new Date(anchorMs);
+      let dayOffset = Math.max(0, Math.floor((anchorMs - rowStart) / 86_400_000));
+      let prevMin = anchorDate.getHours() * 60 + anchorDate.getMinutes();
+      for (const key of ['PELABUHAN BAKAUHENI (PULANG)', 'MASUK KAPAL (PULANG)', 'PELABUHAN MERAK (PULANG)', 'BACK TO POOL']) {
+        if (!cp[key]) continue;
+        const mins = toBareMins(cp[key]);
+        if (mins === null) continue;
+        if (mins < prevMin) dayOffset += 1;
+        result[key] = rowStart + dayOffset * 86_400_000 + mins * 60_000;
+        prevMin = mins;
+      }
+    }
+
+    return result;
+  };
+
   const chartData = (() => {
     if (activeTab !== 'SUMATERA') return [];
     return filteredData
@@ -129,16 +219,17 @@ export default function RouteAnalyticsPage({ isTAM = false }: { isTAM?: boolean 
       .map(d => {
         const cp = d.checkpoints || {};
         const tujuan = normalizeTujuan(cp['TUJUAN']);
+        const tl = resolveSumatraTimeline(cp, d.tanggal);
 
         // Segment 1: Tiba di Merak → Masuk Kapal (Nunggu Kapal Berangkat)
-        const waitDepartHours = cp['MASUK KAPAL']
-          ? diffH(cp['PELABUHAN MERAK'], cp['MASUK KAPAL'])
+        const waitDepartHours = tl['MASUK KAPAL'] && tl['PELABUHAN MERAK']
+          ? (tl['MASUK KAPAL'] - tl['PELABUHAN MERAK']) / 3_600_000
           : 0;
 
         // Segment 2: Masuk Kapal → Bakauheni (Ferry Berangkat)
-        const ferryDepartHours = cp['MASUK KAPAL']
-          ? diffH(cp['MASUK KAPAL'], cp['PELABUHAN BAKAUHENI'])
-          : diffH(cp['PELABUHAN MERAK'], cp['PELABUHAN BAKAUHENI']);
+        const ferryDepartHours = tl['MASUK KAPAL'] && tl['PELABUHAN BAKAUHENI']
+          ? (tl['PELABUHAN BAKAUHENI'] - tl['MASUK KAPAL']) / 3_600_000
+          : (tl['PELABUHAN BAKAUHENI'] && tl['PELABUHAN MERAK'] ? (tl['PELABUHAN BAKAUHENI'] - tl['PELABUHAN MERAK']) / 3_600_000 : 0);
 
         // Segment 3: Bakauheni → Tujuan (Delivery)
         // Try multiple checkpoint key names (data may vary)
@@ -151,28 +242,28 @@ export default function RouteAnalyticsPage({ isTAM = false }: { isTAM?: boolean 
           'TIBA TUJUAN',
           'SAMPAI TUJUAN',
         ].find(k => cp[k]);
-        const destHours = unloadingKey
-          ? diffH(cp['PELABUHAN BAKAUHENI'], cp[unloadingKey])
+        const destHours = unloadingKey && tl[unloadingKey] && tl['PELABUHAN BAKAUHENI']
+          ? Math.max(0, (tl[unloadingKey] - tl['PELABUHAN BAKAUHENI']) / 3_600_000)
           : 0;
 
         // Segment 4: Tujuan → Pel. Bakauheni (PULANG) (Return leg starts)
-        const returnToPortHours = cp['PELABUHAN BAKAUHENI (PULANG)'] && unloadingKey
-          ? diffH(cp[unloadingKey], cp['PELABUHAN BAKAUHENI (PULANG)'])
+        const returnToPortHours = tl['PELABUHAN BAKAUHENI (PULANG)'] && unloadingKey && tl[unloadingKey]
+          ? Math.max(0, (tl['PELABUHAN BAKAUHENI (PULANG)'] - tl[unloadingKey]) / 3_600_000)
           : 0;
 
         // Segment 5: Pel. Bakauheni (PULANG) → Masuk Kapal (PULANG) (Nunggu Kapal Pulang)
-        const waitReturnHours = cp['MASUK KAPAL (PULANG)'] && cp['PELABUHAN BAKAUHENI (PULANG)']
-          ? diffH(cp['PELABUHAN BAKAUHENI (PULANG)'], cp['MASUK KAPAL (PULANG)'])
+        const waitReturnHours = tl['MASUK KAPAL (PULANG)'] && tl['PELABUHAN BAKAUHENI (PULANG)']
+          ? Math.max(0, (tl['MASUK KAPAL (PULANG)'] - tl['PELABUHAN BAKAUHENI (PULANG)']) / 3_600_000)
           : 0;
 
         // Segment 6: Masuk Kapal (PULANG) → Pel. Merak (PULANG) (Ferry Pulang)
-        const ferryReturnHours = cp['PELABUHAN MERAK (PULANG)'] && (cp['MASUK KAPAL (PULANG)'] || cp['PELABUHAN BAKAUHENI (PULANG)'])
-          ? diffH(cp['MASUK KAPAL (PULANG)'] || cp['PELABUHAN BAKAUHENI (PULANG)'], cp['PELABUHAN MERAK (PULANG)'])
+        const ferryReturnHours = tl['PELABUHAN MERAK (PULANG)'] && (tl['MASUK KAPAL (PULANG)'] || tl['PELABUHAN BAKAUHENI (PULANG)'])
+          ? Math.max(0, (tl['PELABUHAN MERAK (PULANG)'] - (tl['MASUK KAPAL (PULANG)'] || tl['PELABUHAN BAKAUHENI (PULANG)'])) / 3_600_000)
           : 0;
 
         // Segment 7: Merak (PULANG) → Back to Pool
-        const returnToPoolHours = cp['BACK TO POOL'] && cp['PELABUHAN MERAK (PULANG)']
-          ? diffH(cp['PELABUHAN MERAK (PULANG)'], cp['BACK TO POOL'])
+        const returnToPoolHours = tl['BACK TO POOL'] && tl['PELABUHAN MERAK (PULANG)']
+          ? Math.max(0, (tl['BACK TO POOL'] - tl['PELABUHAN MERAK (PULANG)']) / 3_600_000)
           : 0;
 
         return {
