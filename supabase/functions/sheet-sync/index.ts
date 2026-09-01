@@ -10,7 +10,8 @@
 //     "operation": "delete_then_insert",   // insert | upsert | delete | delete_then_insert | replace_all
 //     "rows": [ { ... } ],                  // untuk insert/upsert/delete_then_insert/replace_all
 //     "match": { "tanggal_date": "2026-08-01" },  // untuk delete/delete_then_insert
-//                                                // nilai bisa array → jadi filter IN: { "tanggal": ["2026-08-01","2026-08-02"] }
+//                                                // nilai bisa array → filter IN: { "tanggal": ["2026-08-01","2026-08-02"] }
+//                                                // nilai bisa objek → filter range: { "tanggal_date": { "gte": "2026-01-01", "lte": "2026-12-31" } }
 //     "onConflict": "tanggal_date"          // opsional, untuk upsert
 //   }
 //
@@ -97,9 +98,11 @@ Deno.serve(async (req) => {
         if (!Array.isArray(rows) || rows.length === 0) {
           return json({ error: 'rows wajib array non-kosong untuk upsert.' }, 400, corsHeaders);
         }
-        let q = serviceClient.from(table).upsert(rows);
-        if (onConflict) q = q.onConflict(onConflict);
-        const { data, error } = await q.select();
+        // supabase-js v2: onConflict dikirim sebagai options, bukan method chaining
+        const { data, error } = await serviceClient
+          .from(table)
+          .upsert(rows, { onConflict: onConflict || undefined })
+          .select();
         if (error) throw error;
         return json({ ok: true, count: data?.length ?? 0 }, 200, corsHeaders);
       }
@@ -109,20 +112,14 @@ Deno.serve(async (req) => {
           return json({ error: 'match wajib objek filter untuk delete.' }, 400, corsHeaders);
         }
         let q = serviceClient.from(table).delete();
-        for (const [col, val] of Object.entries(match)) {
-          if (Array.isArray(val)) {
-            q = q.in(col, val as string[]);
-          } else {
-            q = q.eq(col, val as string);
-          }
-        }
+        applyMatch(q, match);
         const { error } = await q;
         if (error) throw error;
         return json({ ok: true }, 200, corsHeaders);
       }
 
       case 'delete_then_insert': {
-        // Pola sync spreadsheet: hapus dulu data lama (filter eq/IN), lalu insert ulang
+        // Pola sync spreadsheet: hapus dulu data lama (filter eq/IN/range), lalu insert ulang
         if (!match || typeof match !== 'object') {
           return json({ error: 'match wajib objek filter untuk delete_then_insert.' }, 400, corsHeaders);
         }
@@ -130,13 +127,7 @@ Deno.serve(async (req) => {
           return json({ error: 'rows wajib array non-kosong untuk delete_then_insert.' }, 400, corsHeaders);
         }
         let del = serviceClient.from(table).delete();
-        for (const [col, val] of Object.entries(match)) {
-          if (Array.isArray(val)) {
-            del = del.in(col, val as string[]);
-          } else {
-            del = del.eq(col, val as string);
-          }
-        }
+        applyMatch(del, match);
         const { error: delErr } = await del;
         if (delErr) throw delErr;
 
@@ -164,17 +155,27 @@ Deno.serve(async (req) => {
   }
 });
 
-// ── Insert dengan batching (hindari limit payload & timeout) ───────────────────
-const INSERT_CHUNK = 200;
+// ── Insert dengan batching + paralel (biar sync ribuan baris cepet) ────────────
+const INSERT_CHUNK = 500;
+const MAX_CONCURRENCY = 4; // batasi request paralel biar nggak overload DB
 
 async function insertChunked(client: any, table: string, rows: any[]): Promise<number> {
-  let inserted = 0;
+  const chunks: any[][] = [];
   for (let i = 0; i < rows.length; i += INSERT_CHUNK) {
-    const chunk = rows.slice(i, i + INSERT_CHUNK);
-    const { error } = await client.from(table).insert(chunk);
-    if (error) throw error;
-    inserted += chunk.length;
+    chunks.push(rows.slice(i, i + INSERT_CHUNK));
   }
+
+  let inserted = 0;
+  let cursor = 0;
+  const worker = async () => {
+    while (cursor < chunks.length) {
+      const chunk = chunks[cursor++];
+      const { error } = await client.from(table).insert(chunk);
+      if (error) throw error;
+      inserted += chunk.length;
+    }
+  };
+  await Promise.all(Array.from({ length: Math.min(MAX_CONCURRENCY, chunks.length) }, () => worker()));
   return inserted;
 }
 
@@ -184,6 +185,29 @@ function json(payload: unknown, status = 200, headers: Record<string, string> = 
     status,
     headers: { 'Content-Type': 'application/json', ...headers },
   });
+}
+
+// Terapkan filter match ke query. Nilai bisa:
+//   string → eq      { "area": "JBK" }
+//   array  → in      { "tanggal": ["2026-08-01","2026-08-02"] }
+//   objek  → range   { "tanggal_date": { "gte": "2026-01-01", "lte": "2026-12-31" } }
+function applyMatch(q: any, match: Record<string, any>) {
+  for (const [col, val] of Object.entries(match)) {
+    if (Array.isArray(val)) {
+      q = q.in(col, val as string[]);
+    } else if (val && typeof val === 'object') {
+      for (const [op, v] of Object.entries(val)) {
+        if (op === 'gte') q = q.gte(col, v as string);
+        else if (op === 'lte') q = q.lte(col, v as string);
+        else if (op === 'gt') q = q.gt(col, v as string);
+        else if (op === 'lt') q = q.lt(col, v as string);
+        else if (op === 'neq') q = q.neq(col, v as string);
+        else q = q.eq(col, v as string);
+      }
+    } else {
+      q = q.eq(col, val as string);
+    }
+  }
 }
 
 // Constant-time string comparison (anti timing attack)
