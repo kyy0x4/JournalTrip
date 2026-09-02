@@ -209,7 +209,12 @@ export default function TrainingDashboardPage() {
     const trainedIds = new Set(monthRecs.filter(r => r.kehadiran > 0 || r.post_test > 0).map(r => r.driver_id));
     const passedIds = new Set(monthRecs.filter(r => r.kelulusan === 'L').map(r => r.driver_id));
 
-    const rows = (allDrivers.length > 0 ? allDrivers : []).map(d => {
+    // Basis driver: ikut filter area global (selectedArea)
+    const baseDrivers = (allDrivers.length > 0 ? allDrivers : []).filter(d =>
+      !selectedArea || selectedArea === 'ALL' || d.area === selectedArea
+    );
+
+    const rows = baseDrivers.map(d => {
       const rec = monthRecs.find(r => r.driver_id === d.id);
       const trained = trainedIds.has(d.id);
       return {
@@ -234,7 +239,7 @@ export default function TrainingDashboardPage() {
     }).sort((a, b) => Number(b.trained) - Number(a.trained) || a.name.localeCompare(b.name));
 
     return rows;
-  }, [filteredRecords, listMonth, listFilter, listSearch, allDrivers]);
+  }, [filteredRecords, listMonth, listFilter, listSearch, allDrivers, selectedArea]);
 
   const trainedCount = driverListByMonth.filter(d => d.trained).length;
   const notTrainedCount = driverListByMonth.length - trainedCount;
