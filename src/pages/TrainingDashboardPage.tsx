@@ -265,10 +265,10 @@ export default function TrainingDashboardPage() {
       {/* ── Header ── */}
       <div className="sticky top-4 z-40 px-4 md:px-6">
         <div className="max-w-6xl mx-auto bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl shadow-lg shadow-slate-200/50 dark:shadow-none border border-white/60 dark:border-slate-800 px-6 h-16 rounded-2xl flex items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <GraduationCap className="w-5 h-5 text-blue-500" />
-            <span className="font-black text-lg tracking-tight">Training Center</span>
-            <span className="text-[10px] font-black tracking-widest text-slate-500 uppercase bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-lg">Analytics</span>
+          <div className="flex items-center gap-3 min-w-0">
+            <GraduationCap className="w-5 h-5 text-blue-500 shrink-0" />
+            <span className="font-black text-lg tracking-tight truncate">Training Center</span>
+            <span className="text-[10px] font-black tracking-widest text-slate-500 uppercase bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-lg hidden sm:inline">Analytics</span>
           </div>
           <div className="relative">
             <select value={year} onChange={e => setYear(Number(e.target.value))}
@@ -291,10 +291,10 @@ export default function TrainingDashboardPage() {
 
         {/* ── Tabs & Filters ── */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div className="flex gap-1 bg-slate-100 dark:bg-slate-800/50 p-1 rounded-2xl w-fit">
+          <div className="flex gap-1 bg-slate-100 dark:bg-slate-800/50 p-1 rounded-2xl w-full sm:w-fit overflow-x-auto">
             {TABS.map(t => (
               <button key={t.key} onClick={() => setActiveTab(t.key)}
-                className={`px-4 py-2 rounded-xl text-xs font-black tracking-widest uppercase transition-all ${activeTab === t.key ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-sm' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'}`}>
+                className={`px-4 py-2 rounded-xl text-xs font-black tracking-widest uppercase transition-all whitespace-nowrap shrink-0 ${activeTab === t.key ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-sm' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'}`}>
                 {t.label}
               </button>
             ))}
@@ -447,11 +447,11 @@ export default function TrainingDashboardPage() {
                       <thead>
                         <tr className="border-b border-slate-100 dark:border-slate-800">
                           <th className="text-left pb-3 text-[10px] font-black text-slate-400 uppercase tracking-widest">Driver</th>
-                          <th className="text-left pb-3 text-[10px] font-black text-slate-400 uppercase tracking-widest">NIK</th>
-                          <th className="text-left pb-3 text-[10px] font-black text-slate-400 uppercase tracking-widest">Area</th>
+                          <th className="text-left pb-3 text-[10px] font-black text-slate-400 uppercase tracking-widest hidden md:table-cell">NIK</th>
+                          <th className="text-left pb-3 text-[10px] font-black text-slate-400 uppercase tracking-widest hidden md:table-cell">Area</th>
                           <th className="text-center pb-3 text-[10px] font-black text-slate-400 uppercase tracking-widest">Hadir</th>
                           <th className="text-center pb-3 text-[10px] font-black text-slate-400 uppercase tracking-widest">Post Test</th>
-                          <th className="text-center pb-3 text-[10px] font-black text-slate-400 uppercase tracking-widest">Nilai</th>
+                          <th className="text-center pb-3 text-[10px] font-black text-slate-400 uppercase tracking-widest hidden sm:table-cell">Nilai</th>
                           <th className="text-center pb-3 text-[10px] font-black text-slate-400 uppercase tracking-widest">Status</th>
                         </tr>
                       </thead>
@@ -467,14 +467,17 @@ export default function TrainingDashboardPage() {
                                     <User className="w-4 h-4 text-slate-400" />
                                   </div>
                                 )}
-                                <span className="font-bold text-slate-900 dark:text-white">{d.name}</span>
+                                <div className="min-w-0">
+                                  <span className="font-bold text-slate-900 dark:text-white block truncate">{d.name}</span>
+                                  <span className="text-[10px] font-semibold text-slate-400 md:hidden">{d.nik} · {d.area}</span>
+                                </div>
                               </div>
                             </td>
-                            <td className="py-3 font-mono text-xs text-slate-500">{d.nik}</td>
-                            <td className="py-3 text-xs font-semibold text-slate-500">{d.area}</td>
+                            <td className="py-3 font-mono text-xs text-slate-500 hidden md:table-cell">{d.nik}</td>
+                            <td className="py-3 text-xs font-semibold text-slate-500 hidden md:table-cell">{d.area}</td>
                             <td className="py-3 text-center font-bold text-slate-700 dark:text-slate-300">{d.kehadiran > 0 ? d.kehadiran : '—'}</td>
                             <td className="py-3 text-center font-bold text-slate-700 dark:text-slate-300">{d.post_test != null && d.post_test > 0 ? d.post_test : '—'}</td>
-                            <td className="py-3 text-center font-bold text-slate-700 dark:text-slate-300">{d.total_nilai != null && d.total_nilai > 0 ? d.total_nilai : '—'}</td>
+                            <td className="py-3 text-center font-bold text-slate-700 dark:text-slate-300 hidden sm:table-cell">{d.total_nilai != null && d.total_nilai > 0 ? d.total_nilai : '—'}</td>
                             <td className="py-3 text-center">
                               {d.trained ? (
                                 d.passed
