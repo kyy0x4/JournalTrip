@@ -442,55 +442,99 @@ export default function TrainingDashboardPage() {
                 {isLoading ? (
                   <div className="space-y-3">{[...Array(5)].map((_, i) => <div key={i} className="h-12 bg-slate-100 dark:bg-slate-800 rounded-xl animate-pulse" />)}</div>
                 ) : (
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-sm">
-                      <thead>
-                        <tr className="border-b border-slate-100 dark:border-slate-800">
-                          <th className="text-left pb-3 text-[10px] font-black text-slate-400 uppercase tracking-widest">Driver</th>
-                          <th className="text-left pb-3 text-[10px] font-black text-slate-400 uppercase tracking-widest hidden md:table-cell">NIK</th>
-                          <th className="text-left pb-3 text-[10px] font-black text-slate-400 uppercase tracking-widest hidden md:table-cell">Area</th>
-                          <th className="text-center pb-3 text-[10px] font-black text-slate-400 uppercase tracking-widest">Hadir</th>
-                          <th className="text-center pb-3 text-[10px] font-black text-slate-400 uppercase tracking-widest">Post Test</th>
-                          <th className="text-center pb-3 text-[10px] font-black text-slate-400 uppercase tracking-widest hidden sm:table-cell">Nilai</th>
-                          <th className="text-center pb-3 text-[10px] font-black text-slate-400 uppercase tracking-widest">Status</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {pagedDrivers.map(d => (
-                          <tr key={d.id} className="border-b border-slate-50 dark:border-slate-800/50 hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors">
-                            <td className="py-3">
-                              <div className="flex items-center gap-3">
-                                {d.avatar ? (
-                                  <img src={d.avatar} onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(d.name)}&background=e2e8f0&color=475569`; }} className="w-8 h-8 rounded-full object-cover border-2 border-white dark:border-slate-800 shadow-sm shrink-0" alt={d.name} />
-                                ) : (
-                                  <div className="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center shrink-0">
-                                    <User className="w-4 h-4 text-slate-400" />
-                                  </div>
-                                )}
-                                <div className="min-w-0">
-                                  <span className="font-bold text-slate-900 dark:text-white block truncate">{d.name}</span>
-                                  <span className="text-[10px] font-semibold text-slate-400 md:hidden">{d.nik} · {d.area}</span>
-                                </div>
-                              </div>
-                            </td>
-                            <td className="py-3 font-mono text-xs text-slate-500 hidden md:table-cell">{d.nik}</td>
-                            <td className="py-3 text-xs font-semibold text-slate-500 hidden md:table-cell">{d.area}</td>
-                            <td className="py-3 text-center font-bold text-slate-700 dark:text-slate-300">{d.kehadiran > 0 ? d.kehadiran : '—'}</td>
-                            <td className="py-3 text-center font-bold text-slate-700 dark:text-slate-300">{d.post_test != null && d.post_test > 0 ? d.post_test : '—'}</td>
-                            <td className="py-3 text-center font-bold text-slate-700 dark:text-slate-300 hidden sm:table-cell">{d.total_nilai != null && d.total_nilai > 0 ? d.total_nilai : '—'}</td>
-                            <td className="py-3 text-center">
-                              {d.trained ? (
-                                d.passed
-                                  ? <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 text-[10px] font-black uppercase"><CheckCircle2 className="w-3 h-3" /> Lulus</span>
-                                  : <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 text-[10px] font-black uppercase"><GraduationCap className="w-3 h-3" /> Training</span>
-                              ) : (
-                                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400 text-[10px] font-black uppercase"><AlertTriangle className="w-3 h-3" /> Belum</span>
-                              )}
-                            </td>
+                  <>
+                    {/* ── Desktop: tabel ── */}
+                    <div className="hidden md:block overflow-x-auto">
+                      <table className="w-full text-sm">
+                        <thead>
+                          <tr className="border-b border-slate-100 dark:border-slate-800">
+                            <th className="text-left pb-3 text-[10px] font-black text-slate-400 uppercase tracking-widest">Driver</th>
+                            <th className="text-left pb-3 text-[10px] font-black text-slate-400 uppercase tracking-widest">NIK</th>
+                            <th className="text-left pb-3 text-[10px] font-black text-slate-400 uppercase tracking-widest">Area</th>
+                            <th className="text-center pb-3 text-[10px] font-black text-slate-400 uppercase tracking-widest">Hadir</th>
+                            <th className="text-center pb-3 text-[10px] font-black text-slate-400 uppercase tracking-widest">Post Test</th>
+                            <th className="text-center pb-3 text-[10px] font-black text-slate-400 uppercase tracking-widest">Nilai</th>
+                            <th className="text-center pb-3 text-[10px] font-black text-slate-400 uppercase tracking-widest">Status</th>
                           </tr>
-                        ))}
-                      </tbody>
-                    </table>
+                        </thead>
+                        <tbody>
+                          {pagedDrivers.map(d => (
+                            <tr key={d.id} className="border-b border-slate-50 dark:border-slate-800/50 hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors">
+                              <td className="py-3">
+                                <div className="flex items-center gap-3">
+                                  {d.avatar ? (
+                                    <img src={d.avatar} onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(d.name)}&background=e2e8f0&color=475569`; }} className="w-8 h-8 rounded-full object-cover border-2 border-white dark:border-slate-800 shadow-sm shrink-0" alt={d.name} />
+                                  ) : (
+                                    <div className="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center shrink-0">
+                                      <User className="w-4 h-4 text-slate-400" />
+                                    </div>
+                                  )}
+                                  <span className="font-bold text-slate-900 dark:text-white">{d.name}</span>
+                                </div>
+                              </td>
+                              <td className="py-3 font-mono text-xs text-slate-500">{d.nik}</td>
+                              <td className="py-3 text-xs font-semibold text-slate-500">{d.area}</td>
+                              <td className="py-3 text-center font-bold text-slate-700 dark:text-slate-300">{d.kehadiran > 0 ? d.kehadiran : '—'}</td>
+                              <td className="py-3 text-center font-bold text-slate-700 dark:text-slate-300">{d.post_test != null && d.post_test > 0 ? d.post_test : '—'}</td>
+                              <td className="py-3 text-center font-bold text-slate-700 dark:text-slate-300">{d.total_nilai != null && d.total_nilai > 0 ? d.total_nilai : '—'}</td>
+                              <td className="py-3 text-center">
+                                {d.trained ? (
+                                  d.passed
+                                    ? <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 text-[10px] font-black uppercase"><CheckCircle2 className="w-3 h-3" /> Lulus</span>
+                                    : <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 text-[10px] font-black uppercase"><GraduationCap className="w-3 h-3" /> Training</span>
+                                ) : (
+                                  <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400 text-[10px] font-black uppercase"><AlertTriangle className="w-3 h-3" /> Belum</span>
+                                )}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+
+                    {/* ── Mobile: kartu per driver ── */}
+                    <div className="md:hidden space-y-2.5">
+                      {pagedDrivers.map(d => (
+                        <div key={d.id} className="rounded-2xl border border-slate-100 dark:border-slate-800 p-3.5">
+                          <div className="flex items-center gap-3">
+                            {d.avatar ? (
+                              <img src={d.avatar} onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(d.name)}&background=e2e8f0&color=475569`; }} className="w-9 h-9 rounded-full object-cover border-2 border-white dark:border-slate-800 shadow-sm shrink-0" alt={d.name} />
+                            ) : (
+                              <div className="w-9 h-9 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center shrink-0">
+                                <User className="w-4 h-4 text-slate-400" />
+                              </div>
+                            )}
+                            <div className="flex-1 min-w-0">
+                              <p className="font-bold text-slate-900 dark:text-white truncate">{d.name}</p>
+                              <p className="text-[10px] font-semibold text-slate-400 truncate">{d.nik} · {d.area}</p>
+                            </div>
+                            {d.trained ? (
+                              d.passed
+                                ? <span className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 text-[9px] font-black uppercase shrink-0"><CheckCircle2 className="w-3 h-3" /> Lulus</span>
+                                : <span className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 text-[9px] font-black uppercase shrink-0"><GraduationCap className="w-3 h-3" /> Training</span>
+                            ) : (
+                              <span className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400 text-[9px] font-black uppercase shrink-0"><AlertTriangle className="w-3 h-3" /> Belum</span>
+                            )}
+                          </div>
+                          {/* Statistik nilai — numpuk vertikal biar nggak dempet */}
+                          <div className="grid grid-cols-3 gap-2 mt-3 pt-3 border-t border-slate-50 dark:border-slate-800/50">
+                            <div className="text-center">
+                              <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Hadir</p>
+                              <p className="text-base font-black text-slate-900 dark:text-white mt-0.5">{d.kehadiran > 0 ? d.kehadiran : '—'}</p>
+                            </div>
+                            <div className="text-center">
+                              <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Post Test</p>
+                              <p className="text-base font-black text-slate-900 dark:text-white mt-0.5">{d.post_test != null && d.post_test > 0 ? d.post_test : '—'}</p>
+                            </div>
+                            <div className="text-center">
+                              <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Nilai</p>
+                              <p className="text-base font-black text-slate-900 dark:text-white mt-0.5">{d.total_nilai != null && d.total_nilai > 0 ? d.total_nilai : '—'}</p>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+
                     {driverListByMonth.length === 0 && (
                       <p className="text-slate-400 text-sm italic text-center py-8">Tidak ada driver ditemukan.</p>
                     )}
@@ -512,7 +556,7 @@ export default function TrainingDashboardPage() {
                         </div>
                       </div>
                     )}
-                  </div>
+                  </>
                 )}
               </div>
             </motion.div>
