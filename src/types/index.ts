@@ -78,6 +78,12 @@ export interface TrainingMonthlyRecord {
   score_kpi: number;
   created_at: string;
   area?: string;
+  // Kolom baru format Sep 2026+
+  hasil_pre_test?: string | null;
+  hasil_post_test?: string | null;
+  keterangan_test?: string | null;
+  total_nilai?: number | null;
+  q_kehadiran?: number | null;
 }
 
 export interface DriverViolationMonth {

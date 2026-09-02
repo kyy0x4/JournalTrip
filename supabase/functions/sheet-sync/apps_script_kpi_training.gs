@@ -78,7 +78,25 @@ function syncTrainingToSupabase() {
       let postTestIdx = headers.findIndex(h => h === `${month}_POST_TEST`);
       let kelulusanIdx = headers.findIndex(h => h === `${month}_KELULUSAN`);
       let kpiIdx = headers.findIndex(h => h === `${month}_SCORE_KPI`);
-      
+
+      // ── Format baru (Sep 2026+): per minggu ada HASIL_PRE_TEST / HASIL_POST_TEST / KETERANGAN_TEST ──
+      // Ambil nilai pre/post test (gabung dari semua minggu yang ada)
+      let preTestVals = [], postTestVals = [], keteranganVals = [];
+      [1, 2, 3, 4].forEach(w => {
+        const wIdx = headers.findIndex(h => h === `${month}_W${w}`);
+        if (wIdx === -1) return;
+        const pre = headers[wIdx + 1] === 'HASIL_PRE_TEST' ? row[wIdx + 1] : null;
+        const post = headers[wIdx + 2] === 'HASIL_POST_TEST' ? row[wIdx + 2] : null;
+        const ket = headers[wIdx + 3] === 'KETERANGAN_TEST' ? row[wIdx + 3] : null;
+        if (pre !== null && pre !== '' && pre !== undefined) preTestVals.push(String(pre));
+        if (post !== null && post !== '' && post !== undefined) postTestVals.push(String(post));
+        if (ket !== null && ket !== '' && ket !== undefined) keteranganVals.push(String(ket));
+      });
+
+      // TOTAL_NILAI & Q3_KEHADIRAN (kolom baru, cuma ada di format baru)
+      const totalNilaiIdx = headers.findIndex(h => h === 'TOTAL_NILAI');
+      const qHadirIdx = headers.findIndex(h => h === 'Q3_KEHADIRAN');
+
       let kehadiran = kehadiranIdx > -1 ? row[kehadiranIdx] : 0;
       let postTest = postTestIdx > -1 ? row[postTestIdx] : 0;
       
@@ -89,7 +107,7 @@ function syncTrainingToSupabase() {
         if (w3Idx > -1 && row[w3Idx]) tanggalArray.push(formatDate(row[w3Idx]));
         if (w4Idx > -1 && row[w4Idx]) tanggalArray.push(formatDate(row[w4Idx]));
         
-        if (Number(kehadiran) > 0 || tanggalArray.length > 0 || Number(postTest) > 0) {
+        if (Number(kehadiran) > 0 || tanggalArray.length > 0 || Number(postTest) > 0 || preTestVals.length > 0 || postTestVals.length > 0) {
           
           // Kunci unik: "AR1475_JAN"
           let uniqueKey = `${cleanNik}_${month}`;
@@ -103,7 +121,13 @@ function syncTrainingToSupabase() {
             aktual_training: aktualIdx > -1 ? (Number(row[aktualIdx]) || 0) : 0,
             post_test: Number(postTest) || 0,
             kelulusan: kelulusanIdx > -1 ? row[kelulusanIdx].toString() : null,
-            score_kpi: kpiIdx > -1 ? (Number(row[kpiIdx]) || 0) : 0
+            score_kpi: kpiIdx > -1 ? (Number(row[kpiIdx]) || 0) : 0,
+            // Kolom baru (format Sep 2026+)
+            hasil_pre_test: preTestVals.join(", ") || null,
+            hasil_post_test: postTestVals.join(", ") || null,
+            keterangan_test: keteranganVals.join(", ") || null,
+            total_nilai: totalNilaiIdx > -1 ? (Number(row[totalNilaiIdx]) || 0) : null,
+            q_kehadiran: qHadirIdx > -1 ? (Number(row[qHadirIdx]) || 0) : null
           };
         }
       }

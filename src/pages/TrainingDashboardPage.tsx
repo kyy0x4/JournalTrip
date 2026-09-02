@@ -57,7 +57,11 @@ export default function TrainingDashboardPage() {
   const [allRecords, setAllRecords] = useState<TrainingWithDriver[]>([]);
   const [totalDrivers, setTotalDrivers] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'monthly' | 'leaderboard' | 'q1'>('monthly');
+  const [activeTab, setActiveTab] = useState<'monthly' | 'leaderboard' | 'q1' | 'drivers'>('monthly');
+  const [listMonth, setListMonth] = useState('SEP');
+  const [listSearch, setListSearch] = useState('');
+  const [listFilter, setListFilter] = useState<'ALL' | 'TRAINED' | 'NOT_TRAINED'>('ALL');
+  const [allDrivers, setAllDrivers] = useState<DriverRow[]>([]);
 
   // ── Fetch all training records with driver names ────────────────
   useEffect(() => {
@@ -69,6 +73,7 @@ export default function TrainingDashboardPage() {
       ]);
       const driverMap: Record<string, DriverRow> = {};
       (drivers || []).forEach((d: DriverRow) => { driverMap[d.id] = d; });
+      setAllDrivers(drivers || []);
       setTotalDrivers((drivers || []).length);
       const merged: TrainingWithDriver[] = (trainings || []).map((r: TrainingMonthlyRecord) => ({
         ...r,
@@ -198,8 +203,45 @@ export default function TrainingDashboardPage() {
   const avgMonthlyLulus = nonZeroMonths.length > 0
     ? nonZeroMonths.reduce((s, m) => s + m.pctLulus, 0) / nonZeroMonths.length : 0;
 
-  const TABS: { key: 'monthly' | 'leaderboard' | 'q1'; label: string }[] = [
+  // ── List driver per bulan (yang training & yang nggak) ──────────
+  const driverListByMonth = useMemo(() => {
+    const monthRecs = filteredRecords.filter(r => r.bulan?.toUpperCase() === listMonth);
+    const trainedIds = new Set(monthRecs.filter(r => r.kehadiran > 0 || r.post_test > 0).map(r => r.driver_id));
+    const passedIds = new Set(monthRecs.filter(r => r.kelulusan === 'L').map(r => r.driver_id));
+
+    const rows = (allDrivers.length > 0 ? allDrivers : []).map(d => {
+      const rec = monthRecs.find(r => r.driver_id === d.id);
+      const trained = trainedIds.has(d.id);
+      return {
+        id: d.id,
+        name: d.name || 'Driver Tidak Dikenal',
+        nik: d.nik || '-',
+        avatar: d.avatar_url,
+        area: d.area || '-',
+        trained,
+        passed: passedIds.has(d.id),
+        kehadiran: rec?.kehadiran || 0,
+        post_test: rec?.post_test ?? null,
+        kelulusan: rec?.kelulusan ?? null,
+        total_nilai: rec?.total_nilai ?? null,
+        q_kehadiran: rec?.q_kehadiran ?? null,
+      };
+    }).filter(d => {
+      if (listFilter === 'TRAINED' && !d.trained) return false;
+      if (listFilter === 'NOT_TRAINED' && d.trained) return false;
+      if (listSearch && !d.name.toLowerCase().includes(listSearch.toLowerCase()) && !d.nik.toLowerCase().includes(listSearch.toLowerCase())) return false;
+      return true;
+    }).sort((a, b) => Number(b.trained) - Number(a.trained) || a.name.localeCompare(b.name));
+
+    return rows;
+  }, [filteredRecords, listMonth, listFilter, listSearch, allDrivers]);
+
+  const trainedCount = driverListByMonth.filter(d => d.trained).length;
+  const notTrainedCount = driverListByMonth.length - trainedCount;
+
+  const TABS: { key: 'monthly' | 'leaderboard' | 'q1' | 'drivers'; label: string }[] = [
     { key: 'monthly', label: 'Per Bulan' },
+    { key: 'drivers', label: 'List Driver' },
     { key: 'leaderboard', label: 'Leaderboard' },
     { key: 'q1', label: 'Kehadiran Q (3 Bln)' },
   ];
@@ -328,6 +370,115 @@ export default function TrainingDashboardPage() {
                     </tbody>
                   </table>
                 </div>
+              </div>
+            </motion.div>
+          )}
+
+          {/* ── Tab: List Driver per Bulan ── */}
+          {activeTab === 'drivers' && (
+            <motion.div key="drivers" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="space-y-6">
+              {/* Ringkasan */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="bg-emerald-50 dark:bg-emerald-900/20 rounded-3xl p-5 border border-emerald-100 dark:border-emerald-900/40">
+                  <p className="text-[10px] font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-widest mb-2 flex items-center gap-1.5">
+                    <CheckCircle2 className="w-3 h-3" /> Ikut Training
+                  </p>
+                  <p className="text-3xl font-black text-emerald-600 dark:text-emerald-400">{trainedCount}</p>
+                  <p className="text-xs text-emerald-600/70 dark:text-emerald-400/70 mt-1">{MONTH_LABELS[listMonth]} {year}</p>
+                </div>
+                <div className="bg-rose-50 dark:bg-rose-900/20 rounded-3xl p-5 border border-rose-100 dark:border-rose-900/40">
+                  <p className="text-[10px] font-black text-rose-600 dark:text-rose-400 uppercase tracking-widest mb-2 flex items-center gap-1.5">
+                    <AlertTriangle className="w-3 h-3" /> Belum Training
+                  </p>
+                  <p className="text-3xl font-black text-rose-600 dark:text-rose-400">{notTrainedCount}</p>
+                  <p className="text-xs text-rose-600/70 dark:text-rose-400/70 mt-1">{MONTH_LABELS[listMonth]} {year}</p>
+                </div>
+              </div>
+
+              {/* Kontrol: bulan + search + filter */}
+              <div className="flex flex-col sm:flex-row gap-3">
+                <div className="relative shrink-0">
+                  <select value={listMonth} onChange={e => setListMonth(e.target.value)}
+                    className="appearance-none bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl pl-4 pr-10 py-2.5 text-sm font-black text-slate-700 dark:text-slate-300 cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500/20 shadow-sm">
+                    {MONTHS_ORDER.map(m => <option key={m} value={m}>{MONTH_LABELS[m]} {year}</option>)}
+                  </select>
+                  <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+                </div>
+                <div className="flex-1 relative">
+                  <input value={listSearch} onChange={e => setListSearch(e.target.value)} placeholder="Cari nama / NIK driver…"
+                    className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl pl-4 pr-4 py-2.5 text-sm text-slate-700 dark:text-slate-300 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 shadow-sm" />
+                </div>
+                <div className="flex gap-1 bg-slate-100 dark:bg-slate-800/50 p-1 rounded-2xl w-fit">
+                  {([['ALL', 'Semua'], ['TRAINED', 'Training'], ['NOT_TRAINED', 'Belum']] as const).map(([val, label]) => (
+                    <button key={val} onClick={() => setListFilter(val)}
+                      className={`px-4 py-2 rounded-xl text-xs font-black tracking-widest uppercase transition-all ${listFilter === val ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-sm' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'}`}>
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Tabel driver */}
+              <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-100 dark:border-slate-800 p-6">
+                <h3 className="font-black text-base mb-1 flex items-center gap-2">
+                  <Users className="w-4 h-4 text-blue-500" /> Status Training Driver
+                  <span className="text-slate-400 font-normal text-sm">{MONTH_LABELS[listMonth]} {year}</span>
+                </h3>
+                <p className="text-xs text-slate-400 mb-4">{driverListByMonth.length} driver ditampilkan</p>
+                {isLoading ? (
+                  <div className="space-y-3">{[...Array(5)].map((_, i) => <div key={i} className="h-12 bg-slate-100 dark:bg-slate-800 rounded-xl animate-pulse" />)}</div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="border-b border-slate-100 dark:border-slate-800">
+                          <th className="text-left pb-3 text-[10px] font-black text-slate-400 uppercase tracking-widest">Driver</th>
+                          <th className="text-left pb-3 text-[10px] font-black text-slate-400 uppercase tracking-widest">NIK</th>
+                          <th className="text-left pb-3 text-[10px] font-black text-slate-400 uppercase tracking-widest">Area</th>
+                          <th className="text-center pb-3 text-[10px] font-black text-slate-400 uppercase tracking-widest">Hadir</th>
+                          <th className="text-center pb-3 text-[10px] font-black text-slate-400 uppercase tracking-widest">Post Test</th>
+                          <th className="text-center pb-3 text-[10px] font-black text-slate-400 uppercase tracking-widest">Nilai</th>
+                          <th className="text-center pb-3 text-[10px] font-black text-slate-400 uppercase tracking-widest">Status</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {driverListByMonth.map(d => (
+                          <tr key={d.id} className="border-b border-slate-50 dark:border-slate-800/50 hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors">
+                            <td className="py-3">
+                              <div className="flex items-center gap-3">
+                                {d.avatar ? (
+                                  <img src={d.avatar} onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(d.name)}&background=e2e8f0&color=475569`; }} className="w-8 h-8 rounded-full object-cover border-2 border-white dark:border-slate-800 shadow-sm shrink-0" alt={d.name} />
+                                ) : (
+                                  <div className="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center shrink-0">
+                                    <User className="w-4 h-4 text-slate-400" />
+                                  </div>
+                                )}
+                                <span className="font-bold text-slate-900 dark:text-white">{d.name}</span>
+                              </div>
+                            </td>
+                            <td className="py-3 font-mono text-xs text-slate-500">{d.nik}</td>
+                            <td className="py-3 text-xs font-semibold text-slate-500">{d.area}</td>
+                            <td className="py-3 text-center font-bold text-slate-700 dark:text-slate-300">{d.kehadiran > 0 ? d.kehadiran : '—'}</td>
+                            <td className="py-3 text-center font-bold text-slate-700 dark:text-slate-300">{d.post_test != null && d.post_test > 0 ? d.post_test : '—'}</td>
+                            <td className="py-3 text-center font-bold text-slate-700 dark:text-slate-300">{d.total_nilai != null && d.total_nilai > 0 ? d.total_nilai : '—'}</td>
+                            <td className="py-3 text-center">
+                              {d.trained ? (
+                                d.passed
+                                  ? <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 text-[10px] font-black uppercase"><CheckCircle2 className="w-3 h-3" /> Lulus</span>
+                                  : <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 text-[10px] font-black uppercase"><GraduationCap className="w-3 h-3" /> Training</span>
+                              ) : (
+                                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400 text-[10px] font-black uppercase"><AlertTriangle className="w-3 h-3" /> Belum</span>
+                              )}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                    {driverListByMonth.length === 0 && (
+                      <p className="text-slate-400 text-sm italic text-center py-8">Tidak ada driver ditemukan.</p>
+                    )}
+                  </div>
+                )}
               </div>
             </motion.div>
           )}
