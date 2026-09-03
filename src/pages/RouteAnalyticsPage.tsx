@@ -118,6 +118,9 @@ export default function RouteAnalyticsPage({ isTAM = false }: { isTAM?: boolean 
     return 'PALEMBANG';
   };
 
+  // Label tujuan dinamis: filter spesifik → nama kota asli; ALL → "Tujuan" (data campur)
+  const tujuanLabel = activeTujuan === 'ALL' ? 'Tujuan' : activeTujuan.charAt(0) + activeTujuan.slice(1).toLowerCase();
+
   const filteredData = data.filter(d => {
     const tujuan = normalizeTujuan(d.checkpoints?.['TUJUAN']);
     return activeTujuan === 'ALL' || tujuan === activeTujuan;
@@ -340,7 +343,6 @@ export default function RouteAnalyticsPage({ isTAM = false }: { isTAM?: boolean 
           ...d,
           tujuan: cp['Tujuan'] || 'MJKT',
           shift: (cp['Shift'] || '').toUpperCase().includes('DAY') ? 'DAY' : 'NIGHT',
-          pelanggaranRute: (cp['PELANGGARAN RUTE'] || '').toUpperCase() === 'YA',
           segA, segB, segC, segD, segE, segF, segG, segH,
           totalLT,
           label: `${(d.driver || '?').split(' ')[0]} ${new Date(d.tanggal).getDate()}/${new Date(d.tanggal).getMonth() + 1}`
@@ -356,8 +358,6 @@ export default function RouteAnalyticsPage({ isTAM = false }: { isTAM?: boolean 
     return Number((vals.reduce((s, d) => s + ((d[key] as number) || 0), 0) / vals.length).toFixed(1));
   };
 
-  const ngoroViolations = ngoroData.filter(d => d.pelanggaranRute).length;
-
   const monthLabel = new Date(selectedMonth + '-01').toLocaleDateString('id-ID', { month: 'long', year: 'numeric' });
 
   const CustomTooltip = ({ active, payload, label }: any) => {
@@ -365,8 +365,8 @@ export default function RouteAnalyticsPage({ isTAM = false }: { isTAM?: boolean 
     const nameMap: Record<string, string> = {
       waitDepartHours: 'Menunggu Antrian Kapal',
       ferryDepartHours: 'Ferry Berangkat',
-      destHours: 'Bakauheni → Tujuan',
-      returnToPortHours: 'Tujuan → Bakauheni',
+      destHours: `Bakauheni → ${tujuanLabel}`,
+      returnToPortHours: `${tujuanLabel} → Bakauheni`,
       waitReturnHours: 'Menunggu Antrian Kapal Pulang',
       ferryReturnHours: 'Ferry Pulang',
       returnToPoolHours: 'Merak → Pool',
@@ -529,7 +529,7 @@ export default function RouteAnalyticsPage({ isTAM = false }: { isTAM?: boolean 
                   <ArrowRight className="w-4 h-4 text-slate-300" />
                   <span className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 px-3 py-1.5 rounded-xl text-blue-600 dark:text-blue-400 font-black">Bakauheni</span>
                   <ArrowRight className="w-4 h-4 text-slate-300" />
-                  <span className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 px-3 py-1.5 rounded-xl text-amber-700 dark:text-amber-400 font-black">Tujuan</span>
+                  <span className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 px-3 py-1.5 rounded-xl text-amber-700 dark:text-amber-400 font-black">{tujuanLabel}</span>
                   <ArrowRight className="w-4 h-4 text-slate-300" />
                   <span className="bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800 px-3 py-1.5 rounded-xl text-purple-600 dark:text-purple-400 font-black flex items-center gap-1.5">
                     <Ship className="w-3.5 h-3.5" /> Bakauheni
@@ -565,7 +565,7 @@ export default function RouteAnalyticsPage({ isTAM = false }: { isTAM?: boolean 
                     { label: 'Total Ritase', value: chartData.length.toString(), color: 'text-slate-900 dark:text-white' },
                     { label: 'Avg. Nunggu Kapal ↑', value: fmtDur(avgWaitDepart), color: 'text-orange-600 dark:text-orange-400' },
                     { label: 'Avg. Ferry Berangkat', value: fmtDur(avgFerry), color: 'text-blue-600 dark:text-blue-400' },
-                    { label: 'Avg. Bakauheni → Tujuan', value: fmtDur(avgDest), color: 'text-emerald-600 dark:text-emerald-400' },
+                    { label: 'Avg. Bakauheni → ' + tujuanLabel, value: fmtDur(avgDest), color: 'text-emerald-600 dark:text-emerald-400' },
                   ].map(c => (
                     <div key={c.label} className="bg-white dark:bg-slate-900 rounded-2xl p-5 border border-slate-100 dark:border-slate-800">
                       <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">{c.label}</p>
@@ -679,8 +679,8 @@ export default function RouteAnalyticsPage({ isTAM = false }: { isTAM?: boolean 
                       <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Segmen C</p>
                       <h3 className="font-black text-base text-slate-900 dark:text-white flex items-center gap-2">
                         <MapPin className="w-4 h-4 text-emerald-500" />
-                        Bakauheni ke Tujuan
-                        <span className="text-slate-400 font-normal text-sm">Bakauheni → PDC Polygon</span>
+                        Bakauheni ke {tujuanLabel}
+                        <span className="text-slate-400 font-normal text-sm">Bakauheni → PDC {tujuanLabel}</span>
                       </h3>
                     </div>
                     <div className="text-right">
@@ -732,7 +732,7 @@ export default function RouteAnalyticsPage({ isTAM = false }: { isTAM?: boolean 
                 {/* ── KPI Pulang ── */}
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                   {[
-                    { label: 'Avg. Tujuan → Bakauheni', value: fmtDur(avgReturnToPort), color: 'text-purple-600 dark:text-purple-400' },
+                    { label: 'Avg. ' + tujuanLabel + ' → Bakauheni', value: fmtDur(avgReturnToPort), color: 'text-purple-600 dark:text-purple-400' },
                     { label: 'Avg. Nunggu Kapal ↓', value: fmtDur(avgWaitReturn), color: 'text-rose-600 dark:text-rose-400' },
                     { label: 'Avg. Ferry Pulang', value: fmtDur(avgFerryReturn), color: 'text-indigo-600 dark:text-indigo-400' },
                     { label: 'Avg. Merak → Pool', value: fmtDur(avgOf('returnToPoolHours')), color: 'text-blue-600 dark:text-blue-400' },
@@ -754,8 +754,8 @@ export default function RouteAnalyticsPage({ isTAM = false }: { isTAM?: boolean 
                         <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Segmen D</p>
                         <h3 className="font-black text-base text-slate-900 dark:text-white flex items-center gap-2">
                           <TrendingUp className="w-4 h-4 text-purple-500" />
-                          Tujuan ke Bakauheni
-                          <span className="text-slate-400 font-normal text-sm">Tujuan → Pel. Bakauheni</span>
+                          {tujuanLabel} ke Bakauheni
+                          <span className="text-slate-400 font-normal text-sm">{tujuanLabel} → Pel. Bakauheni</span>
                         </h3>
                       </div>
                       <div className="text-right">
@@ -939,10 +939,9 @@ export default function RouteAnalyticsPage({ isTAM = false }: { isTAM?: boolean 
                 </div>
 
                 {/* ── NGORO KPI Cards ── */}
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
                   {[
                     { label: 'Total Ritase', value: ngoroData.length.toString(), color: 'text-slate-900 dark:text-white' },
-                    { label: 'Pelanggaran Rute', value: ngoroViolations.toString() + ' ritase', color: ngoroViolations > 0 ? 'text-rose-600 dark:text-rose-400' : 'text-emerald-600 dark:text-emerald-400' },
                     { label: 'Avg. KM166 → KM575A', value: fmtDur((() => { const d = ngoroData.filter(x => x.segB > 0 && x.segD > 0); return d.length > 0 ? (d.reduce((s, x) => s + x.segB + x.segC + x.segD, 0) / d.length) : 0; })()), color: 'text-blue-600 dark:text-blue-400' },
                     { label: 'Avg. Total Lead Time', value: fmtDur((() => { const d = ngoroData.filter(x => x.totalLT > 0); return d.length > 0 ? (d.reduce((s, x) => s + x.totalLT, 0) / d.length) : 0; })()), color: 'text-amber-600 dark:text-amber-400' },
                   ].map(c => (
@@ -954,16 +953,6 @@ export default function RouteAnalyticsPage({ isTAM = false }: { isTAM?: boolean 
                     </div>
                   ))}
                 </div>
-
-                {/* ── Pelanggaran Rute Alert ── */}
-                {ngoroViolations > 0 && (
-                  <div className="flex items-start gap-3 bg-rose-50 dark:bg-rose-950/20 border border-rose-200 dark:border-rose-900/50 rounded-2xl p-4">
-                    <AlertTriangle className="w-5 h-5 text-rose-500 flex-shrink-0 mt-0.5" />
-                    <div>
-                      <p className="text-sm font-black text-rose-700 dark:text-rose-400 mb-1">{ngoroViolations} Trip dengan Pelanggaran Rute</p>
-                    </div>
-                  </div>
-                )}
 
                 {/* ── BERANGKAT HEADER ── */}
                 <div className="flex items-center gap-3">
