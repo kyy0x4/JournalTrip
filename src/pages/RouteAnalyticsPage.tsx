@@ -186,8 +186,8 @@ export default function RouteAnalyticsPage({ isTAM = false }: { isTAM?: boolean 
     ];
     const unloadingKey = unloadingKeys.find(k => cp[k]) || null;
 
-    // Pass 1: leg berangkat (sampai unloading)
-    steps(['Out PDC', 'PELABUHAN MERAK', 'MASUK KAPAL', 'PELABUHAN BAKAUHENI', unloadingKey]);
+    // Pass 1: leg berangkat (Actual → IN PDC → Out PDC → ... sampai unloading)
+    steps(['Actual', 'IN PDC', 'Out PDC', 'PELABUHAN MERAK', 'MASUK KAPAL', 'PELABUHAN BAKAUHENI', unloadingKey]);
 
     // Koreksi unloading pakai leadtime delivery (durasi dari Out PDC)
     if (unloadingKey && result['Out PDC']) {
@@ -233,6 +233,14 @@ export default function RouteAnalyticsPage({ isTAM = false }: { isTAM?: boolean 
         const cp = d.checkpoints || {};
         const tujuan = normalizeTujuan(cp['TUJUAN']);
         const tl = resolveSumatraTimeline(cp, d.tanggal);
+
+        // Segmen awal: Actual (keluar pool) → IN PDC → Out PDC
+        const preDepart1Hours = tl['IN PDC'] && tl['Actual']
+          ? (tl['IN PDC'] - tl['Actual']) / 3_600_000
+          : 0;
+        const preDepart2Hours = tl['Out PDC'] && tl['IN PDC']
+          ? (tl['Out PDC'] - tl['IN PDC']) / 3_600_000
+          : 0;
 
         // Segment 1: Tiba di Merak → Masuk Kapal (Nunggu Kapal Berangkat)
         const waitDepartHours = tl['MASUK KAPAL'] && tl['PELABUHAN MERAK']
@@ -282,6 +290,8 @@ export default function RouteAnalyticsPage({ isTAM = false }: { isTAM?: boolean 
         return {
           ...d,
           tujuan,
+          preDepart1Hours,
+          preDepart2Hours,
           waitDepartHours,
           ferryDepartHours,
           destHours,
@@ -329,6 +339,10 @@ export default function RouteAnalyticsPage({ isTAM = false }: { isTAM?: boolean 
           return parseFloat((diff / 60).toFixed(1));
         };
 
+        // Segmen awal: Actual (keluar pool) → IN PDC → Out PDC
+        const segPre1 = diffNgoro(cp['Actual'], cp['IN PDC']);
+        const segPre2 = diffNgoro(cp['IN PDC'], cp['Out PDC']);
+
         // Segment A: Out PDC → KM 166 (Tol Cipularang/awal jalan)
         const segA = diffNgoro(cp['Out PDC'], cp['Actual (KM 166)']);
         // Segment B: KM 166 → KM 379A
@@ -353,6 +367,7 @@ export default function RouteAnalyticsPage({ isTAM = false }: { isTAM?: boolean 
           ...d,
           tujuan: cp['Tujuan'] || 'MJKT',
           shift: (cp['Shift'] || '').toUpperCase().includes('DAY') ? 'DAY' : 'NIGHT',
+          segPre1, segPre2,
           segA, segB, segC, segD, segE, segF, segG, segH,
           totalLT,
           label: `${(d.driver || '?').split(' ')[0]} ${new Date(d.tanggal).getDate()}/${new Date(d.tanggal).getMonth() + 1}`
@@ -456,6 +471,8 @@ export default function RouteAnalyticsPage({ isTAM = false }: { isTAM?: boolean 
   const CustomTooltip = ({ active, payload, label }: any) => {
     if (!active || !payload?.length) return null;
     const nameMap: Record<string, string> = {
+      preDepart1Hours: 'Pool → IN PDC',
+      preDepart2Hours: 'IN PDC → Out PDC',
       waitDepartHours: 'Menunggu Antrian Kapal',
       ferryDepartHours: 'Ferry Berangkat',
       destHours: `Bakauheni → ${tujuanLabel}`,
@@ -463,6 +480,7 @@ export default function RouteAnalyticsPage({ isTAM = false }: { isTAM?: boolean 
       waitReturnHours: 'Menunggu Antrian Kapal Pulang',
       ferryReturnHours: 'Ferry Pulang',
       returnToPoolHours: 'Merak → Pool',
+      segPre1: 'Pool → IN PDC', segPre2: 'IN PDC → Out PDC',
       segA: 'Segmen A', segB: 'Segmen B', segC: 'Segmen C', segD: 'Segmen D',
       segE: 'Segmen E', segF: 'Segmen F', segG: 'Segmen G', segH: 'Segmen H',
     };
@@ -690,6 +708,100 @@ export default function RouteAnalyticsPage({ isTAM = false }: { isTAM?: boolean 
 
                 {/* ── Chart SUMATERA (grid 2 kolom) — Berangkat ── */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* ── Segmen Awal: Pool → IN PDC ── */}
+                {chartData.some(d => d.preDepart1Hours > 0) && (
+                  <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 p-6">
+                    <div className="flex items-baseline justify-between mb-6">
+                      <div>
+                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Segmen A</p>
+                        <h3 className="font-black text-base text-slate-900 dark:text-white flex items-center gap-2">
+                          <span className="text-slate-500">🏠</span>
+                          Pool ke IN PDC
+                          <span className="text-slate-400 font-normal text-sm">Actual → IN PDC</span>
+                        </h3>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-[10px] text-slate-400 font-semibold uppercase tracking-widest">Rata-rata</p>
+                        <p className="text-xl font-black text-slate-600 dark:text-slate-300">{fmtDur(avgOf('preDepart1Hours'))}</p>
+                      </div>
+                    </div>
+                    {isLoading ? <LoadingChart /> : (() => {
+                      const d = chartData.filter(x => x.preDepart1Hours > 0);
+                      const avg = avgOf('preDepart1Hours');
+                      return d.length > 0 ? (
+                        <div className="h-[280px] overflow-x-auto overflow-y-hidden custom-scrollbar">
+                          <div style={{ minWidth: `${Math.max(100, d.length * 40)}px`, height: '100%' }}>
+                            <ResponsiveContainer width="100%" height="100%" style={{ overflow: 'visible' }}>
+                              <BarChart data={d} margin={{ top: 5, right: 30, left: -20, bottom: 5 }} barCategoryGap="30%">
+                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                                <XAxis dataKey="label" axisLine={false} tickLine={false} tick={{ fontSize: 8.5, fill: '#94a3b8', fontWeight: 600 }} angle={-45} textAnchor="end" interval="preserveStartEnd" height={85} dy={8} />
+                                <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 9, fill: '#94a3b8', fontWeight: 600 }} tickFormatter={v => `${v}j`} width={28} />
+                                <Tooltip content={<CustomTooltip />} cursor={{ fill: '#f8fafc' }} />
+                                <ReferenceLine y={Number(avg)} stroke="#e2e8f0" strokeDasharray="4 3" label={{ position: 'right', dx: -10, value: `${Number(avg).toFixed(1)}j`, fill: '#94a3b8', fontSize: 9, fontWeight: 700 }} />
+                                <Bar dataKey="preDepart1Hours" radius={[4, 4, 0, 0]} maxBarSize={28}>
+                                  {d.map((e, i) => <Cell key={i} fill={e.preDepart1Hours > 3 ? '#f87171' : e.preDepart1Hours > 1.5 ? '#fbbf24' : '#94a3b8'} />)}
+                                </Bar>
+                              </BarChart>
+                            </ResponsiveContainer>
+                          </div>
+                        </div>
+                      ) : <EmptyChart />;
+                    })()}
+                    <div className="flex items-center gap-4 mt-4 text-[10px] font-semibold text-slate-500">
+                      <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-slate-400 inline-block" /> Normal (&lt;1.5j)</span>
+                      <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-amber-400 inline-block" /> Lambat (1.5–3j)</span>
+                      <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-rose-400 inline-block" /> Lama (&gt;3j)</span>
+                    </div>
+                  </div>
+                )}
+
+                {/* ── Segmen Awal: IN PDC → Out PDC ── */}
+                {chartData.some(d => d.preDepart2Hours > 0) && (
+                  <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 p-6">
+                    <div className="flex items-baseline justify-between mb-6">
+                      <div>
+                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Segmen B</p>
+                        <h3 className="font-black text-base text-slate-900 dark:text-white flex items-center gap-2">
+                          <span className="text-blue-500">🏭</span>
+                          IN PDC ke Out PDC
+                          <span className="text-slate-400 font-normal text-sm">IN PDC → Out PDC</span>
+                        </h3>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-[10px] text-slate-400 font-semibold uppercase tracking-widest">Rata-rata</p>
+                        <p className="text-xl font-black text-blue-600 dark:text-blue-400">{fmtDur(avgOf('preDepart2Hours'))}</p>
+                      </div>
+                    </div>
+                    {isLoading ? <LoadingChart /> : (() => {
+                      const d = chartData.filter(x => x.preDepart2Hours > 0);
+                      const avg = avgOf('preDepart2Hours');
+                      return d.length > 0 ? (
+                        <div className="h-[280px] overflow-x-auto overflow-y-hidden custom-scrollbar">
+                          <div style={{ minWidth: `${Math.max(100, d.length * 40)}px`, height: '100%' }}>
+                            <ResponsiveContainer width="100%" height="100%" style={{ overflow: 'visible' }}>
+                              <BarChart data={d} margin={{ top: 5, right: 30, left: -20, bottom: 5 }} barCategoryGap="30%">
+                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                                <XAxis dataKey="label" axisLine={false} tickLine={false} tick={{ fontSize: 8.5, fill: '#94a3b8', fontWeight: 600 }} angle={-45} textAnchor="end" interval="preserveStartEnd" height={85} dy={8} />
+                                <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 9, fill: '#94a3b8', fontWeight: 600 }} tickFormatter={v => `${v}j`} width={28} />
+                                <Tooltip content={<CustomTooltip />} cursor={{ fill: '#eff6ff' }} />
+                                <ReferenceLine y={Number(avg)} stroke="#e2e8f0" strokeDasharray="4 3" label={{ position: 'right', dx: -10, value: `${Number(avg).toFixed(1)}j`, fill: '#94a3b8', fontSize: 9, fontWeight: 700 }} />
+                                <Bar dataKey="preDepart2Hours" radius={[4, 4, 0, 0]} maxBarSize={28}>
+                                  {d.map((e, i) => <Cell key={i} fill={e.preDepart2Hours > 4 ? '#f87171' : e.preDepart2Hours > 2 ? '#fbbf24' : '#60a5fa'} />)}
+                                </Bar>
+                              </BarChart>
+                            </ResponsiveContainer>
+                          </div>
+                        </div>
+                      ) : <EmptyChart />;
+                    })()}
+                    <div className="flex items-center gap-4 mt-4 text-[10px] font-semibold text-slate-500">
+                      <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-blue-400 inline-block" /> Normal (&lt;2j)</span>
+                      <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-amber-400 inline-block" /> Lambat (2–4j)</span>
+                      <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-rose-400 inline-block" /> Lama (&gt;4j)</span>
+                    </div>
+                  </div>
+                )}
+
                 {/* ── Chart A: Nunggu Kapal Berangkat ── */}
                 {chartData.some(d => d.waitDepartHours > 0) && (
                   <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 p-6">
@@ -1074,12 +1186,14 @@ export default function RouteAnalyticsPage({ isTAM = false }: { isTAM?: boolean 
 
                 {/* ── Shared chart renderer for NGORO (grid 2 kolom) ── */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {(['segA', 'segB', 'segC', 'segD'] as const).map((seg, idx) => {
+                {(['segPre1', 'segPre2', 'segA', 'segB', 'segC', 'segD'] as const).map((seg, idx) => {
                   const segInfo: Record<string, { label: string; subtitle: string; color: (v: number) => string; cursor: string; t1: number; t2: number; avgColor: string }> = {
-                    segA: { label: 'Segmen A', subtitle: 'Out PDC → KM 166A', color: (v) => v > 3 ? '#f87171' : v > 1.5 ? '#fbbf24' : '#60a5fa', cursor: '#f8fafc', t1: 1.5, t2: 3, avgColor: 'text-blue-600 dark:text-blue-400' },
-                    segB: { label: 'Segmen B', subtitle: 'KM 166A → KM 379A', color: (v) => v > 5 ? '#f87171' : v > 3 ? '#fbbf24' : '#34d399', cursor: '#f0fdf4', t1: 3, t2: 5, avgColor: 'text-emerald-600 dark:text-emerald-400' },
-                    segC: { label: 'Segmen C', subtitle: 'KM 379A → KM 575A', color: (v) => v > 6 ? '#f87171' : v > 4 ? '#fbbf24' : '#34d399', cursor: '#f0fdf4', t1: 4, t2: 6, avgColor: 'text-emerald-600 dark:text-emerald-400' },
-                    segD: { label: 'Segmen D', subtitle: 'KM 575A → Unloading', color: (v) => v > 2 ? '#f87171' : v > 1 ? '#fbbf24' : '#a78bfa', cursor: '#f5f3ff', t1: 1, t2: 2, avgColor: 'text-violet-600 dark:text-violet-400' },
+                    segPre1: { label: 'Segmen A', subtitle: 'Pool → IN PDC', color: (v) => v > 3 ? '#f87171' : v > 1.5 ? '#fbbf24' : '#94a3b8', cursor: '#f8fafc', t1: 1.5, t2: 3, avgColor: 'text-slate-500 dark:text-slate-400' },
+                    segPre2: { label: 'Segmen B', subtitle: 'IN PDC → Out PDC', color: (v) => v > 4 ? '#f87171' : v > 2 ? '#fbbf24' : '#60a5fa', cursor: '#f8fafc', t1: 2, t2: 4, avgColor: 'text-blue-600 dark:text-blue-400' },
+                    segA: { label: 'Segmen C', subtitle: 'Out PDC → KM 166A', color: (v) => v > 3 ? '#f87171' : v > 1.5 ? '#fbbf24' : '#60a5fa', cursor: '#f8fafc', t1: 1.5, t2: 3, avgColor: 'text-blue-600 dark:text-blue-400' },
+                    segB: { label: 'Segmen D', subtitle: 'KM 166A → KM 379A', color: (v) => v > 5 ? '#f87171' : v > 3 ? '#fbbf24' : '#34d399', cursor: '#f0fdf4', t1: 3, t2: 5, avgColor: 'text-emerald-600 dark:text-emerald-400' },
+                    segC: { label: 'Segmen E', subtitle: 'KM 379A → KM 575A', color: (v) => v > 6 ? '#f87171' : v > 4 ? '#fbbf24' : '#34d399', cursor: '#f0fdf4', t1: 4, t2: 6, avgColor: 'text-emerald-600 dark:text-emerald-400' },
+                    segD: { label: 'Segmen F', subtitle: 'KM 575A → Unloading', color: (v) => v > 2 ? '#f87171' : v > 1 ? '#fbbf24' : '#a78bfa', cursor: '#f5f3ff', t1: 1, t2: 2, avgColor: 'text-violet-600 dark:text-violet-400' },
                   };
                   const info = segInfo[seg];
                   const filtered = ngoroData.filter(d => (d[seg] as number) > 0);
