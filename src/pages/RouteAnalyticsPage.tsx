@@ -466,12 +466,22 @@ export default function RouteAnalyticsPage({ isTAM = false }: { isTAM?: boolean 
       segA: 'Segmen A', segB: 'Segmen B', segC: 'Segmen C', segD: 'Segmen D',
       segE: 'Segmen E', segF: 'Segmen F', segG: 'Segmen G', segH: 'Segmen H',
     };
+    // Nama segmen SULAWESI: s1..s10 (berangkat) & p1..p10 (pulang)
+    const segNames: Record<string, string> = {};
+    const goAll = ['Pool', ...SULAWESI_GO, 'Unloading'];
+    const backAll = ['Unloading', ...SULAWESI_RETURN, 'Pool'];
+    goAll.slice(0, -1).forEach((from, i) => {
+      segNames[`s${i + 1}`] = `Segmen ${String.fromCharCode(65 + i)} · ${from} → ${goAll[i + 1]}`;
+    });
+    backAll.slice(0, -1).forEach((from, i) => {
+      segNames[`p${i + 1}`] = `Segmen ${String.fromCharCode(65 + i)} · ${from} → ${backAll[i + 1]}`;
+    });
     return (
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl p-4 shadow-xl text-sm">
         <p className="font-black text-slate-800 dark:text-white mb-2">{label}</p>
         {payload.map((p: any) => (
           <p key={p.dataKey} className="font-semibold" style={{ color: p.fill }}>
-            {nameMap[p.dataKey] || p.dataKey}: {fmtDur(p.value)}
+            {nameMap[p.dataKey] || segNames[p.dataKey] || p.dataKey}: {fmtDur(p.value)}
           </p>
         ))}
       </div>
