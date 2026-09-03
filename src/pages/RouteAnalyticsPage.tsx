@@ -1208,9 +1208,13 @@ export default function RouteAnalyticsPage({ isTAM = false }: { isTAM?: boolean 
                   ))}
                   <span className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 px-3 py-1.5 rounded-xl text-amber-700 dark:text-amber-400 font-black">Unloading</span>
                   <ArrowRight className="w-4 h-4 text-slate-300" />
-                  <span className="bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800 px-3 py-1.5 rounded-xl text-purple-600 dark:text-purple-400 font-black flex items-center gap-1.5 text-xs">
-                    <TrendingUp className="w-3 h-3" /> Pulang
-                  </span>
+                  {SULAWESI_RETURN.map(loc => (
+                    <span key={loc}>
+                      <span className="bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800 px-3 py-1.5 rounded-xl text-purple-600 dark:text-purple-400 font-black text-xs">{loc}</span>
+                      <ArrowRight className="w-3.5 h-3.5 text-slate-300 inline mx-1" />
+                    </span>
+                  ))}
+                  <span className="bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-3 py-1.5 rounded-xl text-slate-600 dark:text-slate-400 font-black">Pool</span>
                 </div>
 
                 {/* ── KPI Cards ── */}
@@ -1228,167 +1232,111 @@ export default function RouteAnalyticsPage({ isTAM = false }: { isTAM?: boolean 
                   ))}
                 </div>
 
-                {/* ── Arah Berangkat ── */}
-                <div className="flex items-center gap-3">
-                  <div className="flex-1 h-px bg-emerald-100 dark:bg-emerald-900/30" />
-                  <span className="text-[11px] font-black text-emerald-600 uppercase tracking-widest flex items-center gap-1.5 px-3 py-1 bg-emerald-50 dark:bg-emerald-900/20 rounded-full border border-emerald-200 dark:border-emerald-800">
-                    <TrendingUp className="w-3 h-3" /> Arah Berangkat
-                  </span>
-                  <div className="flex-1 h-px bg-emerald-100 dark:bg-emerald-900/30" />
-                </div>
-
-                {/* Chart tiap lokasi berangkat */}
-                {SULAWESI_GO.map((loc, i) => {
-                  const segKey = `s${i + 1}`;
-                  const from = i === 0 ? 'Pool' : SULAWESI_GO[i - 1];
-                  const to = loc;
-                  const filtered = sulawesiData.filter(d => ((d as any)[segKey] || 0) > 0);
-                  if (filtered.length === 0) return null;
-                  const avg = sulawesiAvgOf(segKey);
-                  return (
-                    <div key={segKey} className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 p-6">
-                      <div className="flex items-baseline justify-between mb-6">
-                        <div>
-                          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Segmen {String.fromCharCode(65 + i)}</p>
-                          <h3 className="font-black text-base text-slate-900 dark:text-white flex items-center gap-2">
-                            <MapPin className="w-4 h-4 text-emerald-500" /> {from} → {to}
-                          </h3>
-                        </div>
-                        <div className="text-right">
-                          <p className="text-[10px] text-slate-400 font-semibold uppercase tracking-widest">Rata-rata</p>
-                          <p className="text-xl font-black text-emerald-600 dark:text-emerald-400">{fmtDur(avg)}</p>
-                        </div>
-                      </div>
-                      {isLoading ? <LoadingChart /> : (
-                        <div className="h-[280px] overflow-x-auto overflow-y-hidden custom-scrollbar">
-                          <div style={{ minWidth: `${Math.max(100, filtered.length * 40)}px`, height: '100%' }}>
-                            <ResponsiveContainer width="100%" height="100%" style={{ overflow: 'visible' }}>
-                              <BarChart data={filtered} margin={{ top: 5, right: 30, left: -20, bottom: 5 }} barCategoryGap="30%">
-                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                                <XAxis dataKey="label" axisLine={false} tickLine={false} tick={{ fontSize: 8.5, fill: '#94a3b8', fontWeight: 600 }} angle={-45} textAnchor="end" interval="preserveStartEnd" height={85} dy={8} />
-                                <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 9, fill: '#94a3b8', fontWeight: 600 }} tickFormatter={v => `${v}j`} width={28} />
-                                <Tooltip content={<CustomTooltip />} cursor={{ fill: '#f0fdf4' }} />
-                                <ReferenceLine y={Number(avg)} stroke="#e2e8f0" strokeDasharray="4 3" label={{ position: 'right', value: `${Number(avg).toFixed(1)}j`, fill: '#94a3b8', fontSize: 9, fontWeight: 700 }} />
-                                <Bar dataKey={segKey} radius={[4, 4, 0, 0]} maxBarSize={28}>
-                                  {filtered.map((e, idx) => {
-                                    const v = (e as any)[segKey] as number;
-                                    return <Cell key={idx} fill={v > 8 ? '#f87171' : v > 4 ? '#fbbf24' : '#34d399'} />;
-                                  })}
-                                </Bar>
-                              </BarChart>
-                            </ResponsiveContainer>
-                          </div>
-                        </div>
-                      )}
-                      <div className="flex items-center gap-4 mt-4 text-[10px] font-semibold text-slate-500">
-                        <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-emerald-400 inline-block" /> Normal (&lt;4j)</span>
-                        <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-amber-400 inline-block" /> Lambat (4–8j)</span>
-                        <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-rose-400 inline-block" /> Lama (&gt;8j)</span>
-                      </div>
-                    </div>
-                  );
-                })}
-
-                {/* Segmen akhir berangkat: Paguat → Unloading */}
+                {/* ── Chart segmen SULAWESI (grid 2 kolom) ── */}
                 {(() => {
-                  const filtered = sulawesiData.filter(d => ((d as any).s10 || 0) > 0);
-                  if (filtered.length === 0) return null;
-                  const avg = sulawesiAvgOf('s10');
-                  return (
-                    <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 p-6">
-                      <div className="flex items-baseline justify-between mb-6">
-                        <div>
-                          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Segmen {String.fromCharCode(65 + SULAWESI_GO.length)}</p>
-                          <h3 className="font-black text-base text-slate-900 dark:text-white flex items-center gap-2">
-                            <MapPin className="w-4 h-4 text-amber-500" /> Paguat → Unloading
-                          </h3>
-                        </div>
-                        <div className="text-right">
-                          <p className="text-[10px] text-slate-400 font-semibold uppercase tracking-widest">Rata-rata</p>
-                          <p className="text-xl font-black text-amber-600 dark:text-amber-400">{fmtDur(avg)}</p>
-                        </div>
-                      </div>
-                      {isLoading ? <LoadingChart /> : (
-                        <div className="h-[280px] overflow-x-auto overflow-y-hidden custom-scrollbar">
-                          <div style={{ minWidth: `${Math.max(100, filtered.length * 40)}px`, height: '100%' }}>
-                            <ResponsiveContainer width="100%" height="100%" style={{ overflow: 'visible' }}>
-                              <BarChart data={filtered} margin={{ top: 5, right: 30, left: -20, bottom: 5 }} barCategoryGap="30%">
-                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                                <XAxis dataKey="label" axisLine={false} tickLine={false} tick={{ fontSize: 8.5, fill: '#94a3b8', fontWeight: 600 }} angle={-45} textAnchor="end" interval="preserveStartEnd" height={85} dy={8} />
-                                <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 9, fill: '#94a3b8', fontWeight: 600 }} tickFormatter={v => `${v}j`} width={28} />
-                                <Tooltip content={<CustomTooltip />} cursor={{ fill: '#fffbeb' }} />
-                                <ReferenceLine y={Number(avg)} stroke="#e2e8f0" strokeDasharray="4 3" label={{ position: 'right', value: `${Number(avg).toFixed(1)}j`, fill: '#94a3b8', fontSize: 9, fontWeight: 700 }} />
-                                <Bar dataKey="s10" radius={[4, 4, 0, 0]} maxBarSize={28}>
-                                  {filtered.map((e, idx) => <Cell key={idx} fill={((e as any).s10 || 0) > 6 ? '#f87171' : ((e as any).s10 || 0) > 3 ? '#fbbf24' : '#f59e0b'} />)}
-                                </Bar>
-                              </BarChart>
-                            </ResponsiveContainer>
+                  // Bangun daftar semua segmen: berangkat (s1..s10) + pulang (p1..p10)
+                  type SegDef = { key: string; from: string; to: string; dir: 'go' | 'back'; color: (v: number) => string; normal: string; lambat: string; lama: string; t1: number; t2: number; };
+                  const segs: SegDef[] = [];
+
+                  SULAWESI_GO.forEach((loc, i) => {
+                    segs.push({
+                      key: `s${i + 1}`,
+                      from: i === 0 ? 'Pool' : SULAWESI_GO[i - 1],
+                      to: loc,
+                      dir: 'go',
+                      color: (v) => v > 8 ? '#f87171' : v > 4 ? '#fbbf24' : '#34d399',
+                      normal: '#34d399', lambat: '#fbbf24', lama: '#f87171',
+                      t1: 4, t2: 8,
+                    });
+                  });
+                  // s10: Paguat → Unloading (setelah 9 lokasi berangkat)
+                  segs.push({
+                    key: 's10',
+                    from: 'Paguat',
+                    to: 'Unloading',
+                    dir: 'go',
+                    color: (v) => v > 6 ? '#f87171' : v > 3 ? '#fbbf24' : '#f59e0b',
+                    normal: '#f59e0b', lambat: '#fbbf24', lama: '#f87171',
+                    t1: 3, t2: 6,
+                  });
+                  SULAWESI_RETURN.forEach((loc, i) => {
+                    segs.push({
+                      key: `p${i + 1}`,
+                      from: i === 0 ? 'Unloading' : SULAWESI_RETURN[i - 1],
+                      to: loc,
+                      dir: 'back',
+                      color: (v) => v > 8 ? '#f87171' : v > 4 ? '#fbbf24' : '#a78bfa',
+                      normal: '#a78bfa', lambat: '#fbbf24', lama: '#f87171',
+                      t1: 4, t2: 8,
+                    });
+                  });
+
+                  const rendered = segs
+                    .map(seg => {
+                      const filtered = sulawesiData.filter(d => ((d as any)[seg.key] || 0) > 0);
+                      if (filtered.length === 0) return null;
+                      const avg = sulawesiAvgOf(seg.key);
+                      const pinColor = seg.dir === 'go'
+                        ? (seg.key === 's10' ? 'text-amber-500' : 'text-emerald-500')
+                        : 'text-purple-500';
+                      const avgColor = seg.dir === 'go'
+                        ? (seg.key === 's10' ? 'text-amber-600 dark:text-amber-400' : 'text-emerald-600 dark:text-emerald-400')
+                        : 'text-purple-600 dark:text-purple-400';
+                      return (
+                        <div key={seg.key} className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 p-4 flex flex-col">
+                          <div className="flex items-start justify-between mb-3 gap-2">
+                            <div className="min-w-0">
+                              <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-0.5">
+                                {seg.dir === 'go' ? 'Berangkat' : 'Pulang'} · Segmen {seg.key.slice(1)}
+                              </p>
+                              <h3 className="font-black text-sm text-slate-900 dark:text-white truncate flex items-center gap-1.5">
+                                <MapPin className={`w-3.5 h-3.5 shrink-0 ${pinColor}`} />
+                                <span className="truncate">{seg.from} → {seg.to}</span>
+                              </h3>
+                            </div>
+                            <div className="text-right shrink-0">
+                              <p className="text-[9px] text-slate-400 font-semibold uppercase tracking-widest">Rata²</p>
+                              <p className={`text-lg font-black leading-tight ${avgColor}`}>{fmtDur(avg)}</p>
+                            </div>
+                          </div>
+                          {isLoading ? <div className="h-[150px] bg-slate-100 dark:bg-slate-800/50 rounded-xl animate-pulse" /> : (
+                            <div className="h-[150px] overflow-x-auto overflow-y-hidden custom-scrollbar">
+                              <div style={{ minWidth: `${Math.max(80, filtered.length * 34)}px`, height: '100%' }}>
+                                <ResponsiveContainer width="100%" height="100%">
+                                  <BarChart data={filtered} margin={{ top: 5, right: 10, left: -22, bottom: 0 }} barCategoryGap="30%">
+                                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                                    <XAxis dataKey="label" axisLine={false} tickLine={false} tick={{ fontSize: 7.5, fill: '#94a3b8', fontWeight: 600 }} angle={-45} textAnchor="end" interval="preserveStartEnd" height={50} dy={4} />
+                                    <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 8, fill: '#94a3b8', fontWeight: 600 }} tickFormatter={v => `${v}j`} width={30} />
+                                    <Tooltip content={<CustomTooltip />} cursor={{ fill: seg.dir === 'go' ? '#f0fdf4' : '#f5f3ff' }} />
+                                    <Bar dataKey={seg.key} radius={[3, 3, 0, 0]} maxBarSize={22}>
+                                      {filtered.map((e, idx) => {
+                                        const v = (e as any)[seg.key] as number;
+                                        return <Cell key={idx} fill={seg.color(v)} />;
+                                      })}
+                                    </Bar>
+                                  </BarChart>
+                                </ResponsiveContainer>
+                              </div>
+                            </div>
+                          )}
+                          <div className="flex items-center gap-3 mt-2.5 text-[9px] font-semibold text-slate-500">
+                            <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-sm inline-block" style={{ backgroundColor: seg.normal }} /> Normal (&lt;{seg.t1}j)</span>
+                            <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-sm inline-block" style={{ backgroundColor: seg.lambat }} /> Lambat</span>
+                            <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-sm inline-block" style={{ backgroundColor: seg.lama }} /> Lama (&gt;{seg.t2}j)</span>
                           </div>
                         </div>
-                      )}
+                      );
+                    })
+                    .filter(Boolean);
+
+                  if (rendered.length === 0) return null;
+
+                  return (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {rendered}
                     </div>
                   );
                 })()}
-
-                {/* ── Arah Pulang ── */}
-                <div className="flex items-center gap-3">
-                  <div className="flex-1 h-px bg-purple-100 dark:bg-purple-900/30" />
-                  <span className="text-[11px] font-black text-purple-500 uppercase tracking-widest flex items-center gap-1.5 px-3 py-1 bg-purple-50 dark:bg-purple-900/20 rounded-full border border-purple-200 dark:border-purple-800">
-                    <TrendingUp className="w-3 h-3" /> Arah Pulang
-                  </span>
-                  <div className="flex-1 h-px bg-purple-100 dark:bg-purple-900/30" />
-                </div>
-
-                {SULAWESI_RETURN.map((loc, i) => {
-                  const segKey = `p${i + 1}`;
-                  const from = i === 0 ? 'Unloading' : SULAWESI_RETURN[i - 1];
-                  const to = loc;
-                  const filtered = sulawesiData.filter(d => ((d as any)[segKey] || 0) > 0);
-                  if (filtered.length === 0) return null;
-                  const avg = sulawesiAvgOf(segKey);
-                  return (
-                    <div key={segKey} className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 p-6">
-                      <div className="flex items-baseline justify-between mb-6">
-                        <div>
-                          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Segmen {String.fromCharCode(65 + i)}</p>
-                          <h3 className="font-black text-base text-slate-900 dark:text-white flex items-center gap-2">
-                            <MapPin className="w-4 h-4 text-purple-500" /> {from} → {to}
-                          </h3>
-                        </div>
-                        <div className="text-right">
-                          <p className="text-[10px] text-slate-400 font-semibold uppercase tracking-widest">Rata-rata</p>
-                          <p className="text-xl font-black text-purple-600 dark:text-purple-400">{fmtDur(avg)}</p>
-                        </div>
-                      </div>
-                      {isLoading ? <LoadingChart /> : (
-                        <div className="h-[280px] overflow-x-auto overflow-y-hidden custom-scrollbar">
-                          <div style={{ minWidth: `${Math.max(100, filtered.length * 40)}px`, height: '100%' }}>
-                            <ResponsiveContainer width="100%" height="100%" style={{ overflow: 'visible' }}>
-                              <BarChart data={filtered} margin={{ top: 5, right: 30, left: -20, bottom: 5 }} barCategoryGap="30%">
-                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                                <XAxis dataKey="label" axisLine={false} tickLine={false} tick={{ fontSize: 8.5, fill: '#94a3b8', fontWeight: 600 }} angle={-45} textAnchor="end" interval="preserveStartEnd" height={85} dy={8} />
-                                <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 9, fill: '#94a3b8', fontWeight: 600 }} tickFormatter={v => `${v}j`} width={28} />
-                                <Tooltip content={<CustomTooltip />} cursor={{ fill: '#f5f3ff' }} />
-                                <ReferenceLine y={Number(avg)} stroke="#e2e8f0" strokeDasharray="4 3" label={{ position: 'right', value: `${Number(avg).toFixed(1)}j`, fill: '#94a3b8', fontSize: 9, fontWeight: 700 }} />
-                                <Bar dataKey={segKey} radius={[4, 4, 0, 0]} maxBarSize={28}>
-                                  {filtered.map((e, idx) => {
-                                    const v = (e as any)[segKey] as number;
-                                    return <Cell key={idx} fill={v > 8 ? '#f87171' : v > 4 ? '#fbbf24' : '#a78bfa'} />;
-                                  })}
-                                </Bar>
-                              </BarChart>
-                            </ResponsiveContainer>
-                          </div>
-                        </div>
-                      )}
-                      <div className="flex items-center gap-4 mt-4 text-[10px] font-semibold text-slate-500">
-                        <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-violet-400 inline-block" /> Normal (&lt;4j)</span>
-                        <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-amber-400 inline-block" /> Lambat (4–8j)</span>
-                        <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-rose-400 inline-block" /> Lama (&gt;8j)</span>
-                      </div>
-                    </div>
-                  );
-                })}
               </div>
             ) : null}
           </motion.div>
