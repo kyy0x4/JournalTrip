@@ -558,7 +558,7 @@ export default function RouteAnalyticsPage({ isTAM = false }: { isTAM?: boolean 
                   tickFormatter={v => `${v}j`} width={28} />
                 <Tooltip content={<CustomTooltip />} cursor={{ fill: tooltipCursor }} />
                 <ReferenceLine y={Number(avg)} stroke="#e2e8f0" strokeDasharray="4 3"
-                  label={{ position: 'insideTopRight', value: `${avg}j`, fill: '#94a3b8', fontSize: 9, fontWeight: 700 }} />
+                  label={{ position: 'right', dx: -10, value: `${avg}j`, fill: '#94a3b8', fontSize: 9, fontWeight: 700 }} />
                 <Bar dataKey={dataKey} radius={[4, 4, 0, 0]} maxBarSize={28}>
                   {filtered.map((e, i) => (
                     <Cell key={i} fill={colorFn((e as any)[dataKey])} />
@@ -717,7 +717,7 @@ export default function RouteAnalyticsPage({ isTAM = false }: { isTAM?: boolean 
                               <XAxis dataKey="label" axisLine={false} tickLine={false} tick={{ fontSize: 8.5, fill: '#94a3b8', fontWeight: 600 }} angle={-45} textAnchor="end" interval={0} height={85} dy={8} />
                               <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 9, fill: '#94a3b8', fontWeight: 600 }} tickFormatter={v => `${v}j`} width={28} />
                               <Tooltip content={<CustomTooltip />} cursor={{ fill: '#fff7ed' }} />
-                              <ReferenceLine y={Number(avgWaitDepart)} stroke="#e2e8f0" strokeDasharray="4 3" label={{ position: 'insideTopRight', value: `${Number(avgWaitDepart).toFixed(1)}j`, fill: '#94a3b8', fontSize: 9, fontWeight: 700 }} />
+                              <ReferenceLine y={Number(avgWaitDepart)} stroke="#e2e8f0" strokeDasharray="4 3" label={{ position: 'right', dx: -10, value: `${Number(avgWaitDepart).toFixed(1)}j`, fill: '#94a3b8', fontSize: 9, fontWeight: 700 }} />
                               <Bar dataKey="waitDepartHours" radius={[4, 4, 0, 0]} maxBarSize={28}>
                                 {d.map((e, i) => <Cell key={i} fill={e.waitDepartHours > 4 ? '#f87171' : e.waitDepartHours > 2 ? '#fb923c' : '#fdba74'} />)}
                               </Bar>
@@ -759,7 +759,7 @@ export default function RouteAnalyticsPage({ isTAM = false }: { isTAM?: boolean 
                           <XAxis dataKey="label" axisLine={false} tickLine={false} tick={{ fontSize: 8.5, fill: '#94a3b8', fontWeight: 600 }} angle={-45} textAnchor="end" interval={0} height={85} dy={8} />
                           <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 9, fill: '#94a3b8', fontWeight: 600 }} tickFormatter={v => `${v}j`} width={28} />
                           <Tooltip content={<CustomTooltip />} cursor={{ fill: '#f8fafc' }} />
-                          <ReferenceLine y={Number(avgFerry)} stroke="#e2e8f0" strokeDasharray="4 3" label={{ position: 'insideTopRight', value: `${Number(avgFerry).toFixed(1)}j`, fill: '#94a3b8', fontSize: 9, fontWeight: 700 }} />
+                          <ReferenceLine y={Number(avgFerry)} stroke="#e2e8f0" strokeDasharray="4 3" label={{ position: 'right', dx: -10, value: `${Number(avgFerry).toFixed(1)}j`, fill: '#94a3b8', fontSize: 9, fontWeight: 700 }} />
                           <Bar dataKey="ferryDepartHours" radius={[4, 4, 0, 0]} maxBarSize={28}>
                             {chartData.map((e, i) => (
                               <Cell key={i} fill={e.ferryDepartHours > 8 ? '#f87171' : e.ferryDepartHours > 5 ? '#fbbf24' : '#60a5fa'} />
@@ -805,7 +805,7 @@ export default function RouteAnalyticsPage({ isTAM = false }: { isTAM?: boolean 
                               <XAxis dataKey="label" axisLine={false} tickLine={false} tick={{ fontSize: 8.5, fill: '#94a3b8', fontWeight: 600 }} angle={-45} textAnchor="end" interval="preserveStartEnd" height={85} dy={8} />
                               <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 9, fill: '#94a3b8', fontWeight: 600 }} tickFormatter={v => `${v}j`} width={28} />
                               <Tooltip content={<CustomTooltip />} cursor={{ fill: '#f0fdf4' }} />
-                              <ReferenceLine y={Number(avgDest)} stroke="#e2e8f0" strokeDasharray="4 3" label={{ position: 'insideTopRight', value: `${Number(avgDest).toFixed(1)}j`, fill: '#94a3b8', fontSize: 9, fontWeight: 700 }} />
+                              <ReferenceLine y={Number(avgDest)} stroke="#e2e8f0" strokeDasharray="4 3" label={{ position: 'right', dx: -10, value: `${Number(avgDest).toFixed(1)}j`, fill: '#94a3b8', fontSize: 9, fontWeight: 700 }} />
                               <Bar dataKey="destHours" radius={[4, 4, 0, 0]} maxBarSize={28}>
                                 {d2.map((e, i) => (
                                   <Cell key={i} fill={e.destHours > 10 ? '#f87171' : e.destHours > 6 ? '#fbbf24' : '#34d399'} />
@@ -882,7 +882,7 @@ export default function RouteAnalyticsPage({ isTAM = false }: { isTAM?: boolean 
                                 <XAxis dataKey="label" axisLine={false} tickLine={false} tick={{ fontSize: 8.5, fill: '#94a3b8', fontWeight: 600 }} angle={-45} textAnchor="end" interval="preserveStartEnd" height={85} dy={8} />
                                 <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 9, fill: '#94a3b8', fontWeight: 600 }} tickFormatter={v => `${v}j`} width={28} />
                                 <Tooltip content={<CustomTooltip />} cursor={{ fill: '#fdf4ff' }} />
-                                <ReferenceLine y={Number(avgReturnToPort)} stroke="#e2e8f0" strokeDasharray="4 3" label={{ position: 'insideTopRight', value: `${Number(avgReturnToPort).toFixed(1)}j`, fill: '#94a3b8', fontSize: 9, fontWeight: 700 }} />
+                                <ReferenceLine y={Number(avgReturnToPort)} stroke="#e2e8f0" strokeDasharray="4 3" label={{ position: 'right', dx: -10, value: `${Number(avgReturnToPort).toFixed(1)}j`, fill: '#94a3b8', fontSize: 9, fontWeight: 700 }} />
                                 <Bar dataKey="returnToPortHours" radius={[4, 4, 0, 0]} maxBarSize={28}>
                                   {d.map((e, i) => <Cell key={i} fill={e.returnToPortHours > 10 ? '#f87171' : e.returnToPortHours > 6 ? '#c084fc' : '#a855f7'} />)}
                                 </Bar>
@@ -923,7 +923,7 @@ export default function RouteAnalyticsPage({ isTAM = false }: { isTAM?: boolean 
                                 <XAxis dataKey="label" axisLine={false} tickLine={false} tick={{ fontSize: 8.5, fill: '#94a3b8', fontWeight: 600 }} angle={-45} textAnchor="end" interval="preserveStartEnd" height={85} dy={8} />
                                 <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 9, fill: '#94a3b8', fontWeight: 600 }} tickFormatter={v => `${v}j`} width={28} />
                                 <Tooltip content={<CustomTooltip />} cursor={{ fill: '#fff1f2' }} />
-                                <ReferenceLine y={Number(avgWaitReturn)} stroke="#e2e8f0" strokeDasharray="4 3" label={{ position: 'insideTopRight', value: `${Number(avgWaitReturn).toFixed(1)}j`, fill: '#94a3b8', fontSize: 9, fontWeight: 700 }} />
+                                <ReferenceLine y={Number(avgWaitReturn)} stroke="#e2e8f0" strokeDasharray="4 3" label={{ position: 'right', dx: -10, value: `${Number(avgWaitReturn).toFixed(1)}j`, fill: '#94a3b8', fontSize: 9, fontWeight: 700 }} />
                                 <Bar dataKey="waitReturnHours" radius={[4, 4, 0, 0]} maxBarSize={28}>
                                   {d.map((e, i) => <Cell key={i} fill={e.waitReturnHours > 4 ? '#f87171' : e.waitReturnHours > 2 ? '#fb7185' : '#fda4af'} />)}
                                 </Bar>
@@ -964,7 +964,7 @@ export default function RouteAnalyticsPage({ isTAM = false }: { isTAM?: boolean 
                                 <XAxis dataKey="label" axisLine={false} tickLine={false} tick={{ fontSize: 8.5, fill: '#94a3b8', fontWeight: 600 }} angle={-45} textAnchor="end" interval="preserveStartEnd" height={85} dy={8} />
                                 <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 9, fill: '#94a3b8', fontWeight: 600 }} tickFormatter={v => `${v}j`} width={28} />
                                 <Tooltip content={<CustomTooltip />} cursor={{ fill: '#eef2ff' }} />
-                                <ReferenceLine y={Number(avgFerryReturn)} stroke="#e2e8f0" strokeDasharray="4 3" label={{ position: 'insideTopRight', value: `${Number(avgFerryReturn).toFixed(1)}j`, fill: '#94a3b8', fontSize: 9, fontWeight: 700 }} />
+                                <ReferenceLine y={Number(avgFerryReturn)} stroke="#e2e8f0" strokeDasharray="4 3" label={{ position: 'right', dx: -10, value: `${Number(avgFerryReturn).toFixed(1)}j`, fill: '#94a3b8', fontSize: 9, fontWeight: 700 }} />
                                 <Bar dataKey="ferryReturnHours" radius={[4, 4, 0, 0]} maxBarSize={28}>
                                   {d.map((e, i) => <Cell key={i} fill={e.ferryReturnHours > 8 ? '#f87171' : e.ferryReturnHours > 5 ? '#fbbf24' : '#818cf8'} />)}
                                 </Bar>
@@ -1011,7 +1011,7 @@ export default function RouteAnalyticsPage({ isTAM = false }: { isTAM?: boolean 
                                 <XAxis dataKey="label" axisLine={false} tickLine={false} tick={{ fontSize: 8.5, fill: '#94a3b8', fontWeight: 600 }} angle={-45} textAnchor="end" interval="preserveStartEnd" height={85} dy={8} />
                                 <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 9, fill: '#94a3b8', fontWeight: 600 }} tickFormatter={v => `${v}j`} width={28} />
                                 <Tooltip content={<CustomTooltip />} cursor={{ fill: '#eff6ff' }} />
-                                <ReferenceLine y={Number(avgG)} stroke="#e2e8f0" strokeDasharray="4 3" label={{ position: 'insideTopRight', value: `${Number(avgG).toFixed(1)}j`, fill: '#94a3b8', fontSize: 9, fontWeight: 700 }} />
+                                <ReferenceLine y={Number(avgG)} stroke="#e2e8f0" strokeDasharray="4 3" label={{ position: 'right', dx: -10, value: `${Number(avgG).toFixed(1)}j`, fill: '#94a3b8', fontSize: 9, fontWeight: 700 }} />
                                 <Bar dataKey="returnToPoolHours" radius={[4, 4, 0, 0]} maxBarSize={28}>
                                   {d.map((e, i) => <Cell key={i} fill={e.returnToPoolHours > 5 ? '#f87171' : e.returnToPoolHours > 3 ? '#fbbf24' : '#60a5fa'} />)}
                                 </Bar>
@@ -1116,7 +1116,7 @@ export default function RouteAnalyticsPage({ isTAM = false }: { isTAM?: boolean 
                                 tickFormatter={v => `${v}j`} width={28} />
                               <Tooltip content={<CustomTooltip />} cursor={{ fill: info.cursor }} />
                               <ReferenceLine y={Number(avg)} stroke="#e2e8f0" strokeDasharray="4 3"
-                                label={{ position: 'insideTopRight', value: `${avg}j`, fill: '#94a3b8', fontSize: 9, fontWeight: 700 }} />
+                                label={{ position: 'right', dx: -10, value: `${avg}j`, fill: '#94a3b8', fontSize: 9, fontWeight: 700 }} />
                               <Bar dataKey={seg} radius={[4, 4, 0, 0]} maxBarSize={28}>
                                 {filtered.map((e, i) => (
                                   <Cell key={i} fill={info.color(e[seg] as number)} />
@@ -1191,7 +1191,7 @@ export default function RouteAnalyticsPage({ isTAM = false }: { isTAM?: boolean 
                                     tickFormatter={v => `${v}j`} width={28} />
                                   <Tooltip content={<CustomTooltip />} cursor={{ fill: info.cursor }} />
                                   <ReferenceLine y={Number(avg)} stroke="#e2e8f0" strokeDasharray="4 3"
-                                    label={{ position: 'insideTopRight', value: `${Number(avg).toFixed(1)}j`, fill: '#94a3b8', fontSize: 9, fontWeight: 700 }} />
+                                    label={{ position: 'right', dx: -10, value: `${Number(avg).toFixed(1)}j`, fill: '#94a3b8', fontSize: 9, fontWeight: 700 }} />
                                   <Bar dataKey={seg} radius={[4, 4, 0, 0]} maxBarSize={28}>
                                     {filtered.map((e, i) => (
                                       <Cell key={i} fill={info.color(e[seg] as number)} />
@@ -1332,7 +1332,7 @@ export default function RouteAnalyticsPage({ isTAM = false }: { isTAM?: boolean 
                                     <XAxis dataKey="label" axisLine={false} tickLine={false} tick={{ fontSize: 7.5, fill: '#94a3b8', fontWeight: 600 }} angle={-45} textAnchor="end" interval="preserveStartEnd" height={50} dy={4} />
                                     <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 8, fill: '#94a3b8', fontWeight: 600 }} tickFormatter={v => `${v}j`} width={30} />
                                     <Tooltip content={<CustomTooltip />} cursor={{ fill: seg.dir === 'go' ? '#f0fdf4' : '#f5f3ff' }} />
-                                    <ReferenceLine y={Number(avg)} stroke="#94a3b8" strokeDasharray="4 3" label={{ position: 'insideTopRight', value: `${Number(avg).toFixed(1)}j`, fill: '#94a3b8', fontSize: 8, fontWeight: 700, dy: -2 }} />
+                                    <ReferenceLine y={Number(avg)} stroke="#94a3b8" strokeDasharray="4 3" label={{ position: 'right', dx: -10, value: `${Number(avg).toFixed(1)}j`, fill: '#94a3b8', fontSize: 8, fontWeight: 700, dy: -2 }} />
                                     <Bar dataKey={seg.key} radius={[3, 3, 0, 0]} maxBarSize={22}>
                                       {filtered.map((e, idx) => {
                                         const v = (e as any)[seg.key] as number;
