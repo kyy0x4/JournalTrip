@@ -88,7 +88,11 @@ export async function fetchEcoViolations(options?: {
   driverName?: string;
   monthFilter?: string; // e.g., '%-Apr-26' for fast DB filtering
   cabang?: string;
+  /** Kolom yang di-select. Default semua. Eco page cukup kolom ringan biar cepet. */
+  columns?: string;
 }): Promise<EcoViolation[]> {
+  const cols = options?.columns || '*';
+
   // 1. Get Exact Count First
   let countQuery = supabase.from('eco_driving_violations').select('*', { count: 'exact', head: true });
   if (options?.driverId && options?.driverName) {
@@ -124,7 +128,7 @@ export async function fetchEcoViolations(options?: {
     const from = i * pageSize;
     let query = supabase
       .from('eco_driving_violations')
-      .select('*')
+      .select(cols)
       .order('Tanggal', { ascending: false })
       .order('id', { ascending: false })
       .range(from, from + pageSize - 1);

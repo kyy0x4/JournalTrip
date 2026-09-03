@@ -33,6 +33,10 @@ const TYPE_COLORS: Record<string, string> = {
   'default': '#64748b',         // slate-500
 };
 
+// Kolom ringan buat fetch eco — buang Detail/Geolokasi/dll yang bikin payload gede.
+// Kolom dengan spasi WAJIB di-quote ("...") biar PostgREST nggak ilangin spasinya.
+const ECO_LIGHT_COLUMNS = 'id,Tanggal,Waktu,"Plat Nomor",Pengemudi,driver_id,"Jenis Peringatan","Tingkat Urgensi",Lokasi,Koordinat,Area,Customer';
+
 // Pilih warna berdasarkan jenis peringatan
 const getViolationColor = (jenis: string | undefined): string => {
   if (!jenis) return TYPE_COLORS['default'];
@@ -414,7 +418,7 @@ export default function EcoDrivingPage({ isTAM = false }: { isTAM?: boolean }) {
       // 1. Fetch Current Period
       const mFilters = getMonthFilters();
       const promises = mFilters.map(f => fetchEcoViolations({
-        area: selectedArea, customer: selectedCustomer, monthFilter: f, cabang: selectedCabang
+        area: selectedArea, customer: selectedCustomer, monthFilter: f, cabang: selectedCabang, columns: ECO_LIGHT_COLUMNS
       }));
       const results = await Promise.all(promises);
       let rawData = Array.from(new Map(results.flat().map((v: EcoViolation) => [v.id, v])).values());
@@ -461,7 +465,7 @@ export default function EcoDrivingPage({ isTAM = false }: { isTAM?: boolean }) {
         const prevMonthStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
         const prevFilters = getMonthFilters(prevMonthStr);
         const prevResults = await Promise.all(prevFilters.map(f => fetchEcoViolations({
-          area: selectedArea, customer: selectedCustomer, monthFilter: f, cabang: selectedCabang
+          area: selectedArea, customer: selectedCustomer, monthFilter: f, cabang: selectedCabang, columns: ECO_LIGHT_COLUMNS
         })));
         const prevRaw = Array.from(new Map(prevResults.flat().map((v: EcoViolation) => [v.id, v])).values());
         const prevFiltered = (prevRaw as EcoViolation[]).filter(v => {
@@ -480,7 +484,7 @@ export default function EcoDrivingPage({ isTAM = false }: { isTAM?: boolean }) {
         
         const prevFilters = getMonthFilters(undefined, prevStart, prevEnd);
         const prevResults = await Promise.all(prevFilters.map(f => fetchEcoViolations({
-          area: selectedArea, customer: selectedCustomer, monthFilter: f, cabang: selectedCabang
+          area: selectedArea, customer: selectedCustomer, monthFilter: f, cabang: selectedCabang, columns: ECO_LIGHT_COLUMNS
         })));
         
         const prevRaw = Array.from(new Map(prevResults.flat().map((v: EcoViolation) => [v.id, v])).values());
