@@ -678,6 +678,8 @@ export default function RouteAnalyticsPage({ isTAM = false }: { isTAM?: boolean 
                   <div className="flex-1 h-px bg-blue-100 dark:bg-blue-900/30" />
                 </div>
 
+                {/* ── Chart SUMATERA (grid 2 kolom) — Berangkat ── */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {/* ── Chart A: Nunggu Kapal Berangkat ── */}
                 {chartData.some(d => d.waitDepartHours > 0) && (
                   <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 p-6">
@@ -812,6 +814,7 @@ export default function RouteAnalyticsPage({ isTAM = false }: { isTAM?: boolean 
                     <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-rose-400 inline-block" /> Lama (&gt;10j)</span>
                   </div>
                 </div>
+                </div>
 
                 {/* ── PULANG SECTION HEADER ── */}
                 <div className="flex items-center gap-3">
@@ -839,6 +842,8 @@ export default function RouteAnalyticsPage({ isTAM = false }: { isTAM?: boolean 
                   ))}
                 </div>
 
+                {/* ── Chart SUMATERA (grid 2 kolom) — Pulang ── */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {/* ── Chart D: Tujuan → Pel. Bakauheni (Pulang) ── */}
                 {chartData.some(d => d.returnToPortHours > 0) && (
                   <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 p-6">
@@ -1013,6 +1018,7 @@ export default function RouteAnalyticsPage({ isTAM = false }: { isTAM?: boolean 
                     </div>
                   </div>
                 )}
+                </div>
 
               </div>
             ) : activeTab === 'NGORO' ? (
@@ -1056,7 +1062,8 @@ export default function RouteAnalyticsPage({ isTAM = false }: { isTAM?: boolean 
                   <div className="flex-1 h-px bg-emerald-100 dark:bg-emerald-900/30" />
                 </div>
 
-                {/* ── Shared chart renderer for NGORO ── */}
+                {/* ── Shared chart renderer for NGORO (grid 2 kolom) ── */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {(['segA', 'segB', 'segC', 'segD'] as const).map((seg, idx) => {
                   const segInfo: Record<string, { label: string; subtitle: string; color: (v: number) => string; cursor: string; t1: number; t2: number; avgColor: string }> = {
                     segA: { label: 'Segmen A', subtitle: 'Out PDC → KM 166A', color: (v) => v > 3 ? '#f87171' : v > 1.5 ? '#fbbf24' : '#60a5fa', cursor: '#f8fafc', t1: 1.5, t2: 3, avgColor: 'text-blue-600 dark:text-blue-400' },
@@ -1118,6 +1125,7 @@ export default function RouteAnalyticsPage({ isTAM = false }: { isTAM?: boolean 
                     </div>
                   );
                 })}
+                </div>
 
                 {/* ── PULANG HEADER ── */}
                 {ngoroData.some(d => d.segE > 0 || d.segF > 0 || d.segG > 0) && (
@@ -1130,6 +1138,7 @@ export default function RouteAnalyticsPage({ isTAM = false }: { isTAM?: boolean 
                       <div className="flex-1 h-px bg-purple-100 dark:bg-purple-900/30" />
                     </div>
 
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {(['segE', 'segF', 'segG', 'segH'] as const).map((seg) => {
                       const segInfo: Record<string, { label: string; subtitle: string; color: (v: number) => string; cursor: string; t1: number; t2: number; avgColor: string }> = {
                         segE: { label: 'Segmen E', subtitle: 'Unloading → KM 575B', color: (v) => v > 2 ? '#f87171' : v > 1 ? '#c084fc' : '#a855f7', cursor: '#fdf4ff', t1: 1, t2: 2, avgColor: 'text-purple-600 dark:text-purple-400' },
@@ -1191,6 +1200,7 @@ export default function RouteAnalyticsPage({ isTAM = false }: { isTAM?: boolean 
                         </div>
                       );
                     })}
+                    </div>
                   </>
                 )}
               </div>
@@ -1289,9 +1299,13 @@ export default function RouteAnalyticsPage({ isTAM = false }: { isTAM?: boolean 
                               <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-0.5">
                                 {seg.dir === 'go' ? 'Berangkat' : 'Pulang'} · Segmen {seg.key.slice(1)}
                               </p>
-                              <h3 className="font-black text-sm text-slate-900 dark:text-white truncate flex items-center gap-1.5">
+                              <h3 className="font-black text-sm text-slate-900 dark:text-white flex items-center gap-1.5 leading-tight">
                                 <MapPin className={`w-3.5 h-3.5 shrink-0 ${pinColor}`} />
-                                <span className="truncate">{seg.from} → {seg.to}</span>
+                                <span className="break-words min-w-0">
+                                  <span className="text-emerald-600 dark:text-emerald-400">{seg.from}</span>
+                                  <span className="text-slate-300 dark:text-slate-600 mx-1">→</span>
+                                  <span className="text-slate-900 dark:text-white">{seg.to}</span>
+                                </span>
                               </h3>
                             </div>
                             <div className="text-right shrink-0">
@@ -1308,6 +1322,7 @@ export default function RouteAnalyticsPage({ isTAM = false }: { isTAM?: boolean 
                                     <XAxis dataKey="label" axisLine={false} tickLine={false} tick={{ fontSize: 7.5, fill: '#94a3b8', fontWeight: 600 }} angle={-45} textAnchor="end" interval="preserveStartEnd" height={50} dy={4} />
                                     <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 8, fill: '#94a3b8', fontWeight: 600 }} tickFormatter={v => `${v}j`} width={30} />
                                     <Tooltip content={<CustomTooltip />} cursor={{ fill: seg.dir === 'go' ? '#f0fdf4' : '#f5f3ff' }} />
+                                    <ReferenceLine y={Number(avg)} stroke="#94a3b8" strokeDasharray="4 3" label={{ position: 'right', value: `${Number(avg).toFixed(1)}j`, fill: '#94a3b8', fontSize: 8, fontWeight: 700 }} />
                                     <Bar dataKey={seg.key} radius={[3, 3, 0, 0]} maxBarSize={22}>
                                       {filtered.map((e, idx) => {
                                         const v = (e as any)[seg.key] as number;
