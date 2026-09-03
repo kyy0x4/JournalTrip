@@ -7,8 +7,12 @@ import {
 } from 'recharts';
 import { leadtimeService, LeadTimeData } from '../services/leadtimeService';
 
-const TABS = ['SUMATERA', 'NGORO'] as const;
+const TABS = ['SUMATERA', 'NGORO', 'SULAWESI'] as const;
 type Tab = typeof TABS[number];
+
+// ── SULAWESI: urutan titik lokasi (berangkat & pulang) ──
+const SULAWESI_GO = ['Pinrang', 'Majene', 'Mamuju', 'Karrosa', 'Sarjo', 'Kebon Kopi', 'Kasimbar', 'Santigi', 'Paguat'];
+const SULAWESI_RETURN = ['Paguat', 'Santigi', 'Kasimbar', 'Kebon Kopi', 'Sarjo', 'Karrosa', 'Mamuju', 'Majene', 'Pinrang'];
 
 type Tujuan = 'ALL' | 'PALEMBANG' | 'LAMPUNG' | 'PEKANBARU';
 const TUJUAN_OPTIONS: Tujuan[] = ['ALL', 'PALEMBANG', 'LAMPUNG', 'PEKANBARU'];
@@ -64,6 +68,12 @@ export default function RouteAnalyticsPage({ isTAM = false }: { isTAM?: boolean 
   const dateTimeToMs = (s?: string): number | null => {
     if (!s || typeof s !== 'string') return null;
     const t = s.trim();
+    // Format: "DD/MM/YYYY HH:MM" (SULAWESI) atau "DD/MM/YYYY HH:MM:SS"
+    const dmyMatch = t.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})\s+(\d{1,2}):(\d{2})/);
+    if (dmyMatch) {
+      const [, dd, mm, yyyy, hh, mi] = dmyMatch;
+      return new Date(Number(yyyy), Number(mm) - 1, Number(dd), Number(hh), Number(mi)).getTime();
+    }
     // Format: "DD Mon YYYY HH:MM" or "DD Mon YYYY HH:MM:SS"
     const dtMatch = t.match(/^(\d{1,2})\s+([A-Za-z]+)\s+(\d{4})\s+(\d{1,2}):(\d{2})/);
     if (dtMatch) {
@@ -356,6 +366,89 @@ export default function RouteAnalyticsPage({ isTAM = false }: { isTAM?: boolean 
     const vals = ngoroData.filter(d => ((d[key] as number) || 0) > 0);
     if (vals.length === 0) return 0;
     return Number((vals.reduce((s, d) => s + ((d[key] as number) || 0), 0) / vals.length).toFixed(1));
+  };
+
+  // ── SULAWESI data ─────────────────────────────────────────────
+  const sulawesiData = useMemo(() => {
+    if (activeTab !== 'SULAWESI') return [];
+
+    const diffLoc = (a?: string, b?: string): number => {
+      const fa = dateTimeToMs(a), fb = dateTimeToMs(b);
+      if (fa === null || fb === null) return 0;
+      let diff = (fb - fa) / 3_600_000;
+      if (diff < 0) diff += 24; // lewat tengah malam
+      if (diff > 20) diff -= 24; // kalau lebih dari 20 jam, kemungkinan beda hari kelebihan
+      if (diff < 0) diff = 0;
+      return Math.round(diff * 100) / 100;
+    };
+
+    // Key checkpoint: cari "Actual (Nama)" atau "Actual (Nama PULANG)" dari checkpoints
+    const cpVal = (cp: Record<string, any>, loc: string, isReturn: boolean): string | undefined => {
+      if (isReturn) {
+        return cp[`Actual (${loc} PULANG)`] || cp[`Actual (${loc} PULANG )`];
+      }
+      return cp[`Actual (${loc})`];
+    };
+
+    return data
+      .filter(d => (d.area || '').toUpperCase() === 'SULAWESI')
+      .map(d => {
+        const cp = d.checkpoints || {};
+        // Arah berangkat: OutPool → tiap lokasi → Unloading
+        const outPool = cp['Actual OutPool'] || cp['Actual'];
+        const seg: Record<string, number> = {};
+
+        let prevVal = typeof outPool === 'string' ? outPool : undefined;
+        SULAWESI_GO.forEach((loc, i) => {
+          const v = cpVal(cp, loc, false);
+          if (prevVal !== undefined && v) {
+            seg[`s${i + 1}`] = diffLoc(prevVal, v);
+          }
+          if (v) prevVal = v;
+        });
+        // s10: Paguat → Unloading
+        const unloading = cp['Actual Unloading'] || cp['Actual (Unloading)'];
+        if (prevVal !== undefined && typeof unloading === 'string' && unloading) {
+          seg['s10'] = diffLoc(prevVal, unloading);
+        }
+
+        // Arah pulang: Unloading → lokasi (return) → BackToPool
+        prevVal = typeof unloading === 'string' ? unloading : undefined;
+        if (prevVal === undefined) {
+          // anchor: kalau unloading kosong, mulai dari lokasi pulang pertama yang ada
+          for (const loc of SULAWESI_RETURN) {
+            const v = cpVal(cp, loc, true);
+            if (v) { prevVal = v; break; }
+          }
+        }
+        SULAWESI_RETURN.forEach((loc, i) => {
+          const v = cpVal(cp, loc, true);
+          if (prevVal !== undefined && v) {
+            seg[`p${i + 1}`] = diffLoc(prevVal, v);
+          }
+          if (v) prevVal = v;
+        });
+        const backToPool = cp['Actual BackToPool'] || cp['Actual Back To Pool'];
+        if (prevVal !== undefined && typeof backToPool === 'string' && backToPool) {
+          seg['p10'] = diffLoc(prevVal, backToPool);
+        }
+
+        return {
+          ...d,
+          ...seg,
+          tujuan: (cp['TUJUAN'] as string) || (cp['Tujuan'] as string) || '',
+          statusLt: (cp['Status LeadTime Delivery'] as string) || (cp['STATUS'] as string) || '',
+          label: `${(d.driver || '?').split(' ')[0]} ${new Date(d.tanggal).getDate()}/${new Date(d.tanggal).getMonth() + 1}`
+        };
+      })
+      .filter(d => Object.keys(d).some(k => /^s\d+$/.test(k) && (d as any)[k] > 0) || Object.keys(d).some(k => /^p\d+$/.test(k) && (d as any)[k] > 0))
+      .sort((a, b) => new Date(a.tanggal).getTime() - new Date(b.tanggal).getTime());
+  }, [data, activeTab]);
+
+  const sulawesiAvgOf = (key: string) => {
+    const vals = sulawesiData.filter(d => ((d as any)[key] || 0) > 0);
+    if (vals.length === 0) return 0;
+    return Number((vals.reduce((s, d) => s + ((d as any)[key] || 0), 0) / vals.length).toFixed(1));
   };
 
   const monthLabel = new Date(selectedMonth + '-01').toLocaleDateString('id-ID', { month: 'long', year: 'numeric' });
@@ -1100,6 +1193,202 @@ export default function RouteAnalyticsPage({ isTAM = false }: { isTAM?: boolean 
                     })}
                   </>
                 )}
+              </div>
+            ) : activeTab === 'SULAWESI' ? (
+              <div className="space-y-6">
+                {/* ── Route Path ── */}
+                <div className="flex items-center flex-wrap gap-2 text-sm font-semibold text-slate-500">
+                  <span className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 px-3 py-1.5 rounded-xl text-slate-700 dark:text-slate-300 font-black">Pool</span>
+                  <ArrowRight className="w-4 h-4 text-slate-300" />
+                  {SULAWESI_GO.map(loc => (
+                    <span key={loc}>
+                      <span className="bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 px-3 py-1.5 rounded-xl text-emerald-700 dark:text-emerald-400 font-black text-xs">{loc}</span>
+                      <ArrowRight className="w-3.5 h-3.5 text-slate-300 inline mx-1" />
+                    </span>
+                  ))}
+                  <span className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 px-3 py-1.5 rounded-xl text-amber-700 dark:text-amber-400 font-black">Unloading</span>
+                  <ArrowRight className="w-4 h-4 text-slate-300" />
+                  <span className="bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800 px-3 py-1.5 rounded-xl text-purple-600 dark:text-purple-400 font-black flex items-center gap-1.5 text-xs">
+                    <TrendingUp className="w-3 h-3" /> Pulang
+                  </span>
+                </div>
+
+                {/* ── KPI Cards ── */}
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                  {[
+                    { label: 'Total Ritase', value: sulawesiData.length.toString(), color: 'text-slate-900 dark:text-white' },
+                    { label: 'Area', value: 'SULAWESI', color: 'text-emerald-600 dark:text-emerald-400' },
+                    { label: 'Avg. Berangkat (Pool→Unload)', value: fmtDur(sulawesiData.filter(d => (d as any).s10 > 0).length > 0 ? sulawesiData.filter(d => (d as any).s10 > 0).reduce((s, d) => s + (d as any).s10, 0) / sulawesiData.filter(d => (d as any).s10 > 0).length : 0), color: 'text-blue-600 dark:text-blue-400' },
+                    { label: 'Avg. Pulang (Unload→Pool)', value: fmtDur(sulawesiData.filter(d => (d as any).p10 > 0).length > 0 ? sulawesiData.filter(d => (d as any).p10 > 0).reduce((s, d) => s + (d as any).p10, 0) / sulawesiData.filter(d => (d as any).p10 > 0).length : 0), color: 'text-purple-600 dark:text-purple-400' },
+                  ].map(c => (
+                    <div key={c.label} className="bg-white dark:bg-slate-900 rounded-2xl p-5 border border-slate-100 dark:border-slate-800">
+                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">{c.label}</p>
+                      <p className={`text-xl font-black ${c.color}`}>{c.value}</p>
+                    </div>
+                  ))}
+                </div>
+
+                {/* ── Arah Berangkat ── */}
+                <div className="flex items-center gap-3">
+                  <div className="flex-1 h-px bg-emerald-100 dark:bg-emerald-900/30" />
+                  <span className="text-[11px] font-black text-emerald-600 uppercase tracking-widest flex items-center gap-1.5 px-3 py-1 bg-emerald-50 dark:bg-emerald-900/20 rounded-full border border-emerald-200 dark:border-emerald-800">
+                    <TrendingUp className="w-3 h-3" /> Arah Berangkat
+                  </span>
+                  <div className="flex-1 h-px bg-emerald-100 dark:bg-emerald-900/30" />
+                </div>
+
+                {/* Chart tiap lokasi berangkat */}
+                {SULAWESI_GO.map((loc, i) => {
+                  const segKey = `s${i + 1}`;
+                  const from = i === 0 ? 'Pool' : SULAWESI_GO[i - 1];
+                  const to = loc;
+                  const filtered = sulawesiData.filter(d => ((d as any)[segKey] || 0) > 0);
+                  if (filtered.length === 0) return null;
+                  const avg = sulawesiAvgOf(segKey);
+                  return (
+                    <div key={segKey} className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 p-6">
+                      <div className="flex items-baseline justify-between mb-6">
+                        <div>
+                          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Segmen {String.fromCharCode(65 + i)}</p>
+                          <h3 className="font-black text-base text-slate-900 dark:text-white flex items-center gap-2">
+                            <MapPin className="w-4 h-4 text-emerald-500" /> {from} → {to}
+                          </h3>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-[10px] text-slate-400 font-semibold uppercase tracking-widest">Rata-rata</p>
+                          <p className="text-xl font-black text-emerald-600 dark:text-emerald-400">{fmtDur(avg)}</p>
+                        </div>
+                      </div>
+                      {isLoading ? <LoadingChart /> : (
+                        <div className="h-[280px] overflow-x-auto overflow-y-hidden custom-scrollbar">
+                          <div style={{ minWidth: `${Math.max(100, filtered.length * 40)}px`, height: '100%' }}>
+                            <ResponsiveContainer width="100%" height="100%" style={{ overflow: 'visible' }}>
+                              <BarChart data={filtered} margin={{ top: 5, right: 30, left: -20, bottom: 5 }} barCategoryGap="30%">
+                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                                <XAxis dataKey="label" axisLine={false} tickLine={false} tick={{ fontSize: 8.5, fill: '#94a3b8', fontWeight: 600 }} angle={-45} textAnchor="end" interval="preserveStartEnd" height={85} dy={8} />
+                                <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 9, fill: '#94a3b8', fontWeight: 600 }} tickFormatter={v => `${v}j`} width={28} />
+                                <Tooltip content={<CustomTooltip />} cursor={{ fill: '#f0fdf4' }} />
+                                <ReferenceLine y={Number(avg)} stroke="#e2e8f0" strokeDasharray="4 3" label={{ position: 'right', value: `${Number(avg).toFixed(1)}j`, fill: '#94a3b8', fontSize: 9, fontWeight: 700 }} />
+                                <Bar dataKey={segKey} radius={[4, 4, 0, 0]} maxBarSize={28}>
+                                  {filtered.map((e, idx) => {
+                                    const v = (e as any)[segKey] as number;
+                                    return <Cell key={idx} fill={v > 8 ? '#f87171' : v > 4 ? '#fbbf24' : '#34d399'} />;
+                                  })}
+                                </Bar>
+                              </BarChart>
+                            </ResponsiveContainer>
+                          </div>
+                        </div>
+                      )}
+                      <div className="flex items-center gap-4 mt-4 text-[10px] font-semibold text-slate-500">
+                        <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-emerald-400 inline-block" /> Normal (&lt;4j)</span>
+                        <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-amber-400 inline-block" /> Lambat (4–8j)</span>
+                        <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-rose-400 inline-block" /> Lama (&gt;8j)</span>
+                      </div>
+                    </div>
+                  );
+                })}
+
+                {/* Segmen akhir berangkat: Paguat → Unloading */}
+                {(() => {
+                  const filtered = sulawesiData.filter(d => ((d as any).s10 || 0) > 0);
+                  if (filtered.length === 0) return null;
+                  const avg = sulawesiAvgOf('s10');
+                  return (
+                    <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 p-6">
+                      <div className="flex items-baseline justify-between mb-6">
+                        <div>
+                          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Segmen {String.fromCharCode(65 + SULAWESI_GO.length)}</p>
+                          <h3 className="font-black text-base text-slate-900 dark:text-white flex items-center gap-2">
+                            <MapPin className="w-4 h-4 text-amber-500" /> Paguat → Unloading
+                          </h3>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-[10px] text-slate-400 font-semibold uppercase tracking-widest">Rata-rata</p>
+                          <p className="text-xl font-black text-amber-600 dark:text-amber-400">{fmtDur(avg)}</p>
+                        </div>
+                      </div>
+                      {isLoading ? <LoadingChart /> : (
+                        <div className="h-[280px] overflow-x-auto overflow-y-hidden custom-scrollbar">
+                          <div style={{ minWidth: `${Math.max(100, filtered.length * 40)}px`, height: '100%' }}>
+                            <ResponsiveContainer width="100%" height="100%" style={{ overflow: 'visible' }}>
+                              <BarChart data={filtered} margin={{ top: 5, right: 30, left: -20, bottom: 5 }} barCategoryGap="30%">
+                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                                <XAxis dataKey="label" axisLine={false} tickLine={false} tick={{ fontSize: 8.5, fill: '#94a3b8', fontWeight: 600 }} angle={-45} textAnchor="end" interval="preserveStartEnd" height={85} dy={8} />
+                                <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 9, fill: '#94a3b8', fontWeight: 600 }} tickFormatter={v => `${v}j`} width={28} />
+                                <Tooltip content={<CustomTooltip />} cursor={{ fill: '#fffbeb' }} />
+                                <ReferenceLine y={Number(avg)} stroke="#e2e8f0" strokeDasharray="4 3" label={{ position: 'right', value: `${Number(avg).toFixed(1)}j`, fill: '#94a3b8', fontSize: 9, fontWeight: 700 }} />
+                                <Bar dataKey="s10" radius={[4, 4, 0, 0]} maxBarSize={28}>
+                                  {filtered.map((e, idx) => <Cell key={idx} fill={((e as any).s10 || 0) > 6 ? '#f87171' : ((e as any).s10 || 0) > 3 ? '#fbbf24' : '#f59e0b'} />)}
+                                </Bar>
+                              </BarChart>
+                            </ResponsiveContainer>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
+
+                {/* ── Arah Pulang ── */}
+                <div className="flex items-center gap-3">
+                  <div className="flex-1 h-px bg-purple-100 dark:bg-purple-900/30" />
+                  <span className="text-[11px] font-black text-purple-500 uppercase tracking-widest flex items-center gap-1.5 px-3 py-1 bg-purple-50 dark:bg-purple-900/20 rounded-full border border-purple-200 dark:border-purple-800">
+                    <TrendingUp className="w-3 h-3" /> Arah Pulang
+                  </span>
+                  <div className="flex-1 h-px bg-purple-100 dark:bg-purple-900/30" />
+                </div>
+
+                {SULAWESI_RETURN.map((loc, i) => {
+                  const segKey = `p${i + 1}`;
+                  const from = i === 0 ? 'Unloading' : SULAWESI_RETURN[i - 1];
+                  const to = loc;
+                  const filtered = sulawesiData.filter(d => ((d as any)[segKey] || 0) > 0);
+                  if (filtered.length === 0) return null;
+                  const avg = sulawesiAvgOf(segKey);
+                  return (
+                    <div key={segKey} className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 p-6">
+                      <div className="flex items-baseline justify-between mb-6">
+                        <div>
+                          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Segmen {String.fromCharCode(65 + i)}</p>
+                          <h3 className="font-black text-base text-slate-900 dark:text-white flex items-center gap-2">
+                            <MapPin className="w-4 h-4 text-purple-500" /> {from} → {to}
+                          </h3>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-[10px] text-slate-400 font-semibold uppercase tracking-widest">Rata-rata</p>
+                          <p className="text-xl font-black text-purple-600 dark:text-purple-400">{fmtDur(avg)}</p>
+                        </div>
+                      </div>
+                      {isLoading ? <LoadingChart /> : (
+                        <div className="h-[280px] overflow-x-auto overflow-y-hidden custom-scrollbar">
+                          <div style={{ minWidth: `${Math.max(100, filtered.length * 40)}px`, height: '100%' }}>
+                            <ResponsiveContainer width="100%" height="100%" style={{ overflow: 'visible' }}>
+                              <BarChart data={filtered} margin={{ top: 5, right: 30, left: -20, bottom: 5 }} barCategoryGap="30%">
+                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                                <XAxis dataKey="label" axisLine={false} tickLine={false} tick={{ fontSize: 8.5, fill: '#94a3b8', fontWeight: 600 }} angle={-45} textAnchor="end" interval="preserveStartEnd" height={85} dy={8} />
+                                <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 9, fill: '#94a3b8', fontWeight: 600 }} tickFormatter={v => `${v}j`} width={28} />
+                                <Tooltip content={<CustomTooltip />} cursor={{ fill: '#f5f3ff' }} />
+                                <ReferenceLine y={Number(avg)} stroke="#e2e8f0" strokeDasharray="4 3" label={{ position: 'right', value: `${Number(avg).toFixed(1)}j`, fill: '#94a3b8', fontSize: 9, fontWeight: 700 }} />
+                                <Bar dataKey={segKey} radius={[4, 4, 0, 0]} maxBarSize={28}>
+                                  {filtered.map((e, idx) => {
+                                    const v = (e as any)[segKey] as number;
+                                    return <Cell key={idx} fill={v > 8 ? '#f87171' : v > 4 ? '#fbbf24' : '#a78bfa'} />;
+                                  })}
+                                </Bar>
+                              </BarChart>
+                            </ResponsiveContainer>
+                          </div>
+                        </div>
+                      )}
+                      <div className="flex items-center gap-4 mt-4 text-[10px] font-semibold text-slate-500">
+                        <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-violet-400 inline-block" /> Normal (&lt;4j)</span>
+                        <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-amber-400 inline-block" /> Lambat (4–8j)</span>
+                        <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-rose-400 inline-block" /> Lama (&gt;8j)</span>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             ) : null}
           </motion.div>
