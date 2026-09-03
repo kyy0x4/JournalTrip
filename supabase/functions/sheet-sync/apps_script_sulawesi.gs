@@ -121,6 +121,13 @@ function syncLeadTimeSulawesi() {
   const colUnloading = findCol(headers, 'Actual Unloading');
   const colBackToPool = findCol(headers, 'Actual Back To Pool');
   const colStatusLt = findCol(headers, 'Status LeadTime Delivery');
+  // Kolom evaluasi/status buat LeadTimePage (status_info)
+  const colEvalOutPool = findCol(headers, 'Evaluasi OutPool');
+  const colReasonOutPool = findCol(headers, 'Reason Delay OutPool');
+  const colEvalKedatangan = findCol(headers, 'Evaluasi Kedatangan CC');
+  const colReasonPdc = findCol(headers, 'Reason Delay PDC');
+  const colStatusBtp = findCol(headers, 'Status BTP');
+  const colReasonBtp = findCol(headers, 'Reason Delay Back To Pool');
 
   if (colTanggal === -1 || colNopol === -1 || colDriver === -1) {
     SpreadsheetApp.getUi().alert('Header tidak cocok: Tanggal / No Polisi / Driver tidak ditemukan.');
@@ -149,6 +156,7 @@ function syncLeadTimeSulawesi() {
     if (!nopol || !driver) continue;
 
     const cp = {};
+    const si = {};
     // Waktu keluar pool
     if (colActual > -1) {
       const v = formatDateRaw(row[colActual]);
@@ -176,7 +184,7 @@ function syncLeadTimeSulawesi() {
       const v = formatDateRaw(row[colBackToPool]);
       if (v) cp['Actual BackToPool'] = v;
     }
-    // Metadata
+    // Metadata (checkpoints — dipakai Route Analytics)
     if (colTujuan > -1) {
       const t = String(row[colTujuan] || '').trim();
       if (t) cp['TUJUAN'] = t;
@@ -186,7 +194,37 @@ function syncLeadTimeSulawesi() {
       if (st) cp['STATUS'] = st;
     }
 
-    if (Object.keys(cp).length === 0) continue;
+    // ── status_info — dipakai halaman LeadTime (flow: OutPool→InPDC→Unloading→InPool) ──
+    if (colEvalOutPool > -1) {
+      const v = String(row[colEvalOutPool] || '').trim();
+      if (v) si['Evaluasi Keluar Pool'] = v;
+    }
+    if (colReasonOutPool > -1) {
+      const v = String(row[colReasonOutPool] || '').trim();
+      if (v) si['Reason Delay OutPool'] = v;
+    }
+    if (colEvalKedatangan > -1) {
+      const v = String(row[colEvalKedatangan] || '').trim();
+      if (v) si['Evaluasi Kedatangan CC'] = v;
+    }
+    if (colReasonPdc > -1) {
+      const v = String(row[colReasonPdc] || '').trim();
+      if (v) si['Reason Delay PDC'] = v;
+    }
+    if (colStatusLt > -1) {
+      const v = String(row[colStatusLt] || '').trim();
+      if (v) si['Status Leadtime'] = v;   // key yang dicari LeadTimePage utk delivery
+    }
+    if (colStatusBtp > -1) {
+      const v = String(row[colStatusBtp] || '').trim();
+      if (v) si['Status Leadtime Back To Pool'] = v;
+    }
+    if (colReasonBtp > -1) {
+      const v = String(row[colReasonBtp] || '').trim();
+      if (v) si['Reason Delay BackToPool'] = v;
+    }
+
+    if (Object.keys(cp).length === 0 && Object.keys(si).length === 0) continue;
 
     rows.push({
       tanggal: date,
@@ -196,7 +234,7 @@ function syncLeadTimeSulawesi() {
       shift: 'DAY SHIFT',
       ritase_ke: 'RIT 1',
       checkpoints: cp,
-      status_info: {},
+      status_info: si,
     });
   }
 

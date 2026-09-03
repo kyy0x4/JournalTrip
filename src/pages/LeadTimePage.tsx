@@ -101,6 +101,13 @@ const TIMELINE_FLOWS: Record<string, string[]> = {
     'Pelabuhan Merak', 'Pelabuhan Bakauheni', 
     'Unloading', 'InPool'
   ],
+  'SULAWESI': [
+    'OutPool', 'InPDC', 'OutPDC',
+    'Pinrang', 'Majene', 'Mamuju', 'Karrosa', 'Sarjo', 'Kebon Kopi', 'Kasimbar', 'Santigi', 'Paguat',
+    'Unloading',
+    'Paguat PULANG', 'Santigi PULANG', 'Kasimbar PULANG', 'Kebon Kopi PULANG', 'Sarjo PULANG', 'Karrosa PULANG', 'Mamuju PULANG', 'Majene PULANG', 'Pinrang PULANG',
+    'InPool'
+  ],
   'DEFAULT': ['OutPool', 'InPDC', 'OutPDC', 'Unloading', 'InPool']
 };
 
@@ -117,7 +124,25 @@ const KEY_MAP: Record<string, {actual: string[], plan: string[], stage: string}>
   'KM 164B': { actual: ['KM 164B'], plan: [], stage: 'unknown' },
   'Pelabuhan Merak': { actual: ['Pelabuhan Merak', 'pelabuhan merak', 'merak'], plan: [], stage: 'unknown' },
   'Pelabuhan Bakauheni': { actual: ['Pelabuhan Bakauheni', 'pelabuhan bakauheni', 'bakauheni'], plan: [], stage: 'unknown' },
-  'InPool': { actual: ['Actual (BackToPool)', 'BACK TO POOL', 'inpool', 'in pool'], plan: ['Plan (BackToPool)', 'plan backtopool'], stage: 'backtopool' }
+  'InPool': { actual: ['Actual (BackToPool)', 'BACK TO POOL', 'inpool', 'in pool'], plan: ['Plan (BackToPool)', 'plan backtopool'], stage: 'backtopool' },
+  'Pinrang': { actual: ['Actual (Pinrang)'], plan: [], stage: 'unknown' },
+  'Majene': { actual: ['Actual (Majene)'], plan: [], stage: 'unknown' },
+  'Mamuju': { actual: ['Actual (Mamuju)'], plan: [], stage: 'unknown' },
+  'Karrosa': { actual: ['Actual (Karrosa)'], plan: [], stage: 'unknown' },
+  'Sarjo': { actual: ['Actual (Sarjo)'], plan: [], stage: 'unknown' },
+  'Kebon Kopi': { actual: ['Actual (Kebon Kopi)'], plan: [], stage: 'unknown' },
+  'Kasimbar': { actual: ['Actual (Kasimbar)'], plan: [], stage: 'unknown' },
+  'Santigi': { actual: ['Actual (Santigi)'], plan: [], stage: 'unknown' },
+  'Paguat': { actual: ['Actual (Paguat)'], plan: [], stage: 'unknown' },
+  'Paguat PULANG': { actual: ['Actual (Paguat PULANG)'], plan: [], stage: 'unknown' },
+  'Santigi PULANG': { actual: ['Actual (Santigi PULANG)'], plan: [], stage: 'unknown' },
+  'Kasimbar PULANG': { actual: ['Actual (Kasimbar PULANG)'], plan: [], stage: 'unknown' },
+  'Kebon Kopi PULANG': { actual: ['Actual (Kebon Kopi PULANG)'], plan: [], stage: 'unknown' },
+  'Sarjo PULANG': { actual: ['Actual (Sarjo PULANG)'], plan: [], stage: 'unknown' },
+  'Karrosa PULANG': { actual: ['Actual (Karrosa PULANG)'], plan: [], stage: 'unknown' },
+  'Mamuju PULANG': { actual: ['Actual (Mamuju PULANG)'], plan: [], stage: 'unknown' },
+  'Majene PULANG': { actual: ['Actual (Majene PULANG)'], plan: [], stage: 'unknown' },
+  'Pinrang PULANG': { actual: ['Actual (Pinrang PULANG)'], plan: [], stage: 'unknown' },
 };
 
 export default function LeadTimePage({ isTAM = false }: { isTAM?: boolean }) {
