@@ -1,5 +1,19 @@
 @import "tailwindcss";
 
+/* ── ABC Ginto Normal (body text) ── */
+@font-face { font-family: 'Ginto Normal'; src: url('./image/ginto/ABCGintoNormal-Thin.woff') format('woff'); font-weight: 100; font-style: normal; font-display: swap; }
+@font-face { font-family: 'Ginto Normal'; src: url('./image/ginto/ABCGintoNormal-ThinItalic.woff') format('woff'); font-weight: 100; font-style: italic; font-display: swap; }
+@font-face { font-family: 'Ginto Normal'; src: url('./image/ginto/ABCGintoNormal-Light.woff') format('woff'); font-weight: 300; font-style: normal; font-display: swap; }
+@font-face { font-family: 'Ginto Normal'; src: url('./image/ginto/ABCGintoNormal-LightItalic.woff') format('woff'); font-weight: 300; font-style: italic; font-display: swap; }
+@font-face { font-family: 'Ginto Normal'; src: url('./image/ginto/ABCGintoNormal-Regular.woff') format('woff'); font-weight: 400; font-style: normal; font-display: swap; }
+@font-face { font-family: 'Ginto Normal'; src: url('./image/ginto/ABCGintoNormal-RegularItalic.woff') format('woff'); font-weight: 400; font-style: italic; font-display: swap; }
+@font-face { font-family: 'Ginto Normal'; src: url('./image/ginto/ABCGintoNormal-Medium.woff') format('woff'); font-weight: 500; font-style: normal; font-display: swap; }
+@font-face { font-family: 'Ginto Normal'; src: url('./image/ginto/ABCGintoNormal-MediumItalic.woff') format('woff'); font-weight: 500; font-style: italic; font-display: swap; }
+@font-face { font-family: 'Ginto Normal'; src: url('./image/ginto/ABCGintoNormal-Bold.woff') format('woff'); font-weight: 700; font-style: normal; font-display: swap; }
+@font-face { font-family: 'Ginto Normal'; src: url('./image/ginto/ABCGintoNormal-BoldItalic.woff') format('woff'); font-weight: 700; font-style: italic; font-display: swap; }
+@font-face { font-family: 'Ginto Normal'; src: url('./image/ginto/ABCGintoNormal-Black.woff') format('woff'); font-weight: 900; font-style: normal; font-display: swap; }
+@font-face { font-family: 'Ginto Normal'; src: url('./image/ginto/ABCGintoNormal-BlackItalic.woff') format('woff'); font-weight: 900; font-style: italic; font-display: swap; }
+
 /* ── Anthropic Serif (font asli Claude) ── */
 /* Text cut — untuk teks serif */
 @font-face { font-family: 'Anthropic Serif'; src: url('./image/anthropic-serif/AnthropicSerif-Text-Regular-Static.otf') format('opentype'); font-weight: 400; font-style: normal; font-display: swap; }
@@ -90,7 +104,7 @@
 }
 
 :root {
-  --font-sans: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: "Ginto Normal", "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
   --font-serif: "Anthropic Serif", "Source Serif 4", Georgia, "Times New Roman", serif;
 
   --bg-app: #faf9f5;
@@ -104,9 +118,9 @@
 }
 
 @layer base {
-  /* Claude chat vibe — heading pakai serif display asli Anthropic (kecuali micro-label uppercase) */
+  /* Heading pakai Ginto Normal (bukan Nord) — biar konsisten & lebih kalem */
   h1:not(.uppercase), h2:not(.uppercase) {
-    font-family: "Anthropic Serif Display", var(--font-serif);
+    font-family: "Ginto Normal", var(--font-serif);
     letter-spacing: -0.01em;
   }
 
