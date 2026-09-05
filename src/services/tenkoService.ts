@@ -387,7 +387,11 @@ function filterRecordsByDateRange(records: TenkoRecord[], startDate: string, end
 }
 
 export function shouldUseMonthlyTrend(startDate: string, endDate: string) {
-  return startDate.slice(0, 7) !== endDate.slice(0, 7);
+  const start = new Date(startDate + 'T00:00:00');
+  const end = new Date(endDate + 'T00:00:00');
+  if (isNaN(start.getTime()) || isNaN(end.getTime())) return true;
+  const dayDiff = Math.round((end.getTime() - start.getTime()) / 86400000);
+  return dayDiff > 31;
 }
 
 export function buildPeriodTensiTrends(
@@ -446,8 +450,14 @@ export function matchesPeriodFilter(tanggal: string, filter: string) {
 export async function fetchTenkoData(startDate: string, endDate: string, customer: string = 'ALL', area: string = 'ALL', personnelType: string = 'ALL') {
   try {
     console.log('Fetching Tenko Data:', { startDate, endDate, customer, area, personnelType });
-    let allData: TenkoRecord[] = [];
-    let from = 0;
+    // Pagination memakai keyset (id) biar aman & nggak ada baris yang ke-skip
+    // saat data > 1 halaman — pindah dari offset .range().
+    // NOTE: DO NOT dedup berdasarkan (driver + timestamp) — 1 sesi cek bisa punya
+    // 2 pengukuran valid (tensi tinggi lalu normal) dengan timestamp sama persis.
+    // Dedup cukup by id unik baris (anti duplikat sync beneran).
+    const allData: TenkoRecord[] = [];
+    const seenIds = new Set<string>();
+    let lastId: string | null = null;
     const step = 1000;
     let hasMore = true;
 
@@ -457,8 +467,8 @@ export async function fetchTenkoData(startDate: string, endDate: string, custome
         .select('*')
         .gte('tanggal', startDate)
         .lte('tanggal', endDate)
-        .order('timestamp', { ascending: false })
-        .range(from, from + step - 1);
+        .order('id', { ascending: true })
+        .limit(step);
 
       if (customer && customer !== 'ALL') query = query.eq('customer', customer);
       if (area && area !== 'ALL') query = query.eq('area', area);
@@ -467,39 +477,38 @@ export async function fetchTenkoData(startDate: string, endDate: string, custome
       if (personnelType === 'DRIVER') query = query.eq('is_assistant', false);
       if (personnelType === 'ASST') query = query.eq('is_assistant', true);
 
+      if (lastId) query = query.gt('id', lastId);
+
       const { data, error } = await query;
       if (error) throw error;
 
       if (data && data.length > 0) {
-        // DEBUG: Cek 5 data pertama buat liat status asistennya
-        if (from === 0) {
-          console.log('Sample Data (is_assistant check):', data.slice(0, 5).map(r => ({
-            nama: r.nama_driver,
-            id: r.nik, // Kita liat kolom nik-nya
-            asst: r.is_assistant,
-            asst_type: typeof r.is_assistant
-          })));
-        }
-        allData = [...allData, ...(data as TenkoRecord[])];
+        data.forEach((item: any) => {
+          if (item.id && !seenIds.has(item.id)) {
+            seenIds.add(item.id);
+            allData.push(item as TenkoRecord);
+          }
+        });
         if (data.length < step) hasMore = false;
-        else from += step;
+        else {
+          lastId = data[data.length - 1].id;
+          // Guard: kalau id terakhir sama dengan sebelumnya (data statis), hindari infinite loop
+          if (allData.length > 60000) hasMore = false;
+        }
       } else {
         hasMore = false;
       }
-      
-      if (allData.length > 50000) break;
     }
 
-    // Deduplicate records based on driver and exact timestamp to prevent sync script doubling
-    const uniqueMap = new Map<string, TenkoRecord>();
-    allData.forEach(item => {
-      const driverIdentifier = item.driver_id || item.nama_driver || item.nik;
-      const uniqueKey = `${driverIdentifier}_${item.timestamp}`;
-      uniqueMap.set(uniqueKey, item);
-    });
-    allData = Array.from(uniqueMap.values());
+    console.log('Total Records Fetched:', allData.length);
 
-    console.log('Total Records Fetched (After Deduplication):', allData.length);
+    // Urutkan untuk tampilan: tanggal terbaru dulu, lalu jam cek terbaru.
+    // (Pagination by id, tapi user paling peduli cek yang paling baru.)
+    allData.sort((a, b) => {
+      const d = String(b.tanggal).localeCompare(String(a.tanggal));
+      if (d !== 0) return d;
+      return String(b.timestamp).localeCompare(String(a.timestamp));
+    });
 
     const summary = calculateSummary(allData);
     const dailyMap: Record<string, any> = {};

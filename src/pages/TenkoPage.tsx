@@ -168,6 +168,11 @@ export default function TenkoPage({ isTAM = false }: { isTAM?: boolean }) {
     () => (tenkoService.shouldUseMonthlyTrend(startDate, endDate) ? 'month' : 'day'),
     [startDate, endDate]
   );
+  // Rentang <= 31 hari selalu per-hari (walau beda bulan); per-bulan hanya kalau rentang panjang
+  const chartPeriodLabel = useMemo(
+    () => (chartDateGranularity === 'month' ? 'Monitoring Bulanan — Periode Terpilih' : 'Monitoring Harian — Periode Terpilih'),
+    [chartDateGranularity]
+  );
 
   const dateTrendData = useMemo(() => {
     if (!summary?.raw) return [];
@@ -434,7 +439,7 @@ export default function TenkoPage({ isTAM = false }: { isTAM?: boolean }) {
                 </h3>
                 <p className="text-xs text-slate-400 font-bold uppercase tracking-widest mt-1">
                   {chartView === 'date'
-                    ? (chartDateGranularity === 'month' ? 'Monitoring Bulanan — Periode Terpilih' : 'Monitoring Harian — Periode Terpilih')
+                    ? chartPeriodLabel
                     : `${activeMetric.title} per Driver — Periode Terpilih (Drivers Only)`}
                 </p>
               </div>
