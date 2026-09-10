@@ -101,11 +101,11 @@ export default function TrainingDashboardPage() {
     return allRecords.filter(r => r.area === selectedArea);
   }, [allRecords, selectedArea]);
 
-  // Jumlah driver yang terlihat = total driver di area terpilih (jika filter aktif)
+  // Jumlah driver yang terlihat = total driver di area terpilih (pakai allDrivers biar akurat walau belum pernah training)
   const visibleTotalDrivers = useMemo(() => {
     if (!selectedArea || selectedArea === 'ALL') return totalDrivers;
-    return new Set(filteredRecords.map(r => r.driver_id)).size;
-  }, [selectedArea, filteredRecords, totalDrivers]);
+    return allDrivers.filter(d => d.area === selectedArea).length;
+  }, [selectedArea, allDrivers, totalDrivers]);
 
   // ── Helper: extract year from DD/MM/YYYY or MM/DD/YYYY date string ───────────
   const getTrainingYear = (dateStr: string | null | undefined): number | null => {
