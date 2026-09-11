@@ -279,7 +279,6 @@ export default function KRLoadingUnitsPage({ isTAM: _isTAM = false }: { isTAM?: 
                   </BarChart>
                 </ResponsiveContainer>
               </div>
-              <p className="mt-3 text-[10px] font-bold text-slate-400 text-center">Tooltip juga tampilkan jumlah loading hari itu • Beda dari Report KR (Report KR pakai AreaChart Broken SOP/APD)</p>
             </div>
 
             <div className="lg:col-span-2 bg-white dark:bg-slate-900 p-6 md:p-8 rounded-4xl shadow-sm border border-slate-100 dark:border-slate-800">
