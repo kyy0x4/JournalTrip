@@ -29,6 +29,7 @@ const WRITE_KEY = Deno.env.get('WRITE_KEY') || '';
 // Tambahkan tabel lain di sini kalau memang perlu diisi dari Apps Script.
 const ALLOWED_TABLES = new Set([
   'kr_reports',
+  'kr_loading_units',
   'leadtimes',
   'tenko',
   'driver_training_monthly',
