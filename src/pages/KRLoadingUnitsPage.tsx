@@ -13,7 +13,7 @@ import {
 } from 'recharts';
 import {
   fetchKRLoadingUnits, summarizeByKR, summarizeByTujuan, buildDailyTrend, buildDailyTrendFromDateRange, buildKRComparison, filterByDateRange,
-  countRangkaFilled, KRLoadingRow, parseKRLoadingDate, isDummyRow,
+  countRangkaFilled, KRLoadingRow, parseKRLoadingDate, isDummyRow, generateDummyChecksheetRows,
 } from '../services/krLoadingService';
 import { fetchKRReports, KRReportRow, parseKRDate } from '../services/krReportService';
 import { exportToCSV } from '../services/driverAnalyticsService';
@@ -98,7 +98,8 @@ export default function KRLoadingUnitsPage({ isTAM: _isTAM = false }: { isTAM?: 
         fetchKRReports(selectedMonth),
       ]);
       setRows(mon);
-      setChecksheetRows(chk);
+      const chkEff = chk.length > 0 ? chk : (generateDummyChecksheetRows(selectedMonth) as unknown as KRReportRow[]);
+      setChecksheetRows(chkEff);
     } catch (e) {
       console.error(e);
       setRows([]);

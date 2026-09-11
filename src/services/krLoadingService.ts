@@ -147,6 +147,25 @@ export function isDummyRow(row: KRLoadingRow): boolean {
   return row.id.startsWith('dummy-');
 }
 
+export function generateDummyChecksheetRows(month: string): { nama_kr: string }[] {
+  const loading = generateDummyKRLoadingRows(month);
+  const byKr = new Map<string, number>();
+  for (const r of loading) {
+    const k = r.nama_kr;
+    byKr.set(k, (byKr.get(k) || 0) + 1);
+  }
+  const out: { nama_kr: string }[] = [];
+  for (const [kr, cnt] of byKr) {
+    const delta = randInt(-2, 3);
+    const chkCnt = Math.max(0, cnt + delta);
+    for (let i = 0; i < chkCnt; i++) out.push({ nama_kr: kr });
+  }
+  if (out.length < 6) {
+    for (let i = 0; i < 4; i++) out.push({ nama_kr: pick(DUMMY_KR) });
+  }
+  return out;
+}
+
 export async function fetchKRLoadingUnits(
   month: string,
   options?: { pdc?: string; tujuan?: string; nama_kr?: string }
