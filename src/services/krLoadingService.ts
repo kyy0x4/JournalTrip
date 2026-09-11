@@ -46,6 +46,15 @@ export interface KRMuatDistribution {
   count: number;
 }
 
+export interface KRComparisonRow {
+  nama_kr: string;
+  monitoring_count: number;
+  monitoring_units: number;
+  checksheet_count: number;
+  gap: number;
+  gapAbs: number;
+}
+
 export function parseKRLoadingDate(v: string | null | undefined): string | null {
   if (!v) return null;
   const s = String(v).trim();
@@ -233,6 +242,53 @@ export function buildMuatDistribution(rows: KRLoadingRow[]): KRMuatDistribution[
     .sort((a, b) => a.muat - b.muat);
 }
 
+export function buildKRComparison(
+  monitoringRows: KRLoadingRow[],
+  checksheetRows: { nama_kr: string }[],
+): KRComparisonRow[] {
+  const monMap = new Map<string, { count: number; units: number }>();
+  for (const r of monitoringRows) {
+    const k = (r.nama_kr || 'T/A').trim();
+    if (!monMap.has(k)) monMap.set(k, { count: 0, units: 0 });
+    const v = monMap.get(k)!;
+    v.count += 1;
+    v.units += Number(r.total_muat || 0);
+  }
+  const chkMap = new Map<string, number>();
+  for (const r of checksheetRows) {
+    const k = (r.nama_kr || 'T/A').trim();
+    chkMap.set(k, (chkMap.get(k) || 0) + 1);
+  }
+  const allKrs = new Set<string>([...monMap.keys(), ...chkMap.keys()]);
+  const out: KRComparisonRow[] = [];
+  for (const k of allKrs) {
+    const m = monMap.get(k);
+    const c = chkMap.get(k) || 0;
+    const mc = m?.count || 0;
+    const gap = mc - c;
+    out.push({
+      nama_kr: k,
+      monitoring_count: mc,
+      monitoring_units: m?.units || 0,
+      checksheet_count: c,
+      gap,
+      gapAbs: Math.abs(gap),
+    });
+  }
+  return out.sort((a, b) => b.gapAbs - a.gapAbs);
+}
+
+export function filterByDateRange(rows: KRLoadingRow[], start: string | null, end: string | null): KRLoadingRow[] {
+  if (!start && !end) return rows;
+  return rows.filter(r => {
+    const d = parseKRLoadingDate(r.tanggal_muat) || r.tanggal_muat_date || '';
+    if (!d) return false;
+    if (start && d < start) return false;
+    if (end && d > end) return false;
+    return true;
+  });
+}
+
 export function buildDailyTrend(rows: KRLoadingRow[], month: string): KRLoadingDailyTrend[] {
   const [y, m] = month.split('-').map(Number);
   const daysInMonth = new Date(y, m, 0).getDate();
@@ -256,4 +312,27 @@ export function buildDailyTrend(rows: KRLoadingRow[], month: string): KRLoadingD
   }
 
   return trend;
+}
+
+export function buildDailyTrendFromDateRange(rows: KRLoadingRow[], start: string, end: string): KRLoadingDailyTrend[] {
+  const s = new Date(start + 'T00:00:00');
+  const e = new Date(end + 'T00:00:00');
+  const days: KRLoadingDailyTrend[] = [];
+  for (let d = new Date(s); d <= e; d.setDate(d.getDate() + 1)) {
+    const iso = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    days.push({ date: iso, loading_count: 0, total_muat: 0 });
+  }
+  const byDate = new Map<string, KRLoadingRow[]>();
+  for (const row of rows) {
+    const d = parseKRLoadingDate(row.tanggal_muat) || row.tanggal_muat_date || '';
+    if (!byDate.has(d)) byDate.set(d, []);
+    byDate.get(d)!.push(row);
+  }
+  for (const t of days) {
+    const list = byDate.get(t.date);
+    if (!list) continue;
+    t.loading_count = list.length;
+    t.total_muat = list.reduce((acc, r) => acc + Number(r.total_muat || 0), 0);
+  }
+  return days;
 }

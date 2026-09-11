@@ -5,23 +5,25 @@ import { motion, AnimatePresence } from 'motion/react';
 import {
   Truck, Calendar, ChevronLeft, ChevronRight, ChevronDown,
   Search, Loader2, Package, Users, Hash, MapPin, X, FileText, AlertTriangle, TrendingUp,
-  Building2, Gauge, Navigation, Trophy,
+  Building2, Gauge, Navigation, Trophy, Clock,
 } from 'lucide-react';
 import {
-  BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip,
-  ResponsiveContainer, Legend,
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
+  ResponsiveContainer, Legend, LabelList,
 } from 'recharts';
 import {
-  fetchKRLoadingUnits, summarizeByKR, summarizeByTujuan, buildDailyTrend, buildMuatDistribution,
+  fetchKRLoadingUnits, summarizeByKR, summarizeByTujuan, buildDailyTrend, buildDailyTrendFromDateRange, buildKRComparison, filterByDateRange,
   countRangkaFilled, KRLoadingRow, parseKRLoadingDate, isDummyRow,
 } from '../services/krLoadingService';
+import { fetchKRReports, KRReportRow, parseKRDate } from '../services/krReportService';
 import { exportToCSV } from '../services/driverAnalyticsService';
 
 const COLORS = {
   units: '#0ea5e9',
-  loading: '#6366f1',
   tujuan: ['#0ea5e9', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#06b6d4', '#84cc16'],
-  muat: '#14b8a6',
+  monitoring: '#0ea5e9',
+  checksheet: '#8b5cf6',
+  gap: '#f59e0b',
 };
 
 function StatCard({ label, value, sub, icon, color }: { label: string; value: string | number; sub: string; icon: React.ReactNode; color: string }) {
@@ -38,11 +40,16 @@ function StatCard({ label, value, sub, icon, color }: { label: string; value: st
 export default function KRLoadingUnitsPage({ isTAM: _isTAM = false }: { isTAM?: boolean }) {
   void _isTAM;
   const now = new Date();
+  const todayStr = new Date(new Date().getTime() - (new Date().getTimezoneOffset() * 60000)).toISOString().split('T')[0]!;
+  const [dateMode, setDateMode] = useState<'BULAN' | 'TANGGAL'>('BULAN');
   const [selectedMonth, setSelectedMonth] = useState(`${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`);
+  const [startDate, setStartDate] = useState(`${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`);
+  const [endDate, setEndDate] = useState(todayStr);
   const [selectedPDC, setSelectedPDC] = useState('ALL');
   const [selectedTujuan, setSelectedTujuan] = useState('ALL');
   const [selectedKR, setSelectedKR] = useState('ALL');
   const [rows, setRows] = useState<KRLoadingRow[]>([]);
+  const [checksheetRows, setChecksheetRows] = useState<KRReportRow[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [page, setPage] = useState(1);
@@ -70,14 +77,32 @@ export default function KRLoadingUnitsPage({ isTAM: _isTAM = false }: { isTAM?: 
     toastTimer.current = window.setTimeout(() => setToast(null), 5000);
   }, []);
 
+  const handleMonthChange = (monthStr: string) => {
+    setSelectedMonth(monthStr);
+    const [y, m] = monthStr.split('-').map(Number);
+    const lastDay = new Date(y, m, 0).getDate();
+    setStartDate(`${monthStr}-01`);
+    setEndDate(`${monthStr}-${String(lastDay).padStart(2, '0')}`);
+  };
+
+  const handleModeSwitch = (mode: 'BULAN' | 'TANGGAL') => {
+    setDateMode(mode);
+    if (mode === 'BULAN') handleMonthChange(selectedMonth);
+  };
+
   const loadData = async () => {
     setIsLoading(true);
     try {
-      const data = await fetchKRLoadingUnits(selectedMonth, { pdc: selectedPDC, tujuan: selectedTujuan, nama_kr: selectedKR });
-      setRows(data);
+      const [mon, chk] = await Promise.all([
+        fetchKRLoadingUnits(selectedMonth, { pdc: selectedPDC, tujuan: selectedTujuan, nama_kr: selectedKR }),
+        fetchKRReports(selectedMonth),
+      ]);
+      setRows(mon);
+      setChecksheetRows(chk);
     } catch (e) {
       console.error(e);
       setRows([]);
+      setChecksheetRows([]);
     }
     setIsLoading(false);
   };
@@ -97,46 +122,68 @@ export default function KRLoadingUnitsPage({ isTAM: _isTAM = false }: { isTAM?: 
 
   useEscapeKey(() => setDetailRow(null), !!detailRow);
 
-  const uniquePDC = useMemo(() => { const s = new Set<string>(); rows.forEach(r => { if (r.pdc_muat) s.add(r.pdc_muat.trim()); }); return Array.from(s).sort(); }, [rows]);
-  const uniqueTujuan = useMemo(() => { const s = new Set<string>(); rows.forEach(r => { if (r.tujuan_pengiriman) s.add(r.tujuan_pengiriman.trim()); }); return Array.from(s).sort(); }, [rows]);
-  const uniqueKR = useMemo(() => { const s = new Set<string>(); rows.forEach(r => { if (r.nama_kr) s.add(r.nama_kr.trim()); }); return Array.from(s).sort(); }, [rows]);
+  const rangeLabel = useMemo(() => {
+    if (dateMode === 'BULAN') {
+      const [y, m] = selectedMonth.split('-');
+      return new Date(Number(y), Number(m) - 1, 1).toLocaleDateString('id-ID', { month: 'long', year: 'numeric' });
+    }
+    if (startDate === endDate) return new Date(startDate + 'T00:00:00').toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+    return `${new Date(startDate + 'T00:00:00').toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })} – ${new Date(endDate + 'T00:00:00').toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}`;
+  }, [dateMode, selectedMonth, startDate, endDate]);
 
-  const summaryByKR = useMemo(() => summarizeByKR(rows), [rows]);
-  const summaryByTujuan = useMemo(() => summarizeByTujuan(rows), [rows]);
-  const trend = useMemo(() => buildDailyTrend(rows, selectedMonth), [rows, selectedMonth]);
-  const muatDist = useMemo(() => buildMuatDistribution(rows), [rows]);
-  const isDummy = useMemo(() => rows.length > 0 && rows.every(isDummyRow), [rows]);
+  const filteredByDate = useMemo(() => {
+    if (dateMode === 'BULAN') return rows;
+    return filterByDateRange(rows, startDate, endDate);
+  }, [rows, dateMode, startDate, endDate]);
+
+  const checksheetFilteredByDate = useMemo(() => {
+    if (dateMode === 'BULAN') return checksheetRows;
+    return checksheetRows.filter(r => {
+      const d = parseKRDate(r.tanggal) || r.tanggal_date || '';
+      if (!d) return false;
+      if (d < startDate) return false;
+      if (d > endDate) return false;
+      return true;
+    });
+  }, [checksheetRows, dateMode, startDate, endDate]);
+
+  const uniquePDC = useMemo(() => { const s = new Set<string>(); filteredByDate.forEach(r => { if (r.pdc_muat) s.add(r.pdc_muat.trim()); }); return Array.from(s).sort(); }, [filteredByDate]);
+  const uniqueTujuan = useMemo(() => { const s = new Set<string>(); filteredByDate.forEach(r => { if (r.tujuan_pengiriman) s.add(r.tujuan_pengiriman.trim()); }); return Array.from(s).sort(); }, [filteredByDate]);
+  const uniqueKR = useMemo(() => { const s = new Set<string>(); filteredByDate.forEach(r => { if (r.nama_kr) s.add(r.nama_kr.trim()); }); return Array.from(s).sort(); }, [filteredByDate]);
+
+  const summaryByKR = useMemo(() => summarizeByKR(filteredByDate), [filteredByDate]);
+  const summaryByTujuan = useMemo(() => summarizeByTujuan(filteredByDate), [filteredByDate]);
+  const trend = useMemo(() => {
+    if (dateMode === 'TANGGAL') return buildDailyTrendFromDateRange(filteredByDate, startDate, endDate);
+    return buildDailyTrend(filteredByDate, selectedMonth);
+  }, [filteredByDate, dateMode, selectedMonth, startDate, endDate]);
+  const comparison = useMemo(() => buildKRComparison(filteredByDate, checksheetFilteredByDate), [filteredByDate, checksheetFilteredByDate]);
+  const gapRows = useMemo(() => comparison.filter(c => c.gapAbs > 0), [comparison]);
+  const isDummy = useMemo(() => filteredByDate.length > 0 && filteredByDate.every(isDummyRow), [filteredByDate]);
 
   const totals = useMemo(() => {
-    const totalMuat = rows.reduce((a, r) => a + Number(r.total_muat || 0), 0);
-    const tujuanCount = new Set(rows.map(r => (r.tujuan_pengiriman || '').trim().toUpperCase()).filter(Boolean)).size;
-    const fullLoads = rows.filter(r => Number(r.total_muat) === 6).length;
+    const totalMuat = filteredByDate.reduce((a, r) => a + Number(r.total_muat || 0), 0);
+    const tujuanCount = new Set(filteredByDate.map(r => (r.tujuan_pengiriman || '').trim().toUpperCase()).filter(Boolean)).size;
     return {
       totalMuat,
-      loadingCount: rows.length,
-      avgMuat: rows.length ? Math.round((totalMuat / rows.length) * 10) / 10 : 0,
+      loadingCount: filteredByDate.length,
+      avgMuat: filteredByDate.length ? Math.round((totalMuat / filteredByDate.length) * 10) / 10 : 0,
       krCount: summaryByKR.length,
       tujuanCount,
-      fullLoads,
     };
-  }, [rows, summaryByKR]);
-
-  const monthLabel = useMemo(() => {
-    const [y, m] = selectedMonth.split('-');
-    return new Date(Number(y), Number(m) - 1, 1).toLocaleDateString('id-ID', { month: 'long', year: 'numeric' });
-  }, [selectedMonth]);
+  }, [filteredByDate, summaryByKR]);
 
   const filtered = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
-    if (!q) return rows;
-    return rows.filter(r =>
+    if (!q) return filteredByDate;
+    return filteredByDate.filter(r =>
       (r.nama_kr || '').toLowerCase().includes(q) ||
       (r.no_lambung || '').toLowerCase().includes(q) ||
       (r.nama_driver || '').toLowerCase().includes(q) ||
       (r.tujuan_pengiriman || '').toLowerCase().includes(q) ||
       (r.pdc_muat || '').toLowerCase().includes(q)
     );
-  }, [rows, searchQuery]);
+  }, [filteredByDate, searchQuery]);
 
   const sortedFiltered = useMemo(() => {
     return [...filtered].sort((a, b) => {
@@ -170,13 +217,23 @@ export default function KRLoadingUnitsPage({ isTAM: _isTAM = false }: { isTAM?: 
       'No Rangka 6': r.no_rangka_6 || '-',
       'Tujuan': r.tujuan_pengiriman || '-',
     }));
-    exportToCSV(csv, `KR_Loading_${selectedMonth}.csv`);
+    const suffix = dateMode === 'BULAN' ? selectedMonth : `${startDate}_sd_${endDate}`;
+    exportToCSV(csv, `KR_Loading_${suffix}.csv`);
     showToast('success', `CSV berhasil diexport (${csv.length} baris)`);
   };
 
   const openPdc = () => { if (pdcBtnRef.current) { const r = pdcBtnRef.current.getBoundingClientRect(); const isMob = window.innerWidth < 640; setPdcPos({ top: r.bottom + 8, left: isMob ? Math.max(8, r.left) : r.left, width: Math.max(r.width, isMob ? window.innerWidth - 16 : 160) }); } setPdcOpen(v => !v); };
   const openTujuan = () => { if (tujuanBtnRef.current) { const r = tujuanBtnRef.current.getBoundingClientRect(); const isMob = window.innerWidth < 640; setTujuanPos({ top: r.bottom + 8, left: isMob ? Math.max(8, r.left) : r.left, width: Math.max(r.width, isMob ? window.innerWidth - 16 : 180) }); } setTujuanOpen(v => !v); };
   const openKr = () => { if (krBtnRef.current) { const r = krBtnRef.current.getBoundingClientRect(); const isMob = window.innerWidth < 640; setKrPos({ top: r.bottom + 8, left: isMob ? Math.max(8, r.left) : r.left, width: Math.max(r.width, isMob ? window.innerWidth - 16 : 180) }); } setKrOpen(v => !v); };
+
+  const comparisonChartData = useMemo(() => {
+    return comparison.slice(0, 10).map(c => ({
+      nama_kr: c.nama_kr.length > 14 ? c.nama_kr.slice(0, 14) + '…' : c.nama_kr,
+      full: c.nama_kr,
+      monitoring: c.monitoring_count,
+      checksheet: c.checksheet_count,
+    }));
+  }, [comparison]);
 
   return (
     <div className="space-y-6 pb-20">
@@ -192,10 +249,29 @@ export default function KRLoadingUnitsPage({ isTAM: _isTAM = false }: { isTAM?: 
             </div>
           </div>
           <div className="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-3 w-full lg:w-auto">
-            <div className="relative group w-full sm:w-44">
-              <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none"><Calendar className="w-4 h-4 text-slate-400 group-hover:text-sky-500 transition-colors" /></div>
-              <input type="month" value={selectedMonth} onChange={(e) => setSelectedMonth(e.target.value)} className="w-full pl-9 pr-3 py-2 bg-slate-50 dark:bg-slate-800 hover:bg-white dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-black text-slate-700 dark:text-slate-300 focus:ring-2 focus:ring-sky-500/50 outline-none uppercase tracking-widest transition-all cursor-pointer shadow-sm select-none" />
+            <div className="flex items-center gap-1 p-1 bg-slate-100 dark:bg-slate-800 rounded-xl shrink-0">
+              {(['BULAN', 'TANGGAL'] as const).map(m => (
+                <button
+                  key={m}
+                  onClick={() => handleModeSwitch(m)}
+                  className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${dateMode === m ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700'}`}
+                >
+                  {m === 'BULAN' ? 'Bulan' : 'Tanggal'}
+                </button>
+              ))}
             </div>
+            {dateMode === 'BULAN' ? (
+              <div className="relative group w-full sm:w-44">
+                <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none"><Calendar className="w-4 h-4 text-slate-400 group-hover:text-sky-500 transition-colors" /></div>
+                <input type="month" value={selectedMonth} onChange={(e) => handleMonthChange(e.target.value)} className="w-full pl-9 pr-3 py-2 bg-slate-50 dark:bg-slate-800 hover:bg-white dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-black text-slate-700 dark:text-slate-300 focus:ring-2 focus:ring-sky-500/50 outline-none uppercase tracking-widest transition-all cursor-pointer shadow-sm select-none" />
+              </div>
+            ) : (
+              <div className="flex items-center gap-2 w-full sm:w-auto">
+                <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} className="flex-1 sm:w-36 px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-black text-slate-700 dark:text-slate-300 outline-none focus:ring-2 focus:ring-sky-500/50" />
+                <span className="text-slate-400 font-black text-xs">—</span>
+                <input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} className="flex-1 sm:w-36 px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-black text-slate-700 dark:text-slate-300 outline-none focus:ring-2 focus:ring-sky-500/50" />
+              </div>
+            )}
             <div className="relative w-full sm:w-40">
               <button ref={pdcBtnRef} onClick={openPdc} className="w-full flex items-center justify-between pl-4 pr-3 py-2 bg-slate-50 dark:bg-slate-800 hover:bg-white dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 rounded-xl text-[10px] font-black text-slate-700 dark:text-slate-300 outline-none uppercase tracking-widest transition-all shadow-sm">
                 <span className="truncate flex items-center gap-1.5"><Building2 className="w-3 h-3 text-slate-400" /> {selectedPDC === 'ALL' ? 'Semua PDC' : selectedPDC}</span><ChevronDown className="w-4 h-4 text-slate-400 shrink-0 ml-2" />
@@ -241,19 +317,17 @@ export default function KRLoadingUnitsPage({ isTAM: _isTAM = false }: { isTAM?: 
         </div>
       ) : (
         <motion.div key="content" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
-            <StatCard label="Total Unit" value={totals.totalMuat.toLocaleString('id-ID')} sub={`${monthLabel} • sum total_muat`} icon={<Package className="w-5 h-5 text-sky-600" />} color="bg-sky-50 dark:bg-sky-500/10" />
-            <StatCard label="Total Loading" value={totals.loadingCount.toLocaleString('id-ID')} sub="Baris muatan bulan ini" icon={<Truck className="w-5 h-5 text-violet-600" />} color="bg-violet-50 dark:bg-violet-500/10" />
-            <StatCard label="Rata-rata Muat" value={totals.avgMuat.toLocaleString('id-ID')} sub="Unit per loading" icon={<Gauge className="w-5 h-5 text-amber-600" />} color="bg-amber-50 dark:bg-amber-500/10" />
-            <StatCard label="Full Load" value={`${totals.fullLoads}`} sub="Muat 6 unit (car carrier penuh)" icon={<Trophy className="w-5 h-5 text-emerald-600" />} color="bg-emerald-50 dark:bg-emerald-500/10" />
-            <StatCard label="Tujuan Aktif" value={totals.tujuanCount.toLocaleString('id-ID')} sub={`${totals.krCount} KR aktif`} icon={<Navigation className="w-5 h-5 text-rose-600" />} color="bg-rose-50 dark:bg-rose-500/10" />
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+            <StatCard label="Total Unit" value={totals.totalMuat.toLocaleString('id-ID')} sub={`${rangeLabel} • sum total_muat`} icon={<Package className="w-5 h-5 text-sky-600" />} color="bg-sky-50 dark:bg-sky-500/10" />
+            <StatCard label="Rata-rata Pengiriman" value={totals.avgMuat.toLocaleString('id-ID')} sub="Unit per loading" icon={<Gauge className="w-5 h-5 text-amber-600" />} color="bg-amber-50 dark:bg-amber-500/10" />
+            <StatCard label="Tujuan Aktif" value={totals.tujuanCount.toLocaleString('id-ID')} sub={`${totals.krCount} KR • ${filteredByDate.length} loading`} icon={<Navigation className="w-5 h-5 text-rose-600" />} color="bg-rose-50 dark:bg-rose-500/10" />
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
             <div className="lg:col-span-3 bg-white dark:bg-slate-900 p-6 md:p-8 rounded-4xl shadow-sm border border-slate-100 dark:border-slate-800">
               <div className="flex items-center gap-3 mb-6">
                 <div className="w-10 h-10 rounded-xl bg-sky-50 dark:bg-sky-900/20 flex items-center justify-center"><TrendingUp className="w-5 h-5 text-sky-600 dark:text-sky-400" /></div>
-                <div><h3 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-widest">Unit per Hari</h3><p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest">Batang = total unit dimuat harian</p></div>
+                <div><h3 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-widest">Unit per Hari</h3><p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest">{rangeLabel} • batang = total unit harian</p></div>
               </div>
               <div className="h-[340px] w-full">
                 <ResponsiveContainer width="100%" height="100%">
@@ -284,99 +358,111 @@ export default function KRLoadingUnitsPage({ isTAM: _isTAM = false }: { isTAM?: 
             <div className="lg:col-span-2 bg-white dark:bg-slate-900 p-6 md:p-8 rounded-4xl shadow-sm border border-slate-100 dark:border-slate-800">
               <div className="flex items-center gap-3 mb-6">
                 <div className="w-10 h-10 rounded-xl bg-emerald-50 dark:bg-emerald-900/20 flex items-center justify-center"><Navigation className="w-5 h-5 text-emerald-600 dark:text-emerald-400" /></div>
-                <div><h3 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-widest">Sebaran Tujuan</h3><p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest">Proporsi unit per tujuan pengiriman</p></div>
+                <div><h3 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-widest">Sebaran Tujuan</h3><p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest">Bar horizontal • label angka di ujung</p></div>
               </div>
               {summaryByTujuan.length === 0 ? (
                 <div className="h-[340px] flex flex-col items-center justify-center text-slate-400"><MapPin className="w-8 h-8 mb-2 opacity-40" /><p className="text-xs font-black uppercase tracking-widest">Belum ada data tujuan</p></div>
               ) : (
                 <div className="h-[340px] w-full">
                   <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie data={summaryByTujuan} dataKey="total_muat" nameKey="tujuan" cx="50%" cy="50%" innerRadius={72} outerRadius={118} paddingAngle={2} stroke="none">
-                        {summaryByTujuan.map((_, i) => (<Cell key={i} fill={COLORS.tujuan[i % COLORS.tujuan.length]} />))}
-                      </Pie>
-                      <Tooltip content={({ active, payload }) => {
+                    <BarChart data={summaryByTujuan} layout="vertical" margin={{ top: 0, right: 28, left: 0, bottom: 0 }}>
+                      <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#e2e8f0" opacity={0.3} />
+                      <XAxis type="number" axisLine={false} tickLine={false} tick={{ fontSize: 10, fontWeight: 900, fill: '#94a3b8' }} allowDecimals={false} />
+                      <YAxis type="category" dataKey="tujuan" axisLine={false} tickLine={false} tick={{ fontSize: 10, fontWeight: 900, fill: '#64748b' }} width={92} />
+                      <Tooltip cursor={{ fill: '#f1f5f9', opacity: 0.5 }} content={({ active, payload }) => {
                         if (active && payload && payload[0]) {
-                          const p: any = payload[0];
+                          const p: any = payload[0].payload;
                           return (
                             <div className="bg-white dark:bg-slate-900 px-3 py-2 rounded-2xl shadow-xl border border-slate-100 dark:border-slate-800">
-                              <p className="text-[10px] font-black text-slate-500 uppercase">{p.name}</p>
-                              <p className="text-xs font-black" style={{ color: p.payload.fill || p.color }}>{p.value} unit • {p.payload.loading_count} loading</p>
+                              <p className="text-[10px] font-black text-slate-500 uppercase">{p.tujuan}</p>
+                              <p className="text-xs font-black text-sky-600">{p.total_muat} unit • {p.loading_count} loading</p>
                             </div>
                           );
                         }
                         return null;
                       }} />
-                      <Legend formatter={(value) => <span className="text-[10px] font-black uppercase tracking-widest text-slate-600 dark:text-slate-400">{value}</span>} iconType="circle" wrapperStyle={{ paddingTop: 12 }} />
-                    </PieChart>
+                      <Bar dataKey="total_muat" name="Unit" fill={COLORS.units} radius={[0, 8, 8, 0]} maxBarSize={18}>
+                        <LabelList dataKey="total_muat" position="right" style={{ fontSize: 10, fontWeight: 900, fill: '#0f172a' }} />
+                      </Bar>
+                    </BarChart>
                   </ResponsiveContainer>
                 </div>
               )}
             </div>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
-            <div className="lg:col-span-3 bg-white dark:bg-slate-900 p-6 md:p-8 rounded-4xl shadow-sm border border-slate-100 dark:border-slate-800">
-              <div className="flex items-center gap-3 mb-6">
-                <div className="w-10 h-10 rounded-xl bg-teal-50 dark:bg-teal-900/20 flex items-center justify-center"><Gauge className="w-5 h-5 text-teal-600 dark:text-teal-400" /></div>
-                <div><h3 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-widest">Kapasitas Muat</h3><p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest">Distribusi total_muat 1–6 unit per loading</p></div>
-              </div>
-              <div className="h-[300px] w-full">
+          <div className="bg-white dark:bg-slate-900 p-6 md:p-8 rounded-4xl shadow-sm border border-slate-100 dark:border-slate-800">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="w-10 h-10 rounded-xl bg-violet-50 dark:bg-violet-900/20 flex items-center justify-center"><Trophy className="w-5 h-5 text-violet-600 dark:text-violet-400" /></div>
+              <div><h3 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-widest">Perbandingan Checksheet KR vs Monitoring Unit</h3><p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest">{rangeLabel} • Y = nama KR • Monitoring vs Checksheet per KR</p></div>
+            </div>
+            {comparison.length === 0 ? (
+              <div className="py-16 text-center text-slate-400"><Users className="w-8 h-8 mx-auto mb-2 opacity-40" /><p className="text-xs font-black uppercase tracking-widest">Belum ada data untuk perbandingan</p></div>
+            ) : (
+              <div className="h-[420px] w-full">
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={muatDist} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" opacity={0.3} />
-                    <XAxis dataKey="muat" axisLine={false} tickLine={false} tick={{ fontSize: 11, fontWeight: 900, fill: '#64748b' }} tickFormatter={(v) => `${v} unit`} />
-                    <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fontWeight: 900, fill: '#94a3b8' }} allowDecimals={false} />
+                  <BarChart data={comparisonChartData} layout="vertical" margin={{ top: 10, right: 32, left: 10, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#e2e8f0" opacity={0.3} />
+                    <XAxis type="number" axisLine={false} tickLine={false} tick={{ fontSize: 10, fontWeight: 900, fill: '#94a3b8' }} allowDecimals={false} />
+                    <YAxis type="category" dataKey="nama_kr" axisLine={false} tickLine={false} tick={{ fontSize: 10, fontWeight: 900, fill: '#64748b' }} width={120} />
                     <Tooltip cursor={{ fill: '#f1f5f9', opacity: 0.4 }} content={({ active, payload }) => {
-                      if (active && payload && payload[0]) {
+                      if (active && payload && payload.length) {
                         const d: any = payload[0].payload;
+                        const full = comparison.find(c => c.nama_kr === d.full);
                         return (
-                          <div className="bg-white dark:bg-slate-900 px-3 py-2 rounded-2xl shadow-xl border border-slate-100 dark:border-slate-800">
-                            <p className="text-xs font-black text-slate-900 dark:text-white">{d.muat} unit</p>
-                            <p className="text-[11px] font-bold text-teal-600">{d.count} loading</p>
+                          <div className="bg-white dark:bg-slate-900 p-3 rounded-2xl shadow-xl border border-slate-100 dark:border-slate-800">
+                            <p className="text-[10px] font-black text-slate-500 uppercase mb-1">{d.full}</p>
+                            <p className="text-xs font-black text-sky-600">Monitoring: {d.monitoring} • Units {full?.monitoring_units ?? '-'}</p>
+                            <p className="text-xs font-black text-violet-600">Checksheet: {d.checksheet}</p>
+                            {full && <p className={`text-[11px] font-black ${full.gapAbs > 0 ? 'text-amber-600' : 'text-emerald-600'}`}>Gap: {full.gap > 0 ? '+' : ''}{full.gap} {full.gapAbs > 0 ? '(selisih)' : '(sinkron)'}</p>}
                           </div>
                         );
                       }
                       return null;
                     }} />
-                    <Bar dataKey="count" name="Loading" fill={COLORS.muat} radius={[8, 8, 0, 0]} maxBarSize={44} />
+                    <Legend formatter={(value) => <span className="text-[10px] font-black uppercase tracking-widest text-slate-600 dark:text-slate-400">{value}</span>} iconType="circle" />
+                    <Bar dataKey="monitoring" name="Monitoring Unit" fill={COLORS.monitoring} radius={[0, 8, 8, 0]} maxBarSize={18} />
+                    <Bar dataKey="checksheet" name="Checksheet KR" fill={COLORS.checksheet} radius={[0, 8, 8, 0]} maxBarSize={18} />
                   </BarChart>
                 </ResponsiveContainer>
               </div>
-            </div>
+            )}
+          </div>
 
-            <div className="lg:col-span-2 bg-white dark:bg-slate-900 p-6 md:p-8 rounded-4xl shadow-sm border border-slate-100 dark:border-slate-800">
-              <div className="flex items-center gap-3 mb-6">
-                <div className="w-10 h-10 rounded-xl bg-amber-50 dark:bg-amber-900/20 flex items-center justify-center"><Trophy className="w-5 h-5 text-amber-600 dark:text-amber-400" /></div>
-                <div><h3 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-widest">Top KR</h3><p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest">Unit terbanyak bulan ini</p></div>
-              </div>
-              {summaryByKR.length === 0 ? (
-                <div className="py-16 text-center text-slate-400"><Users className="w-8 h-8 mx-auto mb-2 opacity-40" /><p className="text-xs font-black uppercase tracking-widest">Belum ada data KR</p></div>
-              ) : (
-                <div className="space-y-2.5">
-                  {summaryByKR.slice(0, 6).map((kr, idx) => (
-                    <div key={kr.nama_kr} className={`flex items-center gap-3 p-3 rounded-2xl border ${idx === 0 ? 'bg-amber-50/70 dark:bg-amber-900/10 border-amber-200 dark:border-amber-800' : 'bg-slate-50 dark:bg-slate-800/40 border-slate-100 dark:border-slate-800'}`}>
-                      <div className={`w-8 h-8 rounded-xl flex items-center justify-center text-xs font-black shrink-0 ${idx === 0 ? 'bg-amber-500 text-white' : idx === 1 ? 'bg-slate-300 text-slate-700' : idx === 2 ? 'bg-orange-300 text-orange-900' : 'bg-white dark:bg-slate-700 text-slate-500 border border-slate-200 dark:border-slate-600'}`}>{idx + 1}</div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-xs font-black text-slate-900 dark:text-white truncate">{kr.nama_kr}</p>
-                        <p className="text-[10px] font-bold text-slate-400 truncate">{kr.loading_count} loading • {kr.lambung_count} lambung • avg {kr.avg_muat}/loading</p>
-                      </div>
-                      <div className="text-right shrink-0">
-                        <p className="text-sm font-black text-slate-900 dark:text-white">{kr.total_muat}</p>
-                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">unit</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
+          <div className="bg-white dark:bg-slate-900 p-6 md:p-8 rounded-4xl shadow-sm border border-slate-100 dark:border-slate-800">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="w-10 h-10 rounded-xl bg-amber-50 dark:bg-amber-900/20 flex items-center justify-center"><AlertTriangle className="w-5 h-5 text-amber-600 dark:text-amber-400" /></div>
+              <div><h3 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-widest">KR dengan Gap Tertinggi</h3><p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest">Selisih monitoring vs checksheet • paling tidak sinkron di atas</p></div>
             </div>
+            {gapRows.length === 0 ? (
+              <div className="py-10 text-center">
+                <div className="w-12 h-12 rounded-2xl bg-emerald-50 dark:bg-emerald-900/20 flex items-center justify-center mx-auto mb-3"><Trophy className="w-6 h-6 text-emerald-500" /></div>
+                <p className="text-xs font-black text-emerald-600 uppercase tracking-widest">Semua sinkron</p>
+                <p className="text-[11px] font-bold text-slate-400 mt-1">Monitoring dan checksheet jumlahnya sama per KR di periode ini.</p>
+              </div>
+            ) : (
+              <div className="space-y-2.5">
+                {gapRows.slice(0, 6).map((kr) => (
+                  <div key={kr.nama_kr} className="flex items-center gap-3 p-3 rounded-2xl border bg-amber-50/60 dark:bg-amber-900/10 border-amber-200 dark:border-amber-800">
+                    <div className="w-8 h-8 rounded-xl bg-amber-500 text-white flex items-center justify-center text-xs font-black shrink-0">{kr.gapAbs}</div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-black text-slate-900 dark:text-white truncate">{kr.nama_kr}</p>
+                      <p className="text-[10px] font-bold text-slate-500 truncate">Monitoring {kr.monitoring_count} ({kr.monitoring_units} unit) • Checksheet {kr.checksheet_count} • Gap {kr.gap > 0 ? '+' : ''}{kr.gap}</p>
+                    </div>
+                    <div className={`px-2.5 py-1 rounded-xl text-[10px] font-black shrink-0 ${kr.gap > 0 ? 'bg-sky-100 text-sky-700 dark:bg-sky-900/30 dark:text-sky-300' : 'bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-300'}`}>
+                      {kr.gap > 0 ? 'Monitoring lebih' : 'Checksheet lebih'}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           <div className="bg-white dark:bg-slate-900 rounded-3xl md:rounded-4xl shadow-sm border border-slate-100 dark:border-slate-800 overflow-hidden">
             <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 p-4 md:p-6 border-b border-slate-100 dark:border-slate-800">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-xl bg-sky-50 dark:bg-sky-900/20 flex items-center justify-center"><Package className="w-5 h-5 text-sky-600 dark:text-sky-400" /></div>
-                <div><h3 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-widest">Detail Loading</h3><p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest">{monthLabel} • {sortedFiltered.length} baris • kolom sesuai sheet</p></div>
+                <div><h3 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-widest">Detail Loading</h3><p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest">{rangeLabel} • {sortedFiltered.length} baris • lintas filter (scorecard mengikuti filter)</p></div>
               </div>
               <div className="flex items-center gap-2 flex-wrap">
                 <div className="relative"><Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" /><input type="text" placeholder="Cari KR / lambung / driver / tujuan..." value={searchQuery} onChange={e => { setPage(1); setSearchQuery(e.target.value); }} className="w-full sm:w-64 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl py-2 pl-9 pr-3 text-xs font-medium outline-none focus:ring-2 focus:ring-sky-500/15 focus:border-sky-400/40 transition-all text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-600" /></div>
@@ -386,7 +472,7 @@ export default function KRLoadingUnitsPage({ isTAM: _isTAM = false }: { isTAM?: 
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs border-collapse">
                 <thead><tr className="bg-slate-50 dark:bg-slate-800/50">
-                  <th className="px-4 py-4 font-black text-slate-400 uppercase tracking-widest text-[10px] whitespace-nowrap">Timestamp</th>
+                  <th className="px-4 py-4 font-black text-slate-400 uppercase tracking-widest text-[10px] whitespace-nowrap flex items-center gap-1"><Clock className="w-3 h-3" /> Timestamp</th>
                   <th className="px-4 py-4 font-black text-slate-400 uppercase tracking-widest text-[10px]">KR</th>
                   <th className="px-4 py-4 font-black text-slate-400 uppercase tracking-widest text-[10px]">PDC</th>
                   <th className="px-4 py-4 font-black text-slate-400 uppercase tracking-widest text-[10px] whitespace-nowrap">Tgl / Jam Muat</th>
@@ -398,7 +484,7 @@ export default function KRLoadingUnitsPage({ isTAM: _isTAM = false }: { isTAM?: 
                   <th className="px-4 py-4 font-black text-slate-400 uppercase tracking-widest text-[10px] text-right">Aksi</th>
                 </tr></thead>
                 <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                  {pagedData.length === 0 && (<tr><td colSpan={10} className="px-6 py-16 text-center"><AlertTriangle className="w-8 h-8 text-slate-300 mx-auto mb-3" /><p className="text-xs font-black text-slate-400 uppercase tracking-widest">Belum ada data loading untuk {monthLabel}</p></td></tr>)}
+                  {pagedData.length === 0 && (<tr><td colSpan={10} className="px-6 py-16 text-center"><AlertTriangle className="w-8 h-8 text-slate-300 mx-auto mb-3" /><p className="text-xs font-black text-slate-400 uppercase tracking-widest">Belum ada data loading untuk {rangeLabel}</p></td></tr>)}
                   {pagedData.map(r => {
                     const filled = countRangkaFilled(r);
                     const ts = r.entry_timestamp ? new Date(r.entry_timestamp) : null;
