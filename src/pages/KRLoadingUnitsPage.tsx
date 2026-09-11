@@ -394,17 +394,17 @@ export default function KRLoadingUnitsPage({ isTAM: _isTAM = false }: { isTAM?: 
           <div className="bg-white dark:bg-slate-900 p-6 md:p-8 rounded-4xl shadow-sm border border-slate-100 dark:border-slate-800">
             <div className="flex items-center gap-3 mb-6">
               <div className="w-10 h-10 rounded-xl bg-violet-50 dark:bg-violet-900/20 flex items-center justify-center"><Trophy className="w-5 h-5 text-violet-600 dark:text-violet-400" /></div>
-              <div><h3 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-widest">Perbandingan Checksheet KR vs Monitoring Unit</h3><p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest">{rangeLabel} • Y = nama KR • Monitoring vs Checksheet per KR</p></div>
+              <div><h3 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-widest">Perbandingan Checksheet KR vs Monitoring Unit</h3><p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest">{rangeLabel} • X = nama KR • Monitoring vs Checksheet per KR</p></div>
             </div>
             {comparison.length === 0 ? (
               <div className="py-16 text-center text-slate-400"><Users className="w-8 h-8 mx-auto mb-2 opacity-40" /><p className="text-xs font-black uppercase tracking-widest">Belum ada data untuk perbandingan</p></div>
             ) : (
-              <div className="h-[420px] w-full">
+              <div className="h-[360px] w-full">
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={comparisonChartData} layout="vertical" margin={{ top: 10, right: 32, left: 10, bottom: 0 }}>
-                    <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#e2e8f0" opacity={0.3} />
-                    <XAxis type="number" axisLine={false} tickLine={false} tick={{ fontSize: 10, fontWeight: 900, fill: '#94a3b8' }} allowDecimals={false} />
-                    <YAxis type="category" dataKey="nama_kr" axisLine={false} tickLine={false} tick={{ fontSize: 10, fontWeight: 900, fill: '#64748b' }} width={120} />
+                  <BarChart data={comparisonChartData} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" opacity={0.3} />
+                    <XAxis dataKey="nama_kr" axisLine={false} tickLine={false} tick={{ fontSize: 10, fontWeight: 900, fill: '#64748b' }} interval={0} angle={0} textAnchor="middle" height={36} />
+                    <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fontWeight: 900, fill: '#94a3b8' }} allowDecimals={false} />
                     <Tooltip cursor={{ fill: '#f1f5f9', opacity: 0.4 }} content={({ active, payload }) => {
                       if (active && payload && payload.length) {
                         const d: any = payload[0].payload;
@@ -421,8 +421,8 @@ export default function KRLoadingUnitsPage({ isTAM: _isTAM = false }: { isTAM?: 
                       return null;
                     }} />
                     <Legend formatter={(value) => <span className="text-[10px] font-black uppercase tracking-widest text-slate-600 dark:text-slate-400">{value}</span>} iconType="circle" />
-                    <Bar dataKey="monitoring" name="Monitoring Unit" fill={COLORS.monitoring} radius={[0, 8, 8, 0]} maxBarSize={18} />
-                    <Bar dataKey="checksheet" name="Checksheet KR" fill={COLORS.checksheet} radius={[0, 8, 8, 0]} maxBarSize={18} />
+                    <Bar dataKey="monitoring" name="Monitoring Unit" fill={COLORS.monitoring} radius={[8, 8, 0, 0]} maxBarSize={22} />
+                    <Bar dataKey="checksheet" name="Checksheet KR" fill={COLORS.checksheet} radius={[8, 8, 0, 0]} maxBarSize={22} />
                   </BarChart>
                 </ResponsiveContainer>
               </div>
