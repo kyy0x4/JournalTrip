@@ -87,6 +87,8 @@ const parseDurationHours = (str?: string | null): number | null => {
 const ITEMS_PER_PAGE = 15;
 
 const TIMELINE_FLOWS: Record<string, string[]> = {
+  'SINGLE CARRIER': ['OutPool', 'InPDC', 'OutPDC', 'Unloading'],
+  'DOUBLE DECK': ['OutPool', 'InPDC', 'OutPDC', 'Unloading'],
   'JBK': ['OutPool', 'InPDC', 'OutPDC', 'Unloading'],
   'TMMIN': ['OutPool', 'InPDC', 'OutPDC', 'Unloading'],
   'NGORO': [
@@ -182,10 +184,10 @@ export default function LeadTimePage({ isTAM = false }: { isTAM?: boolean }) {
   const [sortBy, setSortBy] = useState<string>('tanggal');
   const [sortDir, setSortDir] = useState<'asc'|'desc'>('desc');
 
-  const TAM_AREAS = ['ALL', 'JBK', 'NGORO', 'SUMATERA', 'PADANG', 'KALIMANTAN', 'SULAWESI'];
+  const TAM_AREAS = ['ALL', 'TAM', 'TMMIN', 'JBK', 'NGORO', 'SUMATERA', 'PADANG', 'KALIMANTAN', 'SULAWESI', 'SINGLE CARRIER', 'DOUBLE DECK'];
   const areas = isTAM
-    ? ['ALL', 'JBK', 'NGORO', 'TMMIN', 'SUMATERA', 'PADANG', 'SULAWESI', 'KALIMANTAN'].filter(a => TAM_AREAS.includes(a))
-    : ['ALL', 'JBK', 'NGORO', 'TMMIN', 'SUMATERA', 'PADANG', 'SULAWESI', 'KALIMANTAN'];
+    ? ['ALL', 'TAM', 'JBK', 'NGORO', 'SUMATERA', 'PADANG', 'SULAWESI', 'KALIMANTAN', 'SINGLE CARRIER', 'DOUBLE DECK'].filter(a => TAM_AREAS.includes(a))
+    : ['ALL', 'TAM', 'TMMIN', 'JBK', 'NGORO', 'SUMATERA', 'PADANG', 'SULAWESI', 'KALIMANTAN', 'SINGLE CARRIER', 'DOUBLE DECK'];
 
   useEscapeKey(() => {
     if (selectedReason) setSelectedReason(null);
@@ -318,6 +320,7 @@ export default function LeadTimePage({ isTAM = false }: { isTAM?: boolean }) {
       if (areaName === 'JBK') val = (findExactOrInclude(points, ['LeadTime Delivery']) || findExactOrInclude(info, ['Leadtime delivery'])).toLowerCase();
       else if (areaName === 'NGORO') val = findExactOrInclude(info, ['Status Leadtime Delivery']).toLowerCase();
       else if (areaName === 'TMMIN') val = (findExactOrInclude(points, ['LeadTime Delivery', 'Leadtime delivery']) || findExactOrInclude(info, ['Status Leadtime'])).toLowerCase();
+      else if (areaName === 'SINGLE CARRIER' || areaName === 'DOUBLE DECK') val = findExactOrInclude(info, ['Status Leadtime Delivery', 'Status Leadtime']).toLowerCase();
       else if (['PADANG', 'SULAWESI', 'KALIMANTAN'].includes(areaName)) val = findExactOrInclude(info, ['Status Leadtime', 'Actual Delivery']).toLowerCase();
       else if (areaName === 'SUMATERA') {
         const durationStr = findExactOrInclude(points, ['LeadTime Delivery']);
@@ -607,6 +610,7 @@ export default function LeadTimePage({ isTAM = false }: { isTAM?: boolean }) {
       if (areaName === 'JBK') return points['LeadTime Delivery'] || info['Leadtime delivery'] || '-';
       if (areaName === 'NGORO') return info['Status Leadtime Delivery'] || '-';
       if (areaName === 'TMMIN') return points['LeadTime Delivery'] || points['Leadtime Delivery'] || info['Status Leadtime'] || '-';
+      if (areaName === 'SINGLE CARRIER' || areaName === 'DOUBLE DECK') return info['Status Leadtime Delivery'] || info['Status Leadtime'] || '-';
       if (['PADANG', 'SULAWESI', 'KALIMANTAN'].includes(areaName)) return info['Actual Delivery'] || info['Status Leadtime'] || '-';
       if (areaName === 'SUMATERA') {
         for (const key in points) {
@@ -665,9 +669,6 @@ const reasonDelay = config.stage !== 'unknown' ? (getReasonDelay(item, config.st
       <div className="isolate bg-white dark:bg-slate-900 p-4 md:p-8 rounded-3xl md:rounded-4xl border border-slate-200/60 dark:border-slate-800/60 shadow-sm w-full box-border">
         <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">
           <div className="flex items-center gap-4 sm:gap-5 w-full lg:w-auto">
-            <div className="w-12 h-12 md:w-16 md:h-16 bg-blue-600 rounded-2xl flex items-center justify-center shadow-lg shadow-blue-600/20 shrink-0">
-              <Truck className="w-6 h-6 md:w-8 md:h-8 text-white" />
-            </div>
             <div className="min-w-0 flex-1">
               <h1 className="text-lg md:text-3xl font-black text-slate-900 dark:text-white tracking-tighter uppercase leading-tight truncate">LeadTime Center</h1>
               <p className="text-[10px] md:text-sm text-slate-500 dark:text-slate-400 font-bold flex items-center gap-1 mt-0.5 md:mt-1 uppercase tracking-widest truncate">
@@ -1391,8 +1392,8 @@ function AreaDropdown({ areas, selected, onChange }: { areas: string[]; selected
     if (btnRef.current) {
       const r = btnRef.current.getBoundingClientRect();
       const isMob = window.innerWidth < 640;
-      setDropPos({ 
-        top: r.bottom + 8, 
+      setDropPos({
+        top: r.bottom + 8,
         left: isMob ? Math.max(8, r.left) : r.left,
         width: Math.max(r.width, isMob ? window.innerWidth - 16 : 256)
       });
@@ -1400,13 +1401,35 @@ function AreaDropdown({ areas, selected, onChange }: { areas: string[]; selected
     setOpen(v => !v);
   };
 
-  const filtered = areas.filter(a => a.toLowerCase().includes(search.toLowerCase()));
+  const TAM_SUBS = ['JBK', 'SUMATERA', 'NGORO', 'SINGLE CARRIER', 'DOUBLE DECK'];
+  const topLevel = areas.filter(a => !TAM_SUBS.includes(a));
+  const filteredTop = topLevel.filter(a => a.toLowerCase().includes(search.toLowerCase()));
+  const filteredTamSubs = TAM_SUBS.filter(a => areas.includes(a) && a.toLowerCase().includes(search.toLowerCase()));
+  const showTamGroup = areas.includes('TAM') && ('tam'.includes(search.toLowerCase()) || filteredTamSubs.length > 0);
   const AREA_COLORS: Record<string, string> = {
-    ALL: 'bg-slate-500', JBK: 'bg-blue-500', NGORO: 'bg-orange-500', TMMIN: 'bg-red-500', SUMATERA: 'bg-emerald-500',
+    ALL: 'bg-slate-500', TAM: 'bg-red-500', JBK: 'bg-blue-500', NGORO: 'bg-orange-500', TMMIN: 'bg-red-500', SUMATERA: 'bg-emerald-500',
     PADANG: 'bg-violet-500', SULAWESI: 'bg-rose-500', KALIMANTAN: 'bg-cyan-500'
   };
   const getColor = (a: string) => AREA_COLORS[a] || 'bg-slate-400';
   const isDark = document.documentElement.classList.contains('dark');
+
+  const renderOption = (a: string, label?: string) => (
+    <button key={a} type="button" onClick={() => { onChange(a); setOpen(false); setSearch(''); }}
+      style={{
+        width: '100%', display: 'flex', alignItems: 'center', gap: 12,
+        padding: '10px 16px', textAlign: 'left', border: 'none', cursor: 'pointer',
+        backgroundColor: selected === a ? (isDark ? 'rgba(59,130,246,0.1)' : '#eff6ff') : 'transparent',
+      }}
+      onMouseEnter={e => { if (selected !== a) (e.currentTarget as HTMLElement).style.backgroundColor = isDark ? 'rgba(30,41,59,0.6)' : '#f8fafc'; }}
+      onMouseLeave={e => { if (selected !== a) (e.currentTarget as HTMLElement).style.backgroundColor = 'transparent'; }}
+    >
+      <div className={`w-2.5 h-2.5 rounded-full shrink-0 ${getColor(a)}`} />
+      <span style={{ fontSize: 11, fontWeight: 900, textTransform: 'uppercase', flex: 1, color: selected === a ? (isDark ? '#93c5fd' : '#2563eb') : (isDark ? '#cbd5e1' : '#374151'), letterSpacing: '0.05em' }}>
+        {label || (a === 'ALL' ? '✦ ALL AREA' : a)}
+      </span>
+      {selected === a && <CheckCircle2 style={{ width: 14, height: 14, color: '#3b82f6', flexShrink: 0 }} />}
+    </button>
+  );
 
   return (
     <div className="relative flex">
@@ -1449,23 +1472,14 @@ function AreaDropdown({ areas, selected, onChange }: { areas: string[]; selected
                 </div>
               </div>
               <div style={{ maxHeight: 256, overflowY: 'auto', paddingTop: 8, paddingBottom: 8 }}>
-                {filtered.map(a => (
-                  <button key={a} type="button" onClick={() => { onChange(a); setOpen(false); setSearch(''); }}
-                    style={{
-                      width: '100%', display: 'flex', alignItems: 'center', gap: 12,
-                      padding: '10px 16px', textAlign: 'left', border: 'none', cursor: 'pointer',
-                      backgroundColor: selected === a ? (isDark ? 'rgba(59,130,246,0.1)' : '#eff6ff') : 'transparent',
-                    }}
-                    onMouseEnter={e => { if (selected !== a) (e.currentTarget as HTMLElement).style.backgroundColor = isDark ? 'rgba(30,41,59,0.6)' : '#f8fafc'; }}
-                    onMouseLeave={e => { if (selected !== a) (e.currentTarget as HTMLElement).style.backgroundColor = 'transparent'; }}
-                  >
-                    <div className={`w-2.5 h-2.5 rounded-full shrink-0 ${getColor(a)}`} />
-                    <span style={{ fontSize: 11, fontWeight: 900, textTransform: 'uppercase', flex: 1, color: selected === a ? (isDark ? '#93c5fd' : '#2563eb') : (isDark ? '#cbd5e1' : '#374151'), letterSpacing: '0.05em' }}>
-                      {a === 'ALL' ? '✦ ALL AREA' : a}
-                    </span>
-                    {selected === a && <CheckCircle2 style={{ width: 14, height: 14, color: '#3b82f6', flexShrink: 0 }} />}
-                  </button>
-                ))}
+                {filteredTop.filter(a => a !== 'TAM').map(a => renderOption(a))}
+                {showTamGroup && (
+                  <div style={{ padding: '4px 16px 2px', fontSize: 9, fontWeight: 900, letterSpacing: '0.1em', color: '#94a3b8' }}>
+                    TAM ▾
+                  </div>
+                )}
+                {showTamGroup && renderOption('TAM', 'Semua TAM')}
+                {showTamGroup && filteredTamSubs.map(a => renderOption(a))}
               </div>
             </motion.div>
           </AnimatePresence>

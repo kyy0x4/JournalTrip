@@ -13,13 +13,17 @@ export function resolveTripJournalArea(trip: TripAreaRow): string {
   if (area === 'NGORO' || NGORO_PDC_CODES.includes(bongkar)) return 'NGORO';
   if (area === 'SUMATERA') return 'SUMATERA';
   if (area === 'TMMIN') return 'TMMIN';
+  if (area === 'SINGLE CARRIER') return 'SINGLE CARRIER';
+  if (area === 'DOUBLE DECK') return 'DOUBLE DECK';
   return 'JBK';
 }
+
+export const JOURNAL_TAM_AREAS = ['JBK', 'SUMATERA', 'NGORO', 'SINGLE CARRIER', 'DOUBLE DECK'];
 
 function tripMatchesJournalArea(trip: TripAreaRow, selectedArea: string): boolean {
   if (!selectedArea || selectedArea === 'ALL') return true;
   if (selectedArea === 'TAM') {
-    return ['JBK', 'NGORO', 'SUMATERA'].includes(resolveTripJournalArea(trip));
+    return JOURNAL_TAM_AREAS.includes(resolveTripJournalArea(trip));
   }
   return resolveTripJournalArea(trip) === selectedArea;
 }
@@ -37,7 +41,7 @@ function applyTripAreaQuery<T extends { or: (filters: string) => T; in: (col: st
   area: string
 ): T {
   if (!area || area === 'ALL') return query;
-  if (area === 'TAM') return query.in('area', ['JBK', 'NGORO', 'SUMATERA']);
+  if (area === 'TAM') return query.in('area', ['JBK', 'NGORO', 'SUMATERA', 'SINGLE CARRIER', 'DOUBLE DECK']);
   if (area === 'NGORO') return query.or('area.eq.NGORO,pdc_bongkar.in.(MJKT,MKJT)');
   if (area === 'JBK') return query.in('area', ['JBK', 'NGORO']);
   return query.eq('area', area);
@@ -409,7 +413,7 @@ export async function fetchFleetMonitoringData(date: string) {
       let changeRitase = 0;
 
       // Project Categorization Logic (using 'area' column as requested)
-      const tamKeywords = ['JBK', 'NGORO', 'SUMATERA'];
+      const tamKeywords = ['JBK', 'NGORO', 'SUMATERA', 'SINGLE CARRIER', 'DOUBLE DECK'];
       const isTAM = driverTrips.some(t => {
         const area = (t.area || '').toUpperCase();
         return tamKeywords.some(key => area.includes(key));

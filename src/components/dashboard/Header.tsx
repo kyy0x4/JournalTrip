@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'motion/react';
-import { User, ShieldCheck, X, ZoomIn, Calendar, MapPin, CheckCircle2 } from 'lucide-react';
+import { User, ShieldCheck, X, ZoomIn, Calendar, MapPin, CheckCircle2, ChevronDown } from 'lucide-react';
 import { DriverDetails } from '../../types';
 
 interface HeaderProps {
@@ -13,40 +13,109 @@ interface HeaderProps {
   isTAM?: boolean;
 }
 
-const areas = ['JBK', 'NGORO', 'SUMATERA', 'TMMIN'];
+const TAM_AREAS = ['JBK', 'SUMATERA', 'NGORO', 'SINGLE CARRIER', 'DOUBLE DECK'];
+const TMMIN_AREA = 'TMMIN';
 
 export default function Header({ driver, selectedDate, onDateChange, selectedArea, onAreaChange, isTAM = false }: HeaderProps) {
   const [showSimModal, setShowSimModal] = useState(false);
+  const [tamOpen, setTamOpen] = useState(false);
+  const tamRef = useRef<HTMLDivElement>(null);
+  const isTamSelected = selectedArea !== TMMIN_AREA;
+
+  useEffect(() => {
+    if (!tamOpen) return;
+    const handler = (e: MouseEvent) => {
+      if (tamRef.current && !tamRef.current.contains(e.target as Node)) setTamOpen(false);
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [tamOpen]);
 
   return (
     <div className="space-y-6">
-      <motion.div 
+      <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
         className="flex flex-col md:flex-row md:items-center justify-between gap-6"
       >
         <div className="flex flex-wrap items-center gap-3">
-          {/* Area Switcher Premium - Pembersihan total outline/border */}
           <div className="glass-card p-1 rounded-2xl flex items-center gap-1">
-            {(isTAM ? ['JBK', 'NGORO', 'SUMATERA'] : areas).map((area) => (
-                <motion.button
-                  key={area}
-                  whileTap={{ scale: 0.97 }}
-                  onClick={() => onAreaChange(area)}
-                  className={`relative px-4 py-2 rounded-xl text-xs font-black transition-all border-none outline-none focus:outline-none focus:ring-0 focus-visible:outline-none ${
-                    selectedArea === area ? 'text-white' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
-                  }`}
-                >
-                  {selectedArea === area && (
-                    <motion.div
-                      layoutId="activeArea"
-                      className="absolute inset-0 claude-gradient rounded-xl shadow-[0_8px_20px_-6px_rgba(217,119,87,0.5)]"
-                      transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
-                    />
-                  )}
-                  <span className="relative z-10 uppercase tracking-wider">{area}</span>
-                </motion.button>
-              ))}
+            <div ref={tamRef} className="relative">
+              <motion.button
+                whileTap={{ scale: 0.97 }}
+                onClick={() => {
+                  if (!isTamSelected) onAreaChange(TAM_AREAS[0]);
+                  setTamOpen(o => !o);
+                }}
+                className={`relative px-4 py-2 rounded-xl text-xs font-black transition-all border-none outline-none focus:outline-none focus:ring-0 focus-visible:outline-none flex items-center gap-1.5 ${
+                  isTamSelected ? 'text-white' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
+                }`}
+              >
+                {isTamSelected && (
+                  <motion.div
+                    layoutId="activeArea"
+                    className="absolute inset-0 claude-gradient rounded-xl shadow-[0_8px_20px_-6px_rgba(217,119,87,0.5)]"
+                    transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
+                  />
+                )}
+                <span className="relative z-10 uppercase tracking-wider">
+                  {isTamSelected ? selectedArea : 'TAM'}
+                </span>
+                <ChevronDown className={`relative z-10 w-3.5 h-3.5 transition-transform ${tamOpen ? 'rotate-180' : ''}`} />
+              </motion.button>
+
+              <AnimatePresence>
+                {tamOpen && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 8, scale: 0.98 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: 8, scale: 0.98 }}
+                    transition={{ duration: 0.15, ease: 'easeOut' }}
+                    className="absolute top-full left-0 mt-1.5 min-w-[220px] p-1.5 rounded-xl border border-slate-200/60 dark:border-white/[0.08] bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl shadow-2xl shadow-slate-900/10 dark:shadow-black/40 z-50"
+                  >
+                    <p className="px-3 pt-2 pb-1 text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">
+                      TAM
+                    </p>
+                    {TAM_AREAS.map((area) => (
+                      <button
+                        key={area}
+                        type="button"
+                        onClick={() => { onAreaChange(area); setTamOpen(false); }}
+                        className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors text-left ${
+                          selectedArea === area
+                            ? 'bg-red-50 dark:bg-red-500/10 text-red-700 dark:text-red-300'
+                            : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/[0.06] hover:text-slate-900 dark:hover:text-white'
+                        }`}
+                      >
+                        <span className="flex-1 text-xs font-bold uppercase tracking-wider">{area}</span>
+                        {selectedArea === area && (
+                          <span className="w-1.5 h-1.5 rounded-full bg-red-500 shrink-0" />
+                        )}
+                      </button>
+                    ))}
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+
+            {!isTAM && (
+              <motion.button
+                whileTap={{ scale: 0.97 }}
+                onClick={() => { onAreaChange(TMMIN_AREA); setTamOpen(false); }}
+                className={`relative px-4 py-2 rounded-xl text-xs font-black transition-all border-none outline-none focus:outline-none focus:ring-0 focus-visible:outline-none ${
+                  selectedArea === TMMIN_AREA ? 'text-white' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
+                }`}
+              >
+                {!isTamSelected && (
+                  <motion.div
+                    layoutId="activeArea"
+                    className="absolute inset-0 claude-gradient rounded-xl shadow-[0_8px_20px_-6px_rgba(217,119,87,0.5)]"
+                    transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
+                  />
+                )}
+                <span className="relative z-10 uppercase tracking-wider">{TMMIN_AREA}</span>
+              </motion.button>
+            )}
           </div>
         </div>
       </motion.div>

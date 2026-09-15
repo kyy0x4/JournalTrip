@@ -1,19 +1,20 @@
 import { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { useEscapeKey } from '../hooks/useEscapeKey';
-import { 
-  Truck, 
-  MapPin, 
-  Clock, 
-  CheckCircle2, 
-  Navigation, 
+import {
+  Truck,
+  MapPin,
+  Clock,
+  CheckCircle2,
+  Navigation,
   Building2,
   Search,
   ArrowRight,
   Calendar,
   RefreshCcw,
   X,
-  User
+  User,
+  ChevronDown
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { fetchFleetMonitoringData } from '../services/dataFetcher';
@@ -43,10 +44,23 @@ interface FleetArmada {
   allTrips: any[];
 }
 
+const FLEET_TAM_AREAS = ['JBK', 'SUMATERA', 'NGORO', 'SINGLE CARRIER', 'DOUBLE DECK'];
+
 export default function FleetMonitoringPage({ isTAM = false }: { isTAM?: boolean }) {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedShift, setSelectedShift] = useState<'ALL' | 'DAY' | 'NIGHT'>('ALL');
   const [selectedArea, setSelectedArea] = useState('ALL');
+  const [tamOpen, setTamOpen] = useState(false);
+  const tamRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!tamOpen) return;
+    const handler = (e: MouseEvent) => {
+      if (tamRef.current && !tamRef.current.contains(e.target as Node)) setTamOpen(false);
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [tamOpen]);
   const [fleetData, setFleetData] = useState<FleetArmada[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedDriver, setSelectedDriver] = useState<FleetArmada | null>(null);
@@ -66,7 +80,7 @@ export default function FleetMonitoringPage({ isTAM = false }: { isTAM?: boolean
   const loadData = useCallback(async () => {
     setIsLoading(true);
     const data = await fetchFleetMonitoringData(selectedDate);
-    const TAM_AREAS = ['JBK', 'NGORO', 'SUMATERA'];
+    const TAM_AREAS = FLEET_TAM_AREAS;
     const mappedData = (data || []).map((item: any) => ({
       ...item,
       areaCategory: item.project
@@ -145,16 +159,20 @@ export default function FleetMonitoringPage({ isTAM = false }: { isTAM?: boolean
     }
   };
 
+  const isTamSubSelected = FLEET_TAM_AREAS.includes(selectedArea);
+
   const filteredFleet = fleetData.filter(f => {
     const matchesSearch = f.driverName.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          f.nopol.toLowerCase().includes(searchTerm.toLowerCase());
-    
+
     const matchesShift = selectedShift === 'ALL' || (f as any).shift.toUpperCase().includes(selectedShift);
 
     let matchesArea = true;
     if (selectedArea !== 'ALL') {
-      if (isTAM) {
-        // For TAM users, filter by the actual area field (JBK, NGORO, SUMATERA)
+      if (isTamSubSelected) {
+        matchesArea = ((f as any).area || '').toUpperCase().includes(selectedArea);
+      } else if (isTAM) {
+        // For TAM users, filter by the actual area field (JBK, NGORO, SUMATERA, ...)
         matchesArea = ((f as any).area || '').toUpperCase().includes(selectedArea);
       } else {
         // For OPS users, filter by project category (TAM or TMMIN)
@@ -192,18 +210,81 @@ export default function FleetMonitoringPage({ isTAM = false }: { isTAM?: boolean
           {/* Area & Shift Filter - Responsive Group */}
           <div className="grid grid-cols-1 sm:flex items-center gap-3 w-full sm:w-auto">
             <div className="flex bg-slate-100 dark:bg-slate-900 p-1 rounded-xl border border-slate-200/60 dark:border-slate-800 shadow-inner w-full sm:w-auto">
-              {(isTAM ? ['ALL', 'JBK', 'NGORO', 'SUMATERA'] : ['ALL', 'TAM', 'TMMIN']).map((p) => (
-                <button
-                  key={p}
-                  onClick={() => setSelectedArea(p)}
-                  className={`flex-1 sm:w-16 py-2 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all ${
-                    selectedArea === p 
-                      ? 'bg-red-600 text-white shadow-lg shadow-red-500/20' 
-                      : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300'
-                  }`}
-                >
-                  {p}
-                </button>
+              {(['ALL', 'TAM', 'TMMIN'] as const).map((p) => (
+                p === 'TAM' ? (
+                  <div key={p} ref={tamRef} className="relative flex-1 sm:w-auto">
+                    <button
+                      onClick={() => {
+                        if (selectedArea !== 'TAM' && !FLEET_TAM_AREAS.includes(selectedArea)) setSelectedArea('TAM');
+                        setTamOpen(o => !o);
+                      }}
+                      className={`w-full sm:w-auto sm:min-w-16 px-2 py-2 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-1 ${
+                        selectedArea === 'TAM' || FLEET_TAM_AREAS.includes(selectedArea)
+                          ? 'bg-red-600 text-white shadow-lg shadow-red-500/20'
+                          : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300'
+                      }`}
+                    >
+                      {FLEET_TAM_AREAS.includes(selectedArea) ? selectedArea : 'TAM'}
+                      <ChevronDown className={`w-3 h-3 transition-transform ${tamOpen ? 'rotate-180' : ''}`} />
+                    </button>
+
+                    <AnimatePresence>
+                      {tamOpen && (
+                        <motion.div
+                          initial={{ opacity: 0, y: 8, scale: 0.98 }}
+                          animate={{ opacity: 1, y: 0, scale: 1 }}
+                          exit={{ opacity: 0, y: 8, scale: 0.98 }}
+                          transition={{ duration: 0.15, ease: 'easeOut' }}
+                          className="absolute top-full left-0 mt-1.5 min-w-[220px] p-1.5 rounded-xl border border-slate-200/60 dark:border-white/[0.08] bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl shadow-2xl shadow-slate-900/10 dark:shadow-black/40 z-50"
+                        >
+                          <button
+                            type="button"
+                            onClick={() => { setSelectedArea('TAM'); setTamOpen(false); }}
+                            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors text-left ${
+                              selectedArea === 'TAM'
+                                ? 'bg-red-50 dark:bg-red-500/10 text-red-700 dark:text-red-300'
+                                : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/[0.06] hover:text-slate-900 dark:hover:text-white'
+                            }`}
+                          >
+                            <span className="flex-1 text-xs font-bold uppercase tracking-wider">Semua TAM</span>
+                            {selectedArea === 'TAM' && (
+                              <span className="w-1.5 h-1.5 rounded-full bg-red-500 shrink-0" />
+                            )}
+                          </button>
+                          {FLEET_TAM_AREAS.map((a) => (
+                            <button
+                              key={a}
+                              type="button"
+                              onClick={() => { setSelectedArea(a); setTamOpen(false); }}
+                              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors text-left ${
+                                selectedArea === a
+                                  ? 'bg-red-50 dark:bg-red-500/10 text-red-700 dark:text-red-300'
+                                  : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/[0.06] hover:text-slate-900 dark:hover:text-white'
+                              }`}
+                            >
+                              <span className="flex-1 text-xs font-bold uppercase tracking-wider">{a}</span>
+                              {selectedArea === a && (
+                                <span className="w-1.5 h-1.5 rounded-full bg-red-500 shrink-0" />
+                              )}
+                            </button>
+                          ))}
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </div>
+                ) : (
+                  <button
+                    key={p}
+                    onClick={() => { setSelectedArea(p); setTamOpen(false); }}
+                    className={`flex-1 sm:w-16 py-2 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all ${
+                      selectedArea === p
+                        ? 'bg-red-600 text-white shadow-lg shadow-red-500/20'
+                        : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300'
+                    }`}
+                  >
+                    {p}
+                  </button>
+                )
               ))}
             </div>
 

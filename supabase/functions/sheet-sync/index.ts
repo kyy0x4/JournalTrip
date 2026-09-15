@@ -113,7 +113,7 @@ Deno.serve(async (req) => {
           return json({ error: 'match wajib objek filter untuk delete.' }, 400, corsHeaders);
         }
         let q = serviceClient.from(table).delete();
-        applyMatch(q, match);
+        q = applyMatch(q, match);
         const { error } = await q;
         if (error) throw error;
         return json({ ok: true }, 200, corsHeaders);
@@ -128,7 +128,7 @@ Deno.serve(async (req) => {
           return json({ error: 'rows wajib array non-kosong untuk delete_then_insert.' }, 400, corsHeaders);
         }
         let del = serviceClient.from(table).delete();
-        applyMatch(del, match);
+        del = applyMatch(del, match);
         const { error: delErr } = await del;
         if (delErr) throw delErr;
 
@@ -157,8 +157,8 @@ Deno.serve(async (req) => {
 });
 
 // ── Insert dengan batching + paralel (biar sync ribuan baris cepet) ────────────
-const INSERT_CHUNK = 500;
-const MAX_CONCURRENCY = 4; // batasi request paralel biar nggak overload DB
+const INSERT_CHUNK = 250;
+const MAX_CONCURRENCY = 2; // turun biar nggak timeout di plan free
 
 async function insertChunked(client: any, table: string, rows: any[]): Promise<number> {
   const chunks: any[][] = [];
@@ -188,10 +188,6 @@ function json(payload: unknown, status = 200, headers: Record<string, string> = 
   });
 }
 
-// Terapkan filter match ke query. Nilai bisa:
-//   string → eq      { "area": "JBK" }
-//   array  → in      { "tanggal": ["2026-08-01","2026-08-02"] }
-//   objek  → range   { "tanggal_date": { "gte": "2026-01-01", "lte": "2026-12-31" } }
 function applyMatch(q: any, match: Record<string, any>) {
   for (const [col, val] of Object.entries(match)) {
     if (Array.isArray(val)) {
@@ -209,6 +205,7 @@ function applyMatch(q: any, match: Record<string, any>) {
       q = q.eq(col, val as string);
     }
   }
+  return q;
 }
 
 // Constant-time string comparison (anti timing attack)

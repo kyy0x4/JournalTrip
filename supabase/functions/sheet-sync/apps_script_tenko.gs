@@ -3,7 +3,7 @@
 //
 // CARA PAKAI:
 //   1. Copy SELURUH isi file ini ke project Apps Script sheet Tenko (replace semua)
-//   2. Isi WRITE_KEY sesuai yang di-set di Supabase secrets
+//   2. Set WRITE_KEY di Script Properties (Project Settings → Script Properties)
 //   3. Save → tutup & buka ulang spreadsheet → menu "🚀 SYNC DASHBOARD" muncul
 //
 // CATATAN: file ini khusus Tenko. Jangan dicampur dengan script trips/leadtime —
@@ -11,7 +11,8 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const FUNCTION_URL = 'https://tdtywoejybnunxyqzmst.functions.supabase.co/sheet-sync';
-const WRITE_KEY = '<ISI_DENGAN_WRITE_KEY>';
+// WRITE_KEY dari Script Properties (Project Settings → Script Properties)
+const WRITE_KEY = PropertiesService.getScriptProperties().getProperty('WRITE_KEY') || '';
 const CALLSYNC_BATCH = 2000; // pecah batch > 2000 baris biar sync cepet
 
 // ── Kirim operasi ke edge function ─────────────────────────────────────────────

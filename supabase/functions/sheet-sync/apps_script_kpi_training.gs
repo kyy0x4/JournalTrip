@@ -13,7 +13,8 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const FUNCTION_URL = 'https://tdtywoejybnunxyqzmst.functions.supabase.co/sheet-sync';
-const WRITE_KEY = '<ISI_DENGAN_WRITE_KEY>';
+// WRITE_KEY dari Script Properties (Project Settings → Script Properties)
+const WRITE_KEY = PropertiesService.getScriptProperties().getProperty('WRITE_KEY') || '';
 
 // ── Menu ────────────────────────────────────────────────────────────────────────
 function onOpen() {

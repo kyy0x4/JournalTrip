@@ -32,7 +32,13 @@ export const leadtimeService = {
 
       if (startDate) query = query.gte('tanggal', startDate);
       if (endDate)   query = query.lte('tanggal', endDate);
-      if (area && area !== 'ALL') query = query.eq('area', area);
+      if (area && area !== 'ALL') {
+        if (area === 'TAM') {
+          query = query.in('area', ['JBK', 'NGORO', 'SUMATERA', 'SINGLE CARRIER', 'DOUBLE DECK']);
+        } else {
+          query = query.eq('area', area);
+        }
+      }
 
       const { data, error } = await query;
       if (error) throw error;

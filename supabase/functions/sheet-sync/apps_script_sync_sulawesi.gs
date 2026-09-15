@@ -1,22 +1,18 @@
 // ═══════════════════════════════════════════════════════════════════════════════
-// APPS SCRIPT — SYNC SULAWESI (khusus Looker Sulawesi → leadtimes area SULAWESI)
+// APPS SCRIPT — FILE: SYNC SULAWESI
 //
-// CARA PAKAI:
-//   1. Copy SELURUH isi file ini ke project Apps Script spreadsheet Monitoring (replace)
-//   2. Isi WRITE_KEY sesuai yang di-set di Supabase secrets
-//   3. Save → buka spreadsheet → menu "🚀 SYNC DASHBOARD" → "Sinkron LeadTime Sulawesi"
+// Project Apps Script spreadsheet Monitoring berisi 3 file:
+//   1. send data      → file UTAMA: onOpen + callSync/callSyncBatched + konstanta
+//   2. otomatisasi    → tidak ada kode sync, biarkan
+//   3. sync sulawesi  → file INI: cuma syncLeadTimeSulawesi + helper-nya
 //
-// CATATAN:
-//   - Data disimpan di kolom `checkpoints` (bukan status_info) dengan format:
-//       "Actual OutPool", "Actual (Lokasi)", "Actual Unloading",
-//       "Actual (Lokasi PULANG)", "Actual BackToPool", "TUJUAN", "STATUS"
-//   - Lokasi pulang dikasih akhiran " PULANG" biar nggak tabrakan sama lokasi berangkat.
-//   - PADANG & KALIMANTAN belum disertakan — sheet-nya belum dibereskan.
+// CATATAN PENTING:
+//   - TIDAK ada onOpen di file ini (onOpen cuma di "send data").
+//   - TIDAK ada callSync/callSyncBatched/konstanta di sini — itu semua udah ada
+//     di "send data", dan karena satu project, fungsi di sini otomatis bisa akses.
+//   - Menu "Sinkron LeadTime Sulawesi" ada di onOpen "send data", memanggil
+//     syncLeadTimeSulawesi yang didefinisikan di file ini.
 // ═══════════════════════════════════════════════════════════════════════════════
-
-const FUNCTION_URL = 'https://tdtywoejybnunxyqzmst.functions.supabase.co/sheet-sync';
-const WRITE_KEY = '<ISI_DENGAN_WRITE_KEY>';
-const CALLSYNC_BATCH = 2000;
 
 const SULAWESI_SHEET = 'Looker Sulawesi';
 const AREA = 'SULAWESI';
@@ -24,54 +20,6 @@ const AREA = 'SULAWESI';
 // Lokasi berangkat & pulang (urutan rute)
 const GO_LOCATIONS = ['Pinrang', 'Majene', 'Mamuju', 'Karrosa', 'Sarjo', 'Kebon Kopi', 'Kasimbar', 'Santigi', 'Paguat'];
 const RETURN_LOCATIONS = ['Paguat', 'Santigi', 'Kasimbar', 'Kebon Kopi', 'Sarjo', 'Karrosa', 'Mamuju', 'Majene', 'Pinrang'];
-
-// ── Menu ────────────────────────────────────────────────────────────────────────
-function onOpen() {
-  const ui = SpreadsheetApp.getUi();
-  ui.createMenu('🚀 SYNC DASHBOARD')
-    .addItem('⏱️ Sinkron LeadTime Sulawesi', 'syncLeadTimeSulawesi')
-    .addToUi();
-}
-
-// ── Kirim operasi ke edge function ─────────────────────────────────────────────
-function callSync(table, operation, rows, match) {
-  const payload = { table, operation };
-  if (rows) payload.rows = rows;
-  if (match) payload.match = match;
-
-  const res = UrlFetchApp.fetch(FUNCTION_URL, {
-    method: 'POST',
-    contentType: 'application/json',
-    headers: { 'x-write-key': WRITE_KEY },
-    payload: JSON.stringify(payload),
-    muteHttpExceptions: true,
-    timeout: 290,
-  });
-
-  const code = res.getResponseCode();
-  const body = res.getContentText();
-  if (code >= 400) {
-    throw new Error('Sync gagal (' + code + '): ' + body);
-  }
-  return JSON.parse(body);
-}
-
-function callSyncBatched(table, operation, rows, match) {
-  if (!rows || rows.length <= CALLSYNC_BATCH) {
-    return callSync(table, operation, rows, match);
-  }
-
-  let total = 0;
-  const first = callSync(table, operation, rows.slice(0, CALLSYNC_BATCH), match);
-  total += first.count || 0;
-
-  for (let i = CALLSYNC_BATCH; i < rows.length; i += CALLSYNC_BATCH) {
-    const chunk = rows.slice(i, i + CALLSYNC_BATCH);
-    const r = callSync(table, 'insert', chunk);
-    total += r.count || 0;
-  }
-  return { ok: true, count: total };
-}
 
 // ── Helpers format ──────────────────────────────────────────────────────────────
 function formatDateRaw(v) {
