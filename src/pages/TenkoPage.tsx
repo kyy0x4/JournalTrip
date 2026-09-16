@@ -7,7 +7,7 @@ import {
   Calendar, Search, ChevronDown, CheckCircle2, XCircle,
   TrendingUp, BarChart3, PieChart as PieIcon, ClipboardList,
   Building2, Users, Pencil, Loader2, LogIn, Lock,
-  ChevronLeft, ChevronRight, Zap
+  ChevronLeft, ChevronRight, Zap, Camera
 } from 'lucide-react';
 import {
   BarChart, Bar, LineChart, Line, PieChart, Pie, Cell,
@@ -16,11 +16,13 @@ import {
 } from 'recharts';
 import { supabase } from '../lib/supabase';
 import AuthModal from '../components/auth/AuthModal';
+import { isAdminUser } from '../constants/roles';
 import * as tenkoService from '../services/tenkoService';
 import {
   TenkoRecord,
   TenkoSummary,
   TenkoMetricConfig,
+  TenkoMetricId,
   MetricTrendPoint,
   TENKO_HEALTH_METRICS,
   TENSI_FAKTOR_OPTIONS,
@@ -46,6 +48,15 @@ const METRIC_ICONS: Record<string, React.ReactNode> = {
   fatigue: <Zap className="w-6 h-6 text-amber-500" />,
   mental: <Eye className="w-6 h-6 text-emerald-500" />,
 };
+
+type TensiEvidenceSlot = 'foto_tensi_tinggi' | 'foto_istirahat' | 'foto_tensi_ulang';
+type TensiEvidence = Record<TensiEvidenceSlot, string | null>;
+const EVIDENCE_SLOTS: { key: TensiEvidenceSlot; label: string; short: string }[] = [
+  { key: 'foto_tensi_tinggi', label: '1 — Tensi Tinggi', short: 'Tensi tinggi' },
+  { key: 'foto_istirahat', label: '2 — Sedang Istirahat', short: 'Istirahat' },
+  { key: 'foto_tensi_ulang', label: '3 — Tensi Ulang Turun', short: 'Tensi ulang' },
+];
+const EMPTY_EVIDENCE: TensiEvidence = { foto_tensi_tinggi: null, foto_istirahat: null, foto_tensi_ulang: null };
 
 export default function TenkoPage({ isTAM = false }: { isTAM?: boolean }) {
   const [selectedCustomer, setSelectedCustomer] = useState('ALL');
@@ -77,16 +88,27 @@ export default function TenkoPage({ isTAM = false }: { isTAM?: boolean }) {
   const [summary, setSummary] = useState<TenkoSummary | null>(null);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
-  const [crossFilter, setCrossFilter] = useState<{ tensiStatus: string | null; date: string | null }>({ tensiStatus: null, date: null });
+  const [crossFilter, setCrossFilter] = useState<{ metricId: TenkoMetricId | null; status: string | null; date: string | null }>({ metricId: null, status: null, date: null });
   const [metricPage, setMetricPage] = useState(0);
   const [chartView, setChartView] = useState<'date' | 'driver'>('date');
   const activeMetric: TenkoMetricConfig = TENKO_HEALTH_METRICS[metricPage];
   const totalMetricPages = TENKO_HEALTH_METRICS.length;
 
-  const toggleCrossFilter = (key: 'tensiStatus' | 'date', value: string) => {
-    setCrossFilter(prev => ({ ...prev, [key]: prev[key] === value ? null : value }));
+  const toggleMetricStatusFilter = (metricId: TenkoMetricId, key: string) => {
+    setCrossFilter(prev => (prev.metricId === metricId && prev.status === key
+      ? { ...prev, metricId: null, status: null }
+      : { ...prev, metricId, status: key }));
   };
-  const clearCrossFilters = () => setCrossFilter({ tensiStatus: null, date: null });
+  const toggleDateFilter = (value: string) => {
+    setCrossFilter(prev => ({ ...prev, date: prev.date === value ? null : value }));
+  };
+  const clearCrossFilters = () => setCrossFilter({ metricId: null, status: null, date: null });
+  const activeStatusLabel = (() => {
+    if (!crossFilter.metricId || !crossFilter.status) return null;
+    const metric = TENKO_HEALTH_METRICS.find(m => m.id === crossFilter.metricId);
+    const cat = metric?.categories.find(c => c.key === crossFilter.status);
+    return { metricTitle: metric?.title ?? crossFilter.metricId, label: cat?.label ?? crossFilter.status };
+  })();
 
   // Initial load for areas
   useEffect(() => {
@@ -122,7 +144,7 @@ export default function TenkoPage({ isTAM = false }: { isTAM?: boolean }) {
   useEffect(() => {
     const loadData = async () => {
       setLoading(true);
-      setCrossFilter({ tensiStatus: null, date: null });
+      setCrossFilter({ metricId: null, status: null, date: null });
       const data = await tenkoService.fetchTenkoData(startDate, endDate, selectedCustomer, selectedArea, personnelType);
       
       if (isTAM && data.summary && data.summary.raw) {
@@ -142,11 +164,12 @@ export default function TenkoPage({ isTAM = false }: { isTAM?: boolean }) {
 
   const crossFilteredRecords = useMemo(() => {
     if (!summary?.raw) return [];
+    const filterMetric = crossFilter.metricId
+      ? TENKO_HEALTH_METRICS.find(m => m.id === crossFilter.metricId)
+      : undefined;
     return summary.raw.filter(r => {
-      if (crossFilter.tensiStatus) {
-        if (crossFilter.tensiStatus === 'Normal' && (r.sistolik >= 145 || r.diastolik >= 90 || r.sistolik < 90 || r.diastolik < 60)) return false;
-        if (crossFilter.tensiStatus === 'Hipertensi' && !(r.sistolik >= 145 || r.diastolik >= 90)) return false;
-        if (crossFilter.tensiStatus === 'Hipotensi' && !(r.sistolik < 90 || r.diastolik < 60)) return false;
+      if (filterMetric && crossFilter.status) {
+        if (filterMetric.classify(r) !== crossFilter.status) return false;
       }
       if (crossFilter.date && !tenkoService.matchesPeriodFilter(r.tanggal, crossFilter.date)) return false;
       if (searchQuery && !r.nama_driver?.toLowerCase().includes(searchQuery.toLowerCase()) && !r.nopol?.toLowerCase().includes(searchQuery.toLowerCase())) return false;
@@ -155,7 +178,7 @@ export default function TenkoPage({ isTAM = false }: { isTAM?: boolean }) {
   }, [summary, crossFilter, searchQuery]);
 
   const crossSummary = useMemo(() => {
-    if (!crossFilter.tensiStatus && !crossFilter.date) return summary;
+    if (!crossFilter.status && !crossFilter.date) return summary;
     return tenkoService.calculateSummary(crossFilteredRecords);
   }, [crossFilteredRecords, crossFilter, summary]);
 
@@ -191,12 +214,9 @@ export default function TenkoPage({ isTAM = false }: { isTAM?: boolean }) {
   const goToMetricPage = (next: number) => {
     const wrapped = ((next % totalMetricPages) + totalMetricPages) % totalMetricPages;
     setMetricPage(wrapped);
-    if (TENKO_HEALTH_METRICS[wrapped].id !== 'tensi') {
-      setCrossFilter(prev => ({ ...prev, tensiStatus: null }));
-    }
   };
 
-  const hasActiveCrossFilter = crossFilter.tensiStatus !== null || crossFilter.date !== null;
+  const hasActiveCrossFilter = crossFilter.status !== null || crossFilter.date !== null;
 
   const [editingFaktor, setEditingFaktor] = useState<TenkoRecord | null>(null);
   const [faktorForm, setFaktorForm] = useState({ tensi_faktor: '', tensi_keterangan: '' });
@@ -205,6 +225,10 @@ export default function TenkoPage({ isTAM = false }: { isTAM?: boolean }) {
   const [pendingAction, setPendingAction] = useState<(() => void) | null>(null);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [userEmail, setUserEmail] = useState<string | null>(null);
+  const [evidenceMap, setEvidenceMap] = useState<Record<string, TensiEvidence>>({});
+  const [evidenceForm, setEvidenceForm] = useState<TensiEvidence>({ ...EMPTY_EVIDENCE });
+  const [uploadingSlot, setUploadingSlot] = useState<TensiEvidenceSlot | null>(null);
+  const isAdmin = isAdminUser(userEmail);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -240,6 +264,98 @@ export default function TenkoPage({ isTAM = false }: { isTAM?: boolean }) {
       tensi_faktor: record.tensi_faktor || '',
       tensi_keterangan: record.tensi_keterangan || '',
     });
+    setEvidenceForm(evidenceMap[record.id] ? { ...evidenceMap[record.id] } : { ...EMPTY_EVIDENCE });
+    void (async () => {
+      const { data } = await supabase
+        .from('tenko_tensi_evidence')
+        .select('foto_tensi_tinggi, foto_istirahat, foto_tensi_ulang')
+        .eq('tenko_id', record.id)
+        .maybeSingle();
+      if (data) {
+        const ev = {
+          foto_tensi_tinggi: data.foto_tensi_tinggi || null,
+          foto_istirahat: data.foto_istirahat || null,
+          foto_tensi_ulang: data.foto_tensi_ulang || null,
+        };
+        setEvidenceMap(prev => ({ ...prev, [record.id]: ev }));
+        setEditingFaktor(cur => {
+          if (cur && cur.id === record.id) setEvidenceForm(ev);
+          return cur;
+        });
+      }
+    })();
+  };
+
+  const handleEvidenceUpload = async (slot: TensiEvidenceSlot, file: File | undefined) => {
+    if (!file || !editingFaktor) return;
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!isAdminUser(session?.user?.email)) {
+      alert('Hanya akun kmdimcc yang bisa upload evidence.');
+      return;
+    }
+    if (!file.type.startsWith('image/')) {
+      alert('File harus berupa gambar.');
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      alert('Ukuran foto maksimal 5MB.');
+      return;
+    }
+    setUploadingSlot(slot);
+    try {
+      const ext = file.name.split('.').pop() || 'jpg';
+      const path = `${editingFaktor.tanggal}/${editingFaktor.id}/${slot}_${Date.now()}.${ext}`;
+      const { error: uploadError } = await supabase.storage.from('tenko-evidence').upload(path, file);
+      if (uploadError) throw uploadError;
+      const { data: { publicUrl } } = supabase.storage.from('tenko-evidence').getPublicUrl(path);
+      const next = { ...evidenceForm, [slot]: publicUrl };
+      const { error: dbError } = await supabase.from('tenko_tensi_evidence').upsert({
+        tenko_id: editingFaktor.id,
+        tanggal: editingFaktor.tanggal || null,
+        nama_driver: editingFaktor.nama_driver || null,
+        ...next,
+        uploaded_by: session?.user?.email || null,
+        updated_at: new Date().toISOString(),
+      }, { onConflict: 'tenko_id' });
+      if (dbError) throw dbError;
+      setEvidenceForm(next);
+      setEvidenceMap(prev => ({ ...prev, [editingFaktor.id]: next }));
+    } catch (e: any) {
+      alert(`Gagal upload foto: ${e?.message || 'Unknown error'}`);
+    } finally {
+      setUploadingSlot(null);
+    }
+  };
+
+  const handleEvidenceDelete = async (slot: TensiEvidenceSlot) => {
+    if (!editingFaktor) return;
+    const url = evidenceForm[slot];
+    if (!url) return;
+    if (!confirm('Hapus foto evidence ini?')) return;
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!isAdminUser(session?.user?.email)) {
+      alert('Hanya akun kmdimcc yang bisa hapus evidence.');
+      return;
+    }
+    try {
+      const parts = url.split('/tenko-evidence/');
+      if (parts[1]) await supabase.storage.from('tenko-evidence').remove([decodeURIComponent(parts[1])]);
+    } catch { /* file mungkin sudah tidak ada — lanjut hapus URL di DB */ }
+    const next = { ...evidenceForm, [slot]: null };
+    const { error } = await supabase.from('tenko_tensi_evidence').upsert({
+      tenko_id: editingFaktor.id,
+      tanggal: editingFaktor.tanggal || null,
+      nama_driver: editingFaktor.nama_driver || null,
+      ...next,
+      uploaded_by: session?.user?.email || null,
+      updated_at: new Date().toISOString(),
+    }, { onConflict: 'tenko_id' });
+    if (error) {
+      alert(`Gagal hapus foto: ${error.message}`);
+      return;
+    }
+    setEvidenceForm(next);
+    setEvidenceMap(prev => ({ ...prev, [editingFaktor.id]: next }));
   };
 
   const openFaktorEditor = async (record: TenkoRecord) => {
@@ -292,7 +408,35 @@ export default function TenkoPage({ isTAM = false }: { isTAM?: boolean }) {
   const ITEMS_PER_PAGE = 10;
   useEffect(() => setCurrentPage(1), [crossFilter, searchQuery]);
   const totalPages = Math.ceil(crossFilteredRecords.length / ITEMS_PER_PAGE);
-  const paginatedRecords = crossFilteredRecords.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
+  const paginatedRecords = useMemo(
+    () => crossFilteredRecords.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE),
+    [crossFilteredRecords, currentPage]
+  );
+
+  useEffect(() => {
+    const ids = paginatedRecords.map(r => r?.id).filter(Boolean) as string[];
+    if (ids.length === 0) return;
+    let cancelled = false;
+    (async () => {
+      const { data } = await supabase
+        .from('tenko_tensi_evidence')
+        .select('tenko_id, foto_tensi_tinggi, foto_istirahat, foto_tensi_ulang')
+        .in('tenko_id', ids);
+      if (cancelled || !data) return;
+      setEvidenceMap(prev => {
+        const next = { ...prev };
+        for (const row of data) {
+          next[row.tenko_id] = {
+            foto_tensi_tinggi: row.foto_tensi_tinggi || null,
+            foto_istirahat: row.foto_istirahat || null,
+            foto_tensi_ulang: row.foto_tensi_ulang || null,
+          };
+        }
+        return next;
+      });
+    })();
+    return () => { cancelled = true; };
+  }, [paginatedRecords]);
 
   return (
     <div className="space-y-6 pb-20 px-1">
@@ -362,13 +506,13 @@ export default function TenkoPage({ isTAM = false }: { isTAM?: boolean }) {
       {hasActiveCrossFilter && (
         <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="flex items-center gap-3 flex-wrap">
           <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Active Filters:</span>
-          {crossFilter.tensiStatus && (
-            <button onClick={() => toggleCrossFilter('tensiStatus', crossFilter.tensiStatus!)} className="flex items-center gap-2 px-3 py-1.5 bg-blue-500/10 border border-blue-500/30 rounded-xl text-[10px] font-black text-blue-500 uppercase hover:bg-blue-500/20 transition-all">
-              <Heart className="w-3 h-3" /> Tensi: {crossFilter.tensiStatus} <XCircle className="w-3 h-3" />
+          {activeStatusLabel && (
+            <button onClick={() => setCrossFilter(prev => ({ ...prev, metricId: null, status: null }))} className="flex items-center gap-2 px-3 py-1.5 bg-blue-500/10 border border-blue-500/30 rounded-xl text-[10px] font-black text-blue-500 uppercase hover:bg-blue-500/20 transition-all">
+              <Heart className="w-3 h-3" /> {activeStatusLabel.metricTitle}: {activeStatusLabel.label} <XCircle className="w-3 h-3" />
             </button>
           )}
           {crossFilter.date && (
-            <button onClick={() => toggleCrossFilter('date', crossFilter.date!)} className="flex items-center gap-2 px-3 py-1.5 bg-purple-500/10 border border-purple-500/30 rounded-xl text-[10px] font-black text-purple-500 uppercase hover:bg-purple-500/20 transition-all">
+            <button onClick={() => toggleDateFilter(crossFilter.date!)} className="flex items-center gap-2 px-3 py-1.5 bg-purple-500/10 border border-purple-500/30 rounded-xl text-[10px] font-black text-purple-500 uppercase hover:bg-purple-500/20 transition-all">
               <Calendar className="w-3 h-3" /> {crossFilter.date.length === 7 ? 'Bulan' : 'Tanggal'}: {tenkoService.formatTrendPeriodLabel(crossFilter.date, crossFilter.date.length === 7 ? 'month' : 'day')} <XCircle className="w-3 h-3" />
             </button>
           )}
@@ -484,7 +628,7 @@ export default function TenkoPage({ isTAM = false }: { isTAM?: boolean }) {
                       if (driverChartLocked) return;
                       const payload = e?.activePayload?.[0]?.payload;
                       if (!payload) return;
-                      if (chartView === 'date') toggleCrossFilter('date', payload.period);
+                      if (chartView === 'date') toggleDateFilter(payload.period);
                       else setSearchQuery(String(payload.driver));
                     }}
                   >
@@ -561,22 +705,21 @@ export default function TenkoPage({ isTAM = false }: { isTAM?: boolean }) {
                     paddingAngle={8}
                     dataKey="value"
                     onClick={(entry: any) => {
-                      if (activeMetric.id === 'tensi' && entry.filterName) {
-                        toggleCrossFilter('tensiStatus', entry.filterName);
-                      }
+                      const key = entry?.filterKey ?? entry?.filterName;
+                      if (key) toggleMetricStatusFilter(activeMetric.id, key);
                     }}
-                    cursor={activeMetric.id === 'tensi' ? 'pointer' : 'default'}
+                    cursor="pointer"
                   >
                     {metricPieData.map((entry, index) => (
                       <Cell
                         key={`cell-${index}`}
                         fill={entry.color}
                         opacity={
-                          activeMetric.id === 'tensi' && crossFilter.tensiStatus
-                            ? (crossFilter.tensiStatus === entry.filterName ? 1 : 0.35)
+                          crossFilter.metricId === activeMetric.id && crossFilter.status
+                            ? ((entry.filterKey ?? entry.filterName) === crossFilter.status ? 1 : 0.35)
                             : 1
                         }
-                        stroke={activeMetric.id === 'tensi' && crossFilter.tensiStatus === entry.filterName ? '#ffffff' : 'transparent'}
+                        stroke={crossFilter.metricId === activeMetric.id && crossFilter.status === (entry.filterKey ?? entry.filterName) ? '#ffffff' : 'transparent'}
                         strokeWidth={3}
                       />
                     ))}
@@ -590,8 +733,20 @@ export default function TenkoPage({ isTAM = false }: { isTAM?: boolean }) {
               </div>
             </div>
             <div className="grid grid-cols-1 w-full gap-2 mt-8">
-              {metricPieData.map((item, idx) => (
-                <div key={idx} className="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-800/40 rounded-xl">
+              {metricPieData.map((item, idx) => {
+                const key = item.filterKey ?? item.filterName;
+                const isActive = key && crossFilter.metricId === activeMetric.id && crossFilter.status === key;
+                return (
+                <button
+                  key={idx}
+                  type="button"
+                  onClick={() => { if (key) toggleMetricStatusFilter(activeMetric.id, key); }}
+                  className={`flex items-center justify-between p-3 rounded-xl text-left transition-all border ${
+                    isActive
+                      ? 'bg-blue-500/10 dark:bg-blue-500/10 border-blue-500/40'
+                      : 'bg-slate-50 dark:bg-slate-800/40 border-transparent hover:border-slate-300 dark:hover:border-slate-600'
+                  }`}
+                >
                   <div className="flex items-center gap-3">
                     <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: item.color }} />
                     <span className="text-xs font-black text-slate-600 dark:text-slate-300 uppercase">{item.name}</span>
@@ -600,8 +755,9 @@ export default function TenkoPage({ isTAM = false }: { isTAM?: boolean }) {
                     <span className="text-xs font-black text-slate-900 dark:text-white">{item.percent.toFixed(1)}%</span>
                     <span className="text-[10px] font-bold text-slate-400 ml-2">({item.value})</span>
                   </div>
-                </div>
-              ))}
+                </button>
+                );
+              })}
             </div>
           </div>
         </motion.div>
@@ -655,7 +811,7 @@ export default function TenkoPage({ isTAM = false }: { isTAM?: boolean }) {
                     <div className="space-y-1.5">
                       <div className="flex items-center gap-2">
                         <motion.span 
-                          animate={(r.sistolik >= 145 || r.diastolik >= 90 || r.sistolik < 90 || r.diastolik < 60) ? { 
+                          animate={(r.sistolik >= 160 || r.diastolik >= 100 || r.sistolik < 90 || r.diastolik < 60) ? { 
                             opacity: [1, 0.4, 1],
                           } : {}}
                           transition={{ repeat: Infinity, duration: 3, ease: "easeInOut" }}
@@ -671,6 +827,12 @@ export default function TenkoPage({ isTAM = false }: { isTAM?: boolean }) {
                           <p className="text-[9px] font-black text-rose-500/80 uppercase tracking-wide">
                             {getHipertensiTypeLabel(r.sistolik, r.diastolik)}
                           </p>
+                          {evidenceMap[r.id] && Object.values(evidenceMap[r.id]).some(Boolean) && (
+                            <p className="mt-1 flex items-center gap-1 text-[8px] font-black text-blue-500 uppercase">
+                              <Camera className="w-3 h-3" />
+                              {Object.values(evidenceMap[r.id]).filter(Boolean).length}/3 evidence
+                            </p>
+                          )}
                           {isLoggedIn ? (
                             <button
                               type="button"
@@ -706,7 +868,7 @@ export default function TenkoPage({ isTAM = false }: { isTAM?: boolean }) {
                   <td className="px-6 py-5"><p className="text-xs font-black text-slate-700 dark:text-slate-300">{r.oxygen_saturation}% O₂</p><p className="text-[10px] font-bold text-slate-400 uppercase mt-1">{r.rest_time}h Rest</p></td>
                   <td className="px-6 py-5"><div className="flex items-center gap-2"><StatusBadge label="Alc" ok={Number(r.alkohol) === 0} /><StatusBadge label="Eye" ok={r.mata === 'OK'} /><StatusBadge label="Fat" ok={r.fatigue === 'NORMAL'} /></div></td>
                   <td className="px-8 py-5 text-right">
-                    {r.sistolik < 145 && r.diastolik < 90 && r.suhu_tubuh < 37.5 && Number(r.alkohol) === 0 ? (
+                    {r.sistolik < 160 && r.diastolik < 100 && r.suhu_tubuh < 37.5 && Number(r.alkohol) === 0 ? (
                       <span className="flex items-center justify-end gap-1.5 text-[10px] font-black text-emerald-500 uppercase">
                         <CheckCircle2 className="w-3.5 h-3.5" /> FIT TO DRIVE
                       </span>
@@ -802,6 +964,52 @@ export default function TenkoPage({ isTAM = false }: { isTAM?: boolean }) {
                   placeholder="Detail faktor / kondisi driver..."
                   className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl py-3 px-4 text-xs font-semibold text-slate-800 dark:text-slate-100 focus:ring-2 focus:ring-red-500/20 outline-none resize-none"
                 />
+              </div>
+              <div>
+                <label className="block text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1.5">
+                  Evidence Foto (3 slot)
+                </label>
+                {isAdmin ? (
+                  <div className="grid grid-cols-3 gap-2">
+                    {EVIDENCE_SLOTS.map(slot => (
+                      <div key={slot.key} className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 overflow-hidden">
+                        <div className="aspect-square bg-slate-100 dark:bg-slate-700/50 flex items-center justify-center overflow-hidden">
+                          {evidenceForm[slot.key] ? (
+                            <a href={evidenceForm[slot.key]!} target="_blank" rel="noreferrer">
+                              <img src={evidenceForm[slot.key]!} alt={slot.short} className="w-full h-full object-cover" />
+                            </a>
+                          ) : (
+                            <Camera className="w-6 h-6 text-slate-300 dark:text-slate-600" />
+                          )}
+                        </div>
+                        <div className="p-1.5 space-y-1">
+                          <p className="text-[8px] font-black text-slate-500 dark:text-slate-400 uppercase truncate">{slot.label}</p>
+                          <label className={`block text-center text-[8px] font-black uppercase rounded-lg py-1.5 cursor-pointer transition-colors ${uploadingSlot === slot.key ? 'bg-slate-200 text-slate-400' : 'bg-blue-500/10 text-blue-500 hover:bg-blue-500/20'}`}>
+                            {uploadingSlot === slot.key ? 'Upload...' : evidenceForm[slot.key] ? 'Ganti' : 'Upload'}
+                            <input
+                              type="file"
+                              accept="image/*"
+                              className="hidden"
+                              disabled={uploadingSlot !== null}
+                              onChange={(e) => { void handleEvidenceUpload(slot.key, e.target.files?.[0]); e.target.value = ''; }}
+                            />
+                          </label>
+                          {evidenceForm[slot.key] && (
+                            <button
+                              type="button"
+                              onClick={() => { void handleEvidenceDelete(slot.key); }}
+                              className="w-full text-center text-[8px] font-black uppercase rounded-lg py-1 text-rose-500 hover:bg-rose-500/10 transition-colors"
+                            >
+                              Hapus
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-[10px] font-bold text-slate-400">Hanya akun kmdimcc yang bisa upload evidence.</p>
+                )}
               </div>
             </div>
             <div className="flex items-center justify-end gap-3 p-6 border-t border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/30">

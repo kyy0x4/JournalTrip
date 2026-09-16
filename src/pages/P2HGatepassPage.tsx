@@ -55,7 +55,7 @@ interface DriverCheck {
 
 function getTenkoHealth(r: TenkoRecord): { ok: boolean; reason?: string } {
   if (Number(r.alkohol) > 0) return { ok: false, reason: 'Positif Alkohol' };
-  if (r.sistolik >= 145 || r.diastolik >= 90) return { ok: false, reason: 'Hipertensi' };
+  if (r.sistolik >= 160 || r.diastolik >= 100) return { ok: false, reason: 'Hipertensi' };
   if (r.sistolik < 90 || r.diastolik < 60) return { ok: false, reason: 'Hipotensi' };
   if (r.suhu_tubuh >= 37.5) return { ok: false, reason: 'Suhu Tinggi' };
   if ((r.fatigue || '').toUpperCase() === 'LELAH') return { ok: false, reason: 'Fatigue / Lelah' };

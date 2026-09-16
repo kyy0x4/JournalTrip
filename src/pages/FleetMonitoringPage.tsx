@@ -20,6 +20,8 @@ import { motion, AnimatePresence } from 'motion/react';
 import { fetchFleetMonitoringData } from '../services/dataFetcher';
 import { supabase } from '../lib/supabase';
 import { useNotifications } from '../context/NotificationContext';
+import AuthModal from '../components/auth/AuthModal';
+import { isAdminUser } from '../constants/roles';
 
 // Status Types for Fleet
 type FleetStatus = 'In Pool' | 'OTW PDC' | 'In PDC' | 'OTW Destination' | 'At Destination' | 'Finished';
@@ -46,6 +48,86 @@ interface FleetArmada {
 
 const FLEET_TAM_AREAS = ['JBK', 'SUMATERA', 'NGORO', 'SINGLE CARRIER', 'DOUBLE DECK'];
 
+const CANCEL_FAKTOR_OPTIONS = ['Customer batal', 'Unit trouble', 'Driver berhalangan', 'Kendala lapangan'] as const;
+
+interface CancelEvaluation {
+  faktor: string;
+  keterangan: string | null;
+}
+
+function EvalBadges({ trips, evaluations }: { trips: any[]; evaluations: Record<string, CancelEvaluation> }) {
+  const items = (trips || []).filter(t => t?.id && evaluations[t.id]);
+  if (items.length === 0) return null;
+  const allSame = items.length === (trips || []).length && (trips || []).length > 1
+    && items.every(t => evaluations[t.id].faktor === evaluations[items[0].id].faktor);
+  if (allSame) {
+    return (
+      <div className="flex flex-wrap gap-1 mt-1" onClick={e => e.stopPropagation()}>
+        <span className="bg-rose-50 text-rose-600 dark:bg-rose-500/10 dark:text-rose-400 px-1.5 py-0.5 rounded text-[7px] font-black uppercase tracking-tighter">
+          Semua Rit: {evaluations[items[0].id].faktor}
+        </span>
+      </div>
+    );
+  }
+  return (
+    <div className="flex flex-wrap gap-1 mt-1" onClick={e => e.stopPropagation()}>
+      {items.map(t => (
+        <span key={t.id} className="bg-rose-50 text-rose-600 dark:bg-rose-500/10 dark:text-rose-400 px-1.5 py-0.5 rounded text-[7px] font-black uppercase tracking-tighter">
+          R{t.ritNo}: {evaluations[t.id].faktor}
+        </span>
+      ))}
+    </div>
+  );
+}
+
+const EVAL_ALL_TRIPS = '__ALL__';
+
+function EvalInlineForm({ bulkKey, trips, evaluations, savingId, savingBulkId, choiceTripId, onChoiceTrip, onSave }: {
+  bulkKey: string;
+  trips: any[];
+  evaluations: Record<string, CancelEvaluation>;
+  savingId: string | null;
+  savingBulkId: string | null;
+  choiceTripId?: string;
+  onChoiceTrip: (tripId: string) => void;
+  onSave: (target: any | any[], faktor: string, bulkKey: string | null) => void;
+}) {
+  const options = trips || [];
+  if (options.length === 0) return null;
+  const chosenId = choiceTripId === EVAL_ALL_TRIPS
+    ? EVAL_ALL_TRIPS
+    : (options.find(t => t.id === choiceTripId)?.id || options.find(t => !evaluations[t.id])?.id || options[0].id);
+  const isAll = chosenId === EVAL_ALL_TRIPS;
+  const saving = isAll ? savingBulkId === bulkKey : savingId === chosenId;
+  return (
+    <div className="mt-1.5 flex items-center gap-1" onClick={e => e.stopPropagation()}>
+      <select
+        value={chosenId}
+        onChange={e => onChoiceTrip(e.target.value)}
+        onClick={e => e.stopPropagation()}
+        className="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-[9px] font-black px-1.5 py-1 text-slate-600 dark:text-slate-300 focus:outline-none"
+      >
+        <option value={EVAL_ALL_TRIPS}>Semua Rit</option>
+        {options.map(t => (
+          <option key={t.id} value={t.id}>R{t.ritNo}{evaluations[t.id] ? ' ✓' : ''}</option>
+        ))}
+      </select>
+      <select
+        value=""
+        disabled={saving}
+        onChange={e => { if (e.target.value) onSave(isAll ? options : options.find(t => t.id === chosenId), e.target.value, isAll ? bulkKey : null); }}
+        onClick={e => e.stopPropagation()}
+        className="bg-rose-50/60 dark:bg-rose-500/10 border border-rose-200/60 dark:border-rose-900/40 rounded-lg text-[9px] font-black px-1.5 py-1 text-rose-600 dark:text-rose-400 focus:outline-none disabled:opacity-60"
+      >
+        <option value="">{saving ? 'Menyimpan...' : '+ Evaluasi cancel'}</option>
+        {CANCEL_FAKTOR_OPTIONS.map(f => (
+          <option key={f} value={f}>{f}</option>
+        ))}
+      </select>
+    </div>
+  );
+}
+
 export default function FleetMonitoringPage({ isTAM = false }: { isTAM?: boolean }) {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedShift, setSelectedShift] = useState<'ALL' | 'DAY' | 'NIGHT'>('ALL');
@@ -64,6 +146,14 @@ export default function FleetMonitoringPage({ isTAM = false }: { isTAM?: boolean
   const [fleetData, setFleetData] = useState<FleetArmada[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedDriver, setSelectedDriver] = useState<FleetArmada | null>(null);
+  const [evaluations, setEvaluations] = useState<Record<string, CancelEvaluation>>({});
+  const [savingEvalId, setSavingEvalId] = useState<string | null>(null);
+  const [savingEvalBulk, setSavingEvalBulk] = useState<string | null>(null);
+  const [evalChoice, setEvalChoice] = useState<Record<string, string>>({});
+  const [adminEmail, setAdminEmail] = useState<string | null>(null);
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const [pendingEval, setPendingEval] = useState<{ target: any | any[]; faktor: string; bulkKey: string | null } | null>(null);
+  const isAdmin = isAdminUser(adminEmail);
   const dateInputRef = useRef<HTMLInputElement>(null);
   const [selectedDate, setSelectedDate] = useState(() => {
     const now = new Date();
@@ -96,6 +186,94 @@ export default function FleetMonitoringPage({ isTAM = false }: { isTAM?: boolean
     setFleetData(filtered);
     setIsLoading(false);
   }, [selectedDate, isTAM]);
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setAdminEmail(session?.user?.email ?? null);
+    });
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setAdminEmail(session?.user?.email ?? null);
+    });
+    return () => subscription.unsubscribe();
+  }, []);
+
+  useEffect(() => {
+    if (fleetData.length === 0) return;
+    const ids = fleetData.flatMap(f => (f.allTrips || []).map((t: any) => t.id).filter(Boolean));
+    if (ids.length === 0) return;
+    let cancelled = false;
+    (async () => {
+      const { data } = await supabase.from('trip_cancel_evaluations').select('trip_id, faktor, keterangan').in('trip_id', ids);
+      if (cancelled || !data) return;
+      const map: Record<string, CancelEvaluation> = {};
+      for (const row of data) map[row.trip_id] = { faktor: row.faktor, keterangan: row.keterangan };
+      setEvaluations(map);
+    })();
+    return () => { cancelled = true; };
+  }, [fleetData]);
+
+  const persistEvals = useCallback(async (target: any | any[], faktor: string, bulkKey: string | null) => {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!isAdminUser(session?.user?.email)) return false;
+    const list = (Array.isArray(target) ? target : [target]).filter(t => t?.id);
+    if (list.length === 0) return false;
+    if (bulkKey) setSavingEvalBulk(bulkKey);
+    else setSavingEvalId(list[0].id);
+    const rows = list.map(t => ({
+      trip_id: t.id,
+      tanggal: selectedDate,
+      nopol: t.no_polisi || null,
+      ritase_no: t.ritase_no || null,
+      faktor,
+      created_by: session?.user?.email || null,
+      updated_at: new Date().toISOString(),
+    }));
+    const { error } = await supabase.from('trip_cancel_evaluations').upsert(rows, { onConflict: 'trip_id' });
+    if (bulkKey) setSavingEvalBulk(null);
+    else setSavingEvalId(null);
+    if (error) {
+      alert(`Gagal menyimpan evaluasi: ${error.message}`);
+      return false;
+    }
+    setEvaluations(prev => {
+      const next = { ...prev };
+      for (const t of list) next[t.id] = { faktor, keterangan: prev[t.id]?.keterangan || null };
+      return next;
+    });
+    return true;
+  }, [selectedDate]);
+
+  const handleEvalSave = useCallback((target: any | any[], faktor: string, bulkKey: string | null) => {
+    void (async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        setPendingEval({ target, faktor, bulkKey });
+        setIsAuthModalOpen(true);
+        return;
+      }
+      if (!isAdminUser(session?.user?.email)) {
+        alert('Hanya akun kmdimcc yang bisa mengisi evaluasi cancel.');
+        return;
+      }
+      await persistEvals(target, faktor, bulkKey);
+    })();
+  }, [persistEvals]);
+
+  const handleAuthSuccess = useCallback(() => {
+    setIsAuthModalOpen(false);
+    if (pendingEval) {
+      const { target, faktor, bulkKey } = pendingEval;
+      setPendingEval(null);
+      void (async () => {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!isAdminUser(session?.user?.email)) {
+          alert('Hanya akun kmdimcc yang bisa mengisi evaluasi cancel.');
+          return;
+        }
+        await persistEvals(target, faktor, bulkKey);
+      })();
+    }
+  }, [pendingEval, persistEvals]);
 
   // Deteksi delay baru: hanya notify yang belum pernah dilihat
   useEffect(() => {
@@ -186,6 +364,7 @@ export default function FleetMonitoringPage({ isTAM = false }: { isTAM?: boolean
   const stats = useMemo(() => {
     return {
       total: filteredFleet.length,
+      totalRitase: filteredFleet.reduce((acc, f) => acc + (f.totalRitase || 0), 0),
       inPool: filteredFleet.filter(f => f.status === 'In Pool').length,
       otwPdc: filteredFleet.filter(f => f.status === 'OTW PDC').length,
       inPdc: filteredFleet.filter(f => f.status === 'In PDC').length,
@@ -372,13 +551,13 @@ export default function FleetMonitoringPage({ isTAM = false }: { isTAM?: boolean
       {/* ── STATS CARDS ── */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
         {[
-          { label: 'Planning Armada', value: stats.total, icon: Truck, color: 'text-slate-500', bg: 'bg-slate-50' },
+          { label: 'Planning Armada', value: stats.total, sub: `${stats.totalRitase} Total Ritase`, icon: Truck, color: 'text-slate-500', bg: 'bg-slate-50' },
           { label: 'In Pool', value: stats.inPool, icon: Building2, color: 'text-slate-400', bg: 'bg-slate-50' },
           { label: 'OTW PDC', value: stats.otwPdc, icon: Navigation, color: 'text-blue-500', bg: 'bg-blue-50' },
           { label: 'In PDC', value: stats.inPdc, icon: MapPin, color: 'text-orange-500', bg: 'bg-orange-50' },
           { label: 'OTW Tujuan', value: stats.otwDest, icon: Navigation, color: 'text-indigo-500', bg: 'bg-indigo-50' },
-          { label: 'Sampai Tujuan', value: stats.atDest, icon: CheckCircle2, color: 'text-emerald-500', bg: 'bg-emerald-50' },
-        ].map((item, i) => (
+          { label: 'Sampai Tujuan', value: stats.atDest, sub: 'Finished Ritase', icon: CheckCircle2, color: 'text-emerald-500', bg: 'bg-emerald-50' },
+        ].map((item: any, i) => (
           <motion.div 
             key={i}
             initial={{ opacity: 0, y: 20 }}
@@ -392,6 +571,9 @@ export default function FleetMonitoringPage({ isTAM = false }: { isTAM?: boolean
             <div>
               <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-tighter">{item.label}</p>
               <p className="text-xl font-black text-slate-900 dark:text-white">{item.value}</p>
+              {item.sub && (
+                <p className="text-[9px] font-bold text-slate-400 dark:text-slate-500 mt-0.5">{item.sub}</p>
+              )}
             </div>
           </motion.div>
         ))}
@@ -464,6 +646,19 @@ export default function FleetMonitoringPage({ isTAM = false }: { isTAM?: boolean
                                 )}
                               </div>
                               <p className="text-[10px] font-bold text-slate-400 tracking-wider">{item.nopol} • {item.shift}</p>
+                              <EvalBadges trips={item.allTrips} evaluations={evaluations} />
+                              {isAdmin && (
+                                <EvalInlineForm
+                                  bulkKey={item.id}
+                                  trips={item.allTrips}
+                                  evaluations={evaluations}
+                                  savingId={savingEvalId}
+                                  savingBulkId={savingEvalBulk}
+                                  choiceTripId={evalChoice[item.id]}
+                                  onChoiceTrip={(tripId) => setEvalChoice(prev => ({ ...prev, [item.id]: tripId }))}
+                                  onSave={handleEvalSave}
+                                />
+                              )}
                             </div>
                           </div>
                         </td>
@@ -538,6 +733,19 @@ export default function FleetMonitoringPage({ isTAM = false }: { isTAM?: boolean
                             )}
                           </div>
                           <p className="text-[10px] font-bold text-slate-400 tracking-wider">{item.nopol}</p>
+                          <EvalBadges trips={item.allTrips} evaluations={evaluations} />
+                          {isAdmin && (
+                            <EvalInlineForm
+                              bulkKey={item.id}
+                              trips={item.allTrips}
+                              evaluations={evaluations}
+                              savingId={savingEvalId}
+                              savingBulkId={savingEvalBulk}
+                              choiceTripId={evalChoice[item.id]}
+                              onChoiceTrip={(tripId) => setEvalChoice(prev => ({ ...prev, [item.id]: tripId }))}
+                              onSave={handleEvalSave}
+                            />
+                          )}
                         </div>
                       </div>
                       <div className="flex flex-col items-end gap-1">
@@ -690,6 +898,31 @@ export default function FleetMonitoringPage({ isTAM = false }: { isTAM?: boolean
                                   </p>
                                 </div>
                               </div>
+                              {(evaluations[trip.id] || isAdmin) && (
+                                <div className="mt-3 pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center gap-2">
+                                  <span className="text-[8px] font-black text-slate-400 uppercase">Evaluasi cancel:</span>
+                                  {evaluations[trip.id] ? (
+                                    <span className="bg-rose-50 text-rose-600 dark:bg-rose-500/10 dark:text-rose-400 px-2 py-0.5 rounded text-[8px] font-black uppercase">
+                                      {evaluations[trip.id].faktor}
+                                    </span>
+                                  ) : (
+                                    <span className="text-[8px] font-bold text-slate-400">—</span>
+                                  )}
+                                  {isAdmin && (
+                                    <select
+                                      value=""
+                                      disabled={savingEvalId === trip.id}
+                                      onChange={e => { if (e.target.value) handleEvalSave(trip, e.target.value, null); }}
+                                      className="bg-rose-50/60 dark:bg-rose-500/10 border border-rose-200/60 dark:border-rose-900/40 rounded-lg text-[9px] font-black px-1.5 py-1 text-rose-600 dark:text-rose-400 focus:outline-none disabled:opacity-60"
+                                    >
+                                      <option value="">{savingEvalId === trip.id ? 'Menyimpan...' : evaluations[trip.id] ? 'Ubah faktor' : 'Isi faktor'}</option>
+                                      {CANCEL_FAKTOR_OPTIONS.map(f => (
+                                        <option key={f} value={f}>{f}</option>
+                                      ))}
+                                    </select>
+                                  )}
+                                </div>
+                              )}
                             </div>
                           </div>
                         );
@@ -736,6 +969,12 @@ export default function FleetMonitoringPage({ isTAM = false }: { isTAM?: boolean
       </AnimatePresence>,
       document.body
       )}
+
+      <AuthModal
+        isOpen={isAuthModalOpen}
+        onClose={() => { setIsAuthModalOpen(false); setPendingEval(null); }}
+        onSuccess={handleAuthSuccess}
+      />
     </div>
   );
 }

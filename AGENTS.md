@@ -48,7 +48,7 @@ Indonesia, ringkas, format `fix:/feat:/perf:`.
   function `sheet-sync` (service role di server-side), bukan dari client.
 - `supabase/functions/` (Deno) di-exclude dari tsconfig React biar `npm run lint` bersih.
 - Tabel `tenko` kolom `id` UUID unik. Kolom `sistolik/diastolik` sumber klasifikasi
-  hipertensi (>=145/90), hipotensi (<90/60) — hati-hati jangan dedup by
+  hipertensi (>=160/100), hipotensi (<90/60) — hati-hati jangan dedup by
   driver+timestamp: satu sesi cek bisa punya 2 pengukuran valid (tensi tinggi lalu
   normal) dengan timestamp identik.
 
@@ -59,7 +59,7 @@ Indonesia, ringkas, format `fix:/feat:/perf:`.
   dedup by id unik — jangan balik ke `.range()`/dedup timestamp (bikin data ke-drop).
 - `shouldUseMonthlyTrend` per-bulan **hanya kalau rentang >31 hari**; selain itu
   chart per-hari walau beda bulan.
-- Threshold hipertensi sistolik = **145** (bukan 140).
+- Threshold hipertensi = **160/100** (sistolik >= 160 atau diastolik >= 100).
 
 ## Single Carrier / Double Deck (2026-09-15, belum sync perdana)
 

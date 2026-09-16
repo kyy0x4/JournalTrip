@@ -42,7 +42,7 @@ export const TENSI_FAKTOR_OPTIONS = [
 export type TensiFaktor = (typeof TENSI_FAKTOR_OPTIONS)[number];
 
 export function isHipertensi(sistolik: number, diastolik: number) {
-  return sistolik >= 145 || diastolik >= 90;
+  return sistolik >= 160 || diastolik >= 100;
 }
 
 export function isHipotensi(sistolik: number, diastolik: number) {
@@ -54,8 +54,8 @@ export function isAbnormalTensi(sistolik: number, diastolik: number) {
 }
 
 export function getHipertensiTypeLabel(sistolik: number, diastolik: number): string {
-  const sysHigh = sistolik >= 140;
-  const diaHigh = diastolik >= 90;
+  const sysHigh = sistolik >= 160;
+  const diaHigh = diastolik >= 100;
   if (sysHigh && diaHigh) return 'Sistolik & Diastolik Tinggi';
   if (sysHigh) return 'Sistolik Tinggi';
   if (diaHigh) return 'Diastolik Tinggi';
@@ -242,6 +242,7 @@ export type MetricPieSlice = {
   total: number;
   color: string;
   filterName?: string;
+  filterKey?: string;
 };
 
 export function calculateSummary(records: TenkoRecord[]): TenkoSummary {
@@ -351,7 +352,8 @@ export function getMetricPieSlices(summary: TenkoSummary, metricId: TenkoMetricI
       percent: toPercent(value),
       total,
       color: cat.color,
-      filterName: cat.pieFilterName,
+      filterName: cat.pieFilterName ?? cat.key,
+      filterKey: cat.key,
     };
   });
 }
@@ -377,7 +379,7 @@ const MONTH_LABELS = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'S
 function classifyTensiStatus(sistolik: number, diastolik: number): 'normal' | 'hipertensi' | 'hipotensi' {
   const sis = parseInt(String(sistolik)) || 0;
   const dia = parseInt(String(diastolik)) || 0;
-  if (sis >= 145 || dia >= 90) return 'hipertensi';
+  if (sis >= 160 || dia >= 100) return 'hipertensi';
   if (sis < 90 || dia < 60) return 'hipotensi';
   return 'normal';
 }
@@ -520,7 +522,7 @@ export async function fetchTenkoData(startDate: string, endDate: string, custome
       const sis = parseInt(String(item.sistolik)) || 0;
       const dia = parseInt(String(item.diastolik)) || 0;
       
-      if (sis >= 145 || dia >= 90) dailyMap[date].hipertensi++;
+      if (sis >= 160 || dia >= 100) dailyMap[date].hipertensi++;
       else if (sis < 90 || dia < 60) dailyMap[date].hipotensi++;
       else dailyMap[date].normal++;
       dailyMap[date].total++;
