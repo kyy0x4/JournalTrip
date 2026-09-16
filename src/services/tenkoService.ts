@@ -578,11 +578,17 @@ export type TensiFaktorUpdateTarget = Pick<
   'id' | 'tanggal' | 'timestamp' | 'nama_driver' | 'nik' | 'driver_id'
 >;
 
+export type TensiFaktorFailure =
+  | { kind: 'rpc_error'; message: string }
+  | { kind: 'rls_denied'; message: string }
+  | { kind: 'not_found'; message: string }
+  | { kind: 'unknown'; message: string };
+
 export async function updateTensiFaktor(
   record: TensiFaktorUpdateTarget,
   tensi_faktor: string,
   tensi_keterangan: string | null
-): Promise<{ success: boolean; error?: string }> {
+): Promise<{ success: boolean; error?: string; failure?: TensiFaktorFailure }> {
   const payload = { tensi_faktor, tensi_keterangan };
 
   const { data: rpcData, error: rpcError } = await supabase.rpc('update_tenko_tensi_faktor', {
@@ -598,10 +604,23 @@ export async function updateTensiFaktor(
   if (!rpcError) {
     const rows = Array.isArray(rpcData) ? rpcData : rpcData ? [rpcData] : [];
     if (rows.length > 0) return { success: true };
-  } else if (rpcError.code !== 'PGRST202') {
-    // PGRST202 = function not found (migration belum dijalankan)
-    console.warn('update_tenko_tensi_faktor RPC:', rpcError.message);
+    return {
+      success: false,
+      error: 'Baris tenko tidak ketemu (mungkin sudah terhapus saat sync ulang).',
+      failure: { kind: 'not_found', message: 'RPC sukses tapi 0 baris ter-update.' },
+    };
   }
+
+  if (rpcError.code !== 'PGRST202') {
+    // Gagal di RPC — biasanya RLS/policy. Jangan lanjut fallback biar errornya jelas.
+    console.error('update_tenko_tensi_faktor RPC:', rpcError.message);
+    return {
+      success: false,
+      error: `Gagal simpan via RPC: ${rpcError.message}`,
+      failure: { kind: 'rpc_error', message: rpcError.message },
+    };
+  }
+  // PGRST202 = function belum ada (migration belum dijalankan) → coba update langsung.
 
   if (record.id) {
     const { data, error } = await supabase
@@ -612,7 +631,19 @@ export async function updateTensiFaktor(
       .maybeSingle();
 
     if (!error && data) return { success: true };
-    if (error) console.warn('updateTensiFaktor by id:', error.message);
+    if (error) {
+      console.error('updateTensiFaktor by id:', error.message);
+      return {
+        success: false,
+        error: `Gagal simpan langsung: ${error.message}`,
+        failure: { kind: error.code === '42501' ? 'rls_denied' : 'unknown', message: error.message },
+      };
+    }
+    return {
+      success: false,
+      error: 'Baris tenko tidak ketemu by ID (mungkin sudah terhapus saat sync ulang).',
+      failure: { kind: 'not_found', message: 'Update by id sukses tapi 0 baris.' },
+    };
   }
 
   let query = supabase

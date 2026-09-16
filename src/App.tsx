@@ -28,12 +28,14 @@ const AdminDriversPage = lazy(() => import('./pages/AdminDriversPage'));
 const DriverAnalyticsPage = lazy(() => import('./pages/DriverAnalyticsPage'));
 const P2HGatepassPage = lazy(() => import('./pages/P2HGatepassPage'));
 const KRLoadingUnitsPage = lazy(() => import('./pages/KRLoadingUnitsPage'));
+const ProfilePage = lazy(() => import('./pages/ProfilePage'));
+const UserManagementPage = lazy(() => import('./pages/UserManagementPage'));
 
 import Footer from './components/layout/Footer';
 import { fetchDashboardData, fetchActiveDrivers, getDefaultOperationalShift } from './services/dataFetcher';
 import { Ritase, Driver } from './types';
 import { supabase } from './lib/supabase';
-import { isTAMUser, isAdminUser } from './constants/roles';
+import { isTAMUser, isAdminUser, isOwnerUser } from './constants/roles';
 import { SpeedInsights } from "@vercel/speed-insights/react"
 
 export default function App() {
@@ -64,6 +66,7 @@ export default function App() {
 
   const isTAM = isTAMUser(session?.user?.email);
   const isAdmin = isAdminUser(session?.user?.email);
+  const isOwner = isOwnerUser(session?.user?.email);
 
   useEffect(() => {
     const root = window.document.documentElement;
@@ -231,6 +234,7 @@ export default function App() {
           session={session}
           isTAM={isTAM}
           isAdmin={isAdmin}
+          isOwner={isOwner}
           selectedDate={selectedDate}
           setSelectedDate={setSelectedDate}
           isLoadingData={isLoading}
@@ -262,6 +266,7 @@ interface AppShellProps {
   session: any;
   isTAM: boolean;
   isAdmin: boolean;
+  isOwner: boolean;
   selectedDate: string;
   setSelectedDate: (d: string) => void;
   isLoadingData: boolean;
@@ -288,6 +293,7 @@ function AppShell({
   session,
   isTAM,
   isAdmin,
+  isOwner,
   selectedDate,
   setSelectedDate,
   isLoadingData,
@@ -338,6 +344,7 @@ function AppShell({
           session={session}
           isTAM={isTAM}
           isAdmin={isAdmin}
+          isOwner={isOwner}
         />
 
         <main id="pdf-export-content" className="pt-16 min-h-screen">
@@ -353,6 +360,7 @@ function AppShell({
                 isTAM={isTAM}
                 ritases={ritases}
                 isAdmin={isAdmin}
+                isOwner={isOwner}
                 selectedShift={selectedShift}
                 setSelectedShift={onShiftChange}
               />
@@ -376,6 +384,7 @@ interface AnimatedRoutesProps {
   isTAM: boolean;
   ritases: any[];
   isAdmin: boolean;
+  isOwner: boolean;
   selectedShift: 'Day' | 'Night';
   setSelectedShift: (s: 'Day' | 'Night') => void;
 }
@@ -390,6 +399,7 @@ const AnimatedRoutes = ({
   isTAM,
   ritases,
   isAdmin,
+  isOwner,
   selectedShift,
   setSelectedShift,
 }: AnimatedRoutesProps) => {
@@ -470,7 +480,9 @@ const AnimatedRoutes = ({
       <Route path="/kr-report" element={isTAM ? <Navigate to="/dashboard" replace /> : <ReportKRPage />} />
       <Route path="/kr-loading" element={isTAM ? <Navigate to="/dashboard" replace /> : <KRLoadingUnitsPage />} />
       <Route path="/admin-drivers" element={isAdmin ? <AdminDriversPage /> : <Navigate to="/dashboard" replace />} />
+      <Route path="/kelola-user" element={isOwner ? <UserManagementPage /> : <Navigate to="/dashboard" replace />} />
       <Route path="/p2h" element={<P2HGatepassPage />} />
+      <Route path="/profile" element={<ProfilePage />} />
       <Route path="*" element={<Navigate to="/dashboard" replace />} />
     </Routes>
   );

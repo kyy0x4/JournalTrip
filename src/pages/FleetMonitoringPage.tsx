@@ -252,7 +252,7 @@ export default function FleetMonitoringPage({ isTAM = false }: { isTAM?: boolean
         return;
       }
       if (!isAdminUser(session?.user?.email)) {
-        alert('Hanya akun kmdimcc yang bisa mengisi evaluasi cancel.');
+        alert('Hanya owner/admin yang bisa mengisi evaluasi cancel.');
         return;
       }
       await persistEvals(target, faktor, bulkKey);
@@ -267,7 +267,7 @@ export default function FleetMonitoringPage({ isTAM = false }: { isTAM?: boolean
       void (async () => {
         const { data: { session } } = await supabase.auth.getSession();
         if (!isAdminUser(session?.user?.email)) {
-          alert('Hanya akun kmdimcc yang bisa mengisi evaluasi cancel.');
+          alert('Hanya owner/admin yang bisa mengisi evaluasi cancel.');
           return;
         }
         await persistEvals(target, faktor, bulkKey);

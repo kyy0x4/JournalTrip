@@ -7,7 +7,7 @@ import {
   Calendar, Search, ChevronDown, CheckCircle2, XCircle,
   TrendingUp, BarChart3, PieChart as PieIcon, ClipboardList,
   Building2, Users, Pencil, Loader2, LogIn, Lock,
-  ChevronLeft, ChevronRight, Zap, Camera
+  ChevronLeft, ChevronRight, Zap, Camera, X
 } from 'lucide-react';
 import {
   BarChart, Bar, LineChart, Line, PieChart, Pie, Cell,
@@ -221,6 +221,7 @@ export default function TenkoPage({ isTAM = false }: { isTAM?: boolean }) {
   const [editingFaktor, setEditingFaktor] = useState<TenkoRecord | null>(null);
   const [faktorForm, setFaktorForm] = useState({ tensi_faktor: '', tensi_keterangan: '' });
   const [savingFaktor, setSavingFaktor] = useState(false);
+  const [faktorError, setFaktorError] = useState<string | null>(null);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [pendingAction, setPendingAction] = useState<(() => void) | null>(null);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -260,6 +261,7 @@ export default function TenkoPage({ isTAM = false }: { isTAM?: boolean }) {
 
   const showFaktorEditor = (record: TenkoRecord) => {
     setEditingFaktor(record);
+    setFaktorError(null);
     setFaktorForm({
       tensi_faktor: record.tensi_faktor || '',
       tensi_keterangan: record.tensi_keterangan || '',
@@ -290,7 +292,7 @@ export default function TenkoPage({ isTAM = false }: { isTAM?: boolean }) {
     if (!file || !editingFaktor) return;
     const { data: { session } } = await supabase.auth.getSession();
     if (!isAdminUser(session?.user?.email)) {
-      alert('Hanya akun kmdimcc yang bisa upload evidence.');
+      alert('Hanya owner/admin yang bisa upload evidence.');
       return;
     }
     if (!file.type.startsWith('image/')) {
@@ -334,7 +336,7 @@ export default function TenkoPage({ isTAM = false }: { isTAM?: boolean }) {
     if (!confirm('Hapus foto evidence ini?')) return;
     const { data: { session } } = await supabase.auth.getSession();
     if (!isAdminUser(session?.user?.email)) {
-      alert('Hanya akun kmdimcc yang bisa hapus evidence.');
+      alert('Hanya owner/admin yang bisa hapus evidence.');
       return;
     }
     try {
@@ -370,11 +372,11 @@ export default function TenkoPage({ isTAM = false }: { isTAM?: boolean }) {
   const handleSaveFaktor = async () => {
     if (!editingFaktor) return;
     if (!faktorForm.tensi_faktor) {
-      alert('Pilih faktor hipertensi sebelum menyimpan.');
+      setFaktorError('Pilih faktor hipertensi sebelum menyimpan.');
       return;
     }
     if (faktorForm.tensi_faktor === 'Lainnya' && !faktorForm.tensi_keterangan.trim()) {
-      alert('Isi keterangan faktor untuk opsi Lainnya.');
+      setFaktorError('Isi keterangan faktor untuk opsi Lainnya.');
       return;
     }
 
@@ -385,11 +387,12 @@ export default function TenkoPage({ isTAM = false }: { isTAM?: boolean }) {
     }
 
     setSavingFaktor(true);
+    setFaktorError(null);
     const keterangan = faktorForm.tensi_keterangan.trim() || null;
     const res = await tenkoService.updateTensiFaktor(editingFaktor, faktorForm.tensi_faktor, keterangan);
     setSavingFaktor(false);
     if (!res.success) {
-      alert(`Gagal menyimpan: ${res.error || 'Unknown error'}`);
+      setFaktorError(res.error || 'Gagal menyimpan. Coba lagi.');
       return;
     }
     setSummary(prev => {
@@ -926,22 +929,60 @@ export default function TenkoPage({ isTAM = false }: { isTAM?: boolean }) {
           onClick={(e) => { if (e.target === e.currentTarget) setEditingFaktor(null); }}
         >
           <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="w-full max-w-md bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-700 shadow-2xl overflow-hidden"
+            initial={{ opacity: 0, scale: 0.95, y: 12 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            className="w-full max-w-md bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-700 shadow-2xl overflow-hidden max-h-[90vh] overflow-y-auto"
           >
-            <div className="p-6 border-b border-slate-100 dark:border-slate-800">
-              <h3 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-tight">Isi Faktor Hipertensi</h3>
-              <p className="text-[10px] font-bold text-slate-400 uppercase mt-1">{editingFaktor.nama_driver} • {editingFaktor.tensi} mmHg</p>
+            <div className="p-6 border-b border-slate-100 dark:border-slate-800 bg-gradient-to-r from-rose-500/10 via-transparent to-transparent">
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-2xl bg-rose-500/15 flex items-center justify-center shrink-0">
+                    <Heart className="w-5 h-5 text-rose-500" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-tight">Faktor Hipertensi</h3>
+                    <p className="text-[10px] font-bold text-slate-400 uppercase mt-0.5">{editingFaktor.nama_driver} • {editingFaktor.tensi} mmHg</p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setEditingFaktor(null)}
+                  disabled={savingFaktor}
+                  className="p-2 rounded-xl text-slate-400 hover:text-slate-600 hover:bg-slate-100 dark:hover:bg-slate-800 dark:hover:text-slate-200 transition-colors disabled:opacity-50"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
               {userEmail && (
-                <p className="text-[9px] font-bold text-emerald-600 dark:text-emerald-400 mt-2 uppercase">
-                  Disimpan sebagai {userEmail.split('@')[0]}
+                <p className="text-[9px] font-bold text-emerald-600 dark:text-emerald-400 mt-3 uppercase flex items-center gap-1">
+                  <CheckCircle2 className="w-3 h-3" /> Disimpan sebagai {userEmail.split('@')[0]}
                 </p>
               )}
             </div>
-            <div className="p-6 space-y-4">
+            <AnimatePresence>
+              {faktorError && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  exit={{ opacity: 0, height: 0 }}
+                  className="overflow-hidden"
+                >
+                  <div className="mx-6 mt-4 p-3.5 rounded-2xl bg-rose-50 dark:bg-rose-500/10 border border-rose-200 dark:border-rose-500/30 flex items-start gap-2.5">
+                    <AlertCircle className="w-4 h-4 text-rose-500 shrink-0 mt-0.5" />
+                    <div className="min-w-0">
+                      <p className="text-[11px] font-black text-rose-600 dark:text-rose-400 uppercase">Gagal menyimpan</p>
+                      <p className="text-[11px] font-bold text-rose-500/90 dark:text-rose-300/90 mt-0.5 leading-relaxed break-words">{faktorError}</p>
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+            <div className="p-6 space-y-5">
               <div>
-                <label className="block text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Faktor Hipertensi *</label>
+                <p className="text-[9px] font-black text-blue-500 uppercase tracking-widest mb-2 flex items-center gap-1.5">
+                  <span className="w-4 h-4 rounded-full bg-blue-500 text-white text-[8px] font-black flex items-center justify-center">1</span>
+                  Faktor Hipertensi *
+                </p>
                 <select
                   value={faktorForm.tensi_faktor}
                   onChange={(e) => setFaktorForm(prev => ({ ...prev, tensi_faktor: e.target.value }))}
@@ -954,9 +995,10 @@ export default function TenkoPage({ isTAM = false }: { isTAM?: boolean }) {
                 </select>
               </div>
               <div>
-                <label className="block text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1.5">
+                <p className="text-[9px] font-black text-blue-500 uppercase tracking-widest mb-2 flex items-center gap-1.5">
+                  <span className="w-4 h-4 rounded-full bg-blue-500 text-white text-[8px] font-black flex items-center justify-center">2</span>
                   Keterangan {faktorForm.tensi_faktor === 'Lainnya' ? '*' : '(Opsional)'}
-                </label>
+                </p>
                 <textarea
                   rows={3}
                   value={faktorForm.tensi_keterangan}
@@ -966,9 +1008,10 @@ export default function TenkoPage({ isTAM = false }: { isTAM?: boolean }) {
                 />
               </div>
               <div>
-                <label className="block text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1.5">
+                <p className="text-[9px] font-black text-blue-500 uppercase tracking-widest mb-2 flex items-center gap-1.5">
+                  <span className="w-4 h-4 rounded-full bg-blue-500 text-white text-[8px] font-black flex items-center justify-center">3</span>
                   Evidence Foto (3 slot)
-                </label>
+                </p>
                 {isAdmin ? (
                   <div className="grid grid-cols-3 gap-2">
                     {EVIDENCE_SLOTS.map(slot => (
@@ -1008,28 +1051,33 @@ export default function TenkoPage({ isTAM = false }: { isTAM?: boolean }) {
                     ))}
                   </div>
                 ) : (
-                  <p className="text-[10px] font-bold text-slate-400">Hanya akun kmdimcc yang bisa upload evidence.</p>
+                  <p className="text-[10px] font-bold text-slate-400">Hanya owner/admin yang bisa upload evidence.</p>
                 )}
               </div>
             </div>
-            <div className="flex items-center justify-end gap-3 p-6 border-t border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/30">
-              <button
-                type="button"
-                onClick={() => setEditingFaktor(null)}
-                disabled={savingFaktor}
-                className="px-4 py-2.5 rounded-xl text-[10px] font-black uppercase text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 transition-colors"
-              >
-                Batal
-              </button>
-              <button
-                type="button"
-                onClick={handleSaveFaktor}
-                disabled={savingFaktor}
-                className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-[10px] font-black uppercase bg-red-500 text-white hover:bg-red-600 disabled:opacity-50 transition-colors shadow-lg shadow-red-500/20"
-              >
-                {savingFaktor ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <CheckCircle2 className="w-3.5 h-3.5" />}
-                Simpan
-              </button>
+            <div className="flex items-center justify-between gap-3 p-6 border-t border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/30">
+              <p className="text-[9px] font-bold text-slate-400 hidden sm:block">
+                {faktorForm.tensi_faktor ? `Faktor: ${faktorForm.tensi_faktor}` : 'Pilih faktor dulu'}
+              </p>
+              <div className="flex items-center gap-2 ml-auto">
+                <button
+                  type="button"
+                  onClick={() => setEditingFaktor(null)}
+                  disabled={savingFaktor}
+                  className="px-4 py-2.5 rounded-xl text-[10px] font-black uppercase text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 transition-colors"
+                >
+                  Batal
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { void handleSaveFaktor(); }}
+                  disabled={savingFaktor}
+                  className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-[10px] font-black uppercase bg-red-500 text-white hover:bg-red-600 disabled:opacity-50 transition-colors shadow-lg shadow-red-500/20"
+                >
+                  {savingFaktor ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <CheckCircle2 className="w-3.5 h-3.5" />}
+                  {savingFaktor ? 'Menyimpan...' : 'Simpan'}
+                </button>
+              </div>
             </div>
           </motion.div>
         </div>,

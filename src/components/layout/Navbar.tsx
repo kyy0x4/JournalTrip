@@ -3,7 +3,7 @@ import { useEscapeKey } from '../../hooks/useEscapeKey';
 import { Link, useLocation } from 'react-router-dom';
 import {
   Menu, X, Sun, Moon,
-  ChevronDown, Download, LogOut, Users,
+  ChevronDown, Download, LogOut, Users, UserRound, Crown,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { supabase } from '../../lib/supabase';
@@ -26,6 +26,7 @@ interface NavbarProps {
   session?: any;
   isTAM?: boolean;
   isAdmin?: boolean;
+  isOwner?: boolean;
 }
 
 export default function Navbar({
@@ -41,6 +42,7 @@ export default function Navbar({
   session,
   isTAM = false,
   isAdmin = false,
+  isOwner = false,
 }: NavbarProps) {
   const location = useLocation();
   const profileRef = useRef<HTMLDivElement>(null);
@@ -50,8 +52,28 @@ export default function Navbar({
   const [openGroup, setOpenGroup] = useState<string | null>(null);
   const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
 
   const groups = filterNavGroups(isTAM, isAdmin);
+
+  // Avatar user dari user_profiles (kalau belum isi → inisial)
+  useEffect(() => {
+    const uid = session?.user?.id;
+    if (!uid) {
+      setAvatarUrl(null);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      const { data } = await supabase
+        .from('user_profiles')
+        .select('avatar_url')
+        .eq('user_id', uid)
+        .maybeSingle();
+      if (!cancelled) setAvatarUrl(data?.avatar_url || null);
+    })();
+    return () => { cancelled = true; };
+  }, [session?.user?.id]);
 
   // Tutup dropdown saat klik di luar navbar
   useEffect(() => {
@@ -348,15 +370,16 @@ export default function Navbar({
               <motion.button
                 whileTap={{ scale: 0.95 }}
                 onClick={() => { setIsProfileOpen(o => !o); setOpenGroup(null); }}
-                className="flex items-center gap-1.5 md:gap-2 pl-1.5 pr-2.5 py-1.5 bg-slate-100 dark:bg-slate-800 rounded-xl hover:bg-slate-200 dark:hover:bg-slate-700 transition-all shadow-sm outline-none focus:outline-none focus:ring-0 cursor-pointer"
+                className="p-0.5 rounded-full bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 transition-all shadow-sm outline-none focus:outline-none focus:ring-0 cursor-pointer"
+                title="Profil"
               >
-                <div className="w-7 h-7 rounded-lg bg-red-600 text-white flex items-center justify-center font-black text-xs shadow-md shadow-red-600/20">
-                  {session.user?.email ? formatUserName(session.user.email).charAt(0).toUpperCase() : 'U'}
-                </div>
-                <span className="hidden sm:inline text-[11px] font-black text-slate-700 dark:text-slate-200 uppercase truncate max-w-[96px]">
-                  {session.user?.email ? formatUserName(session.user.email).split(' ')[0] : 'User'}
-                </span>
-                <ChevronDown className="w-3 h-3 text-slate-400 shrink-0" />
+                {avatarUrl ? (
+                  <img src={avatarUrl} alt="Profil" className="w-8 h-8 rounded-full object-cover" />
+                ) : (
+                  <div className="w-8 h-8 rounded-full bg-red-600 text-white flex items-center justify-center font-black text-xs shadow-md shadow-red-600/20">
+                    {session.user?.email ? formatUserName(session.user.email).charAt(0).toUpperCase() : 'U'}
+                  </div>
+                )}
               </motion.button>
 
               <AnimatePresence>
@@ -378,6 +401,24 @@ export default function Navbar({
                       </p>
                     </div>
                     <div className="p-1.5">
+                      <Link
+                        to="/profile"
+                        onClick={() => setIsProfileOpen(false)}
+                        className="flex items-center gap-3 px-3 py-2.5 w-full rounded-xl transition-colors text-xs font-black uppercase tracking-wider text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/[0.06] mb-0.5"
+                      >
+                        <UserRound className="w-4 h-4 shrink-0 text-slate-400" />
+                        Profil Saya
+                      </Link>
+                      {isOwner && (
+                        <Link
+                          to="/kelola-user"
+                          onClick={() => setIsProfileOpen(false)}
+                          className="flex items-center gap-3 px-3 py-2.5 w-full rounded-xl transition-colors text-xs font-black uppercase tracking-wider text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-500/10 mb-0.5"
+                        >
+                          <Crown className="w-4 h-4 shrink-0 text-amber-500" />
+                          Kelola User
+                        </Link>
+                      )}
                       {isAdmin && (
                         <Link
                           to="/admin-drivers"
