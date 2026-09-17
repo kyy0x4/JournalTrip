@@ -30,6 +30,7 @@ const P2HGatepassPage = lazy(() => import('./pages/P2HGatepassPage'));
 const KRLoadingUnitsPage = lazy(() => import('./pages/KRLoadingUnitsPage'));
 const ProfilePage = lazy(() => import('./pages/ProfilePage'));
 const UserManagementPage = lazy(() => import('./pages/UserManagementPage'));
+const BerandaPage = lazy(() => import('./pages/BerandaPage'));
 
 import Footer from './components/layout/Footer';
 import { fetchDashboardData, fetchActiveDrivers, getDefaultOperationalShift } from './services/dataFetcher';
@@ -481,6 +482,7 @@ const AnimatedRoutes = ({
       <Route path="/kr-loading" element={isTAM ? <Navigate to="/dashboard" replace /> : <KRLoadingUnitsPage />} />
       <Route path="/admin-drivers" element={isAdmin ? <AdminDriversPage /> : <Navigate to="/dashboard" replace />} />
       <Route path="/kelola-user" element={isOwner ? <UserManagementPage /> : <Navigate to="/dashboard" replace />} />
+      <Route path="/beranda" element={<BerandaPage />} />
       <Route path="/p2h" element={<P2HGatepassPage />} />
       <Route path="/profile" element={<ProfilePage />} />
       <Route path="*" element={<Navigate to="/dashboard" replace />} />

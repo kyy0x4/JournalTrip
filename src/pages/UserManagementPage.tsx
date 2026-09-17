@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { motion } from 'motion/react';
-import { Crown, ShieldCheck, Eye, UserPlus, Users, RefreshCw } from 'lucide-react';
-import { OWNER_EMAIL, ADMIN_EMAIL, TAM_EMAIL, getRoleLabel, type RoleLabel } from '../constants/roles';
+import { Crown, ShieldCheck, Eye, UserPlus, Users, RefreshCw, HeartPulse } from 'lucide-react';
+import { OWNER_EMAIL, ADMIN_EMAIL, TENKO_EMAIL, TAM_EMAIL, getRoleLabel, type RoleLabel } from '../constants/roles';
 
 interface ProfileRow {
   user_id: string;
@@ -22,9 +22,14 @@ const ROLE_META: Record<RoleLabel, { desc: string; badge: string; icon: typeof C
     icon: Crown,
   },
   Admin: {
-    desc: 'Bisa edit (evaluasi cancel, evidence tensi, Admin Foto Driver).',
+    desc: 'MCC shift + bisa edit (evaluasi cancel, evidence tensi, Admin Foto Driver).',
     badge: 'bg-red-50 text-red-600 dark:bg-red-500/10 dark:text-red-400',
     icon: ShieldCheck,
+  },
+  Tenko: {
+    desc: 'Shift Tenko. Posting serah terima di Beranda, isi faktor & evidence tensi.',
+    badge: 'bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400',
+    icon: HeartPulse,
   },
   TAM: {
     desc: 'View TAM (JBK, NGORO, SUMATERA, ...). Menu internal disembunyikan.',
@@ -40,7 +45,8 @@ const ROLE_META: Record<RoleLabel, { desc: string; badge: string; icon: typeof C
 
 const KNOWN_ACCOUNTS: { email: string; note: string }[] = [
   { email: OWNER_EMAIL, note: 'Owner' },
-  { email: ADMIN_EMAIL, note: 'Admin' },
+  { email: ADMIN_EMAIL, note: 'Admin (MCC)' },
+  { email: TENKO_EMAIL, note: 'Tenko' },
   { email: TAM_EMAIL, note: 'TAM' },
 ];
 

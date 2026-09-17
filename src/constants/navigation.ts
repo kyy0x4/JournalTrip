@@ -7,6 +7,7 @@ import {
   Database,
   GraduationCap,
   HeartPulse,
+  Home,
   LayoutDashboard,
   Leaf,
   MapPin,
@@ -40,6 +41,14 @@ export interface NavGroup {
 }
 
 export const NAV_GROUPS: NavGroup[] = [
+  {
+    id: 'beranda',
+    label: 'Beranda',
+    icon: Home,
+    items: [
+      { id: 'beranda', label: 'Beranda', sub: 'Serah Terima MCC ↔ Tenko', path: '/beranda', icon: Home },
+    ],
+  },
   {
     id: 'monitoring',
     label: 'Monitoring',

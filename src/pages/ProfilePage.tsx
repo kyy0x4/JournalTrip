@@ -3,9 +3,31 @@ import { supabase } from '../lib/supabase';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   User, Camera, Save, Lock, Mail, Phone,
-  Briefcase, Building2, MapPin, FileText, AtSign, ShieldCheck, Loader2, ImagePlus, Trash2
+  Briefcase, Building2, MapPin, FileText, AtSign, ShieldCheck, Loader2, ImagePlus, Trash2,
+  Newspaper, MessageCircle
 } from 'lucide-react';
-import { isOwnerUser, isTAMUser, ADMIN_EMAIL, getRoleLabel } from '../constants/roles';
+import { isOwnerUser, isTAMUser, isTenkoUser, ADMIN_EMAIL, getRoleLabel } from '../constants/roles';
+
+interface MyPost {
+  id: string;
+  content: string;
+  photo_url: string | null;
+  status: 'open' | 'done';
+  created_at: string;
+  commentCount: number;
+}
+
+function timeAgo(iso: string) {
+  const s = Math.floor((Date.now() - new Date(iso).getTime()) / 1000);
+  if (s < 60) return 'baru saja';
+  const m = Math.floor(s / 60);
+  if (m < 60) return `${m} mnt lalu`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `${h} jam lalu`;
+  const d = Math.floor(h / 24);
+  if (d < 7) return `${d} hari lalu`;
+  return new Date(iso).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' });
+}
 
 function DefaultCover() {
   return (
@@ -70,6 +92,9 @@ export default function ProfilePage() {
   const toastTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const coverRef = useRef<HTMLInputElement>(null);
+  const [myPosts, setMyPosts] = useState<MyPost[]>([]);
+  const [isLoadingPosts, setIsLoadingPosts] = useState(false);
+  const [deletingPostId, setDeletingPostId] = useState<string | null>(null);
 
   const showToast = (message: string, type: 'success' | 'error') => {
     if (toastTimeout.current) clearTimeout(toastTimeout.current);
@@ -129,6 +154,54 @@ export default function ProfilePage() {
   }, []);
 
   useEffect(() => () => { if (toastTimeout.current) clearTimeout(toastTimeout.current); }, []);
+
+  useEffect(() => {
+    if (!userId) return;
+    let cancelled = false;
+    (async () => {
+      setIsLoadingPosts(true);
+      const { data } = await supabase
+        .from('handover_posts')
+        .select('id, content, photo_url, status, created_at')
+        .eq('author_id', userId)
+        .order('created_at', { ascending: false })
+        .limit(20);
+      if (cancelled) return;
+      const list = (data as Omit<MyPost, 'commentCount'>[]) || [];
+      let counts: Record<string, number> = {};
+      if (list.length > 0) {
+        const { data: cRows } = await supabase
+          .from('handover_comments')
+          .select('post_id')
+          .in('post_id', list.map(p => p.id));
+        for (const r of (cRows as { post_id: string }[]) || []) {
+          counts[r.post_id] = (counts[r.post_id] || 0) + 1;
+        }
+      }
+      if (!cancelled) setMyPosts(list.map(p => ({ ...p, commentCount: counts[p.id] || 0 })));
+      if (!cancelled) setIsLoadingPosts(false);
+    })();
+    return () => { cancelled = true; };
+  }, [userId]);
+
+  const handleDeleteMyPost = async (p: MyPost) => {
+    if (!confirm('Hapus postingan ini beserta komentarnya?')) return;
+    setDeletingPostId(p.id);
+    try {
+      if (p.photo_url) {
+        const part = p.photo_url.split('/handover-photos/')[1];
+        if (part) await supabase.storage.from('handover-photos').remove([decodeURIComponent(part)]);
+      }
+      const { error } = await supabase.from('handover_posts').delete().eq('id', p.id);
+      if (error) throw new Error(error.message);
+      setMyPosts(prev => prev.filter(x => x.id !== p.id));
+      showToast('Postingan dihapus.', 'success');
+    } catch (e: any) {
+      showToast(e?.message || 'Gagal hapus postingan.', 'error');
+    } finally {
+      setDeletingPostId(null);
+    }
+  };
 
   const displayName = form.full_name.trim() || email.split('@')[0] || 'User';
 
@@ -418,6 +491,9 @@ export default function ProfilePage() {
                 {email === ADMIN_EMAIL && (
                   <span className="px-2 py-0.5 rounded-lg text-[9px] font-black uppercase bg-red-50 text-red-600 dark:bg-red-500/10 dark:text-red-400">Admin</span>
                 )}
+                {isTenkoUser(email) && (
+                  <span className="px-2 py-0.5 rounded-lg text-[9px] font-black uppercase bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400">Tenko</span>
+                )}
                 {isTAMUser(email) && (
                   <span className="px-2 py-0.5 rounded-lg text-[9px] font-black uppercase bg-blue-50 text-blue-600 dark:bg-blue-500/10 dark:text-blue-400">TAM</span>
                 )}
@@ -532,6 +608,58 @@ export default function ProfilePage() {
             {isSavingPw ? 'Menyimpan...' : 'Ubah Password'}
           </button>
         </div>
+      </div>
+      {/* ── Postingan saya ── */}
+      <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-100 dark:border-slate-800 overflow-hidden shadow-sm">
+        <div className="p-6 border-b border-slate-100 dark:border-slate-800">
+          <h2 className="font-black text-base flex items-center gap-2">
+            <Newspaper className="w-4 h-4 text-red-500" /> Postingan Saya
+          </h2>
+          <p className="text-xs text-slate-400 mt-0.5">Serah terima yang pernah kamu posting di Beranda. Bisa dihapus, tidak bisa diedit.</p>
+        </div>
+        {isLoadingPosts ? (
+          <div className="p-6 space-y-3 animate-pulse">
+            <div className="h-20 bg-slate-100 dark:bg-slate-800/50 rounded-2xl" />
+            <div className="h-20 bg-slate-100 dark:bg-slate-800/50 rounded-2xl" />
+          </div>
+        ) : myPosts.length === 0 ? (
+          <p className="p-6 text-xs font-bold text-slate-400 text-center">Belum ada postingan.</p>
+        ) : (
+          <div className="divide-y divide-slate-100 dark:divide-slate-800">
+            {myPosts.map(p => (
+              <div key={p.id} className="p-4 sm:p-5 flex gap-3">
+                {p.photo_url && (
+                  <a href={p.photo_url} target="_blank" rel="noreferrer" className="shrink-0">
+                    <img src={p.photo_url} alt="Lampiran" className="w-16 h-16 rounded-2xl object-cover" />
+                  </a>
+                )}
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-medium text-slate-700 dark:text-slate-200 whitespace-pre-wrap break-words line-clamp-3">{p.content || '(hanya foto)'}</p>
+                  <div className="flex flex-wrap items-center gap-2 mt-2">
+                    <span className={`px-2 py-0.5 rounded-lg text-[9px] font-black uppercase ${p.status === 'open' ? 'bg-amber-100 text-amber-700 dark:bg-amber-500/10 dark:text-amber-400' : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400'}`}>
+                      {p.status === 'open' ? 'Belum selesai' : 'Selesai'}
+                    </span>
+                    <span className="text-[10px] font-bold text-slate-400 flex items-center gap-1">
+                      <MessageCircle className="w-3 h-3" /> {p.commentCount}
+                    </span>
+                    <span className="text-[10px] font-bold text-slate-400">{timeAgo(p.created_at)}</span>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => { void handleDeleteMyPost(p); }}
+                  disabled={deletingPostId === p.id}
+                  title="Hapus postingan"
+                  className="shrink-0 self-start p-2 rounded-xl text-slate-300 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-500/10 transition-colors disabled:opacity-50"
+                >
+                  {deletingPostId === p.id
+                    ? <Loader2 className="w-4 h-4 animate-spin" />
+                    : <Trash2 className="w-4 h-4" />}
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );
