@@ -7,6 +7,8 @@
 //   3. sync sulawesi  → cuma berisi syncLeadTimeSulawesi + helper-nya (tanpa onOpen)
 //   4. sync kalimantan → syncKalimantanTrips + syncKalimantanLeadtime + helper-nya
 //                        (tanpa onOpen; sheet "Monitoring TAM Kalimantan")
+//   5. sync padang     → syncPadangTrips + syncPadangLeadtime + helper-nya
+//                        (tanpa onOpen; sheet "Monitoring TAM Padang")
 //
 // CATATAN PENTING:
 //   - Hanya SATU onOpen per project (ada di file ini).
@@ -36,6 +38,8 @@ function onOpen() {
     .addItem('⏱️ Sinkron LeadTime Sulawesi', 'syncLeadTimeSulawesi')
     .addItem('🇮🇩 Sinkron Trips Kalimantan', 'syncKalimantanTrips')
     .addItem('⏱️ Sinkron LeadTime Kalimantan', 'syncKalimantanLeadtime')
+    .addItem('🏔️ Sinkron Trips Padang', 'syncPadangTrips')
+    .addItem('⏱️ Sinkron LeadTime Padang', 'syncPadangLeadtime')
     .addSeparator()
     .addItem('🗑️ Hapus Webhook Log', 'clearWebhookLog')
     .addToUi();

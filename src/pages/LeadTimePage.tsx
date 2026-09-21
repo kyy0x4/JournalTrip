@@ -117,6 +117,13 @@ const TIMELINE_FLOWS: Record<string, string[]> = {
     'GUNUNG MENANGIS PULANG', 'RING ROAD SAMARINDA PULANG', 'KM 38 PULANG',
     'InPool'
   ],
+  'PADANG': [
+    'OutPool', 'InPDC', 'OutPDC',
+    'RM BMW', 'RM AREMA', 'RM DAMAS RAYA', 'RM SIJUNJUNG', 'RM MUSI BANYU ASIN', 'RM MUARA LAKITAN',
+    'Unloading',
+    'RM MUARA LAKITAN PULANG', 'RM MUSI BANYU ASIN PULANG', 'RM SIJUNJUNG PULANG', 'RM DAMAS RAYA PULANG', 'RM AREMA PULANG', 'RM BMW PULANG',
+    'InPool'
+  ],
   'DEFAULT': ['OutPool', 'InPDC', 'OutPDC', 'Unloading', 'InPool']
 };
 
@@ -158,6 +165,18 @@ const KEY_MAP: Record<string, {actual: string[], plan: string[], stage: string}>
   'GUNUNG MENANGIS PULANG': { actual: ['Actual (GUNUNG MENANGIS PULANG)'], plan: [], stage: 'unknown' },
   'RING ROAD SAMARINDA PULANG': { actual: ['Actual (RING ROAD SAMARINDA PULANG)'], plan: [], stage: 'unknown' },
   'KM 38 PULANG': { actual: ['Actual (KM 38 PULANG)'], plan: [], stage: 'unknown' },
+  'RM BMW': { actual: ['Actual In (RM BMW)'], plan: [], stage: 'unknown' },
+  'RM AREMA': { actual: ['Actual In (RM AREMA)'], plan: [], stage: 'unknown' },
+  'RM DAMAS RAYA': { actual: ['Actual In (RM DAMAS RAYA)'], plan: [], stage: 'unknown' },
+  'RM SIJUNJUNG': { actual: ['Actual In (RM SIJUNJUNG)'], plan: [], stage: 'unknown' },
+  'RM MUSI BANYU ASIN': { actual: ['Actual In (RM MUSI BANYU ASIN)'], plan: [], stage: 'unknown' },
+  'RM MUARA LAKITAN': { actual: ['Actual In (RM MUARA LAKITAN)'], plan: [], stage: 'unknown' },
+  'RM MUARA LAKITAN PULANG': { actual: ['Actual In (RM MUARA LAKITAN PULANG)'], plan: [], stage: 'unknown' },
+  'RM MUSI BANYU ASIN PULANG': { actual: ['Actual In (RM MUSI BANYU ASIN PULANG)'], plan: [], stage: 'unknown' },
+  'RM SIJUNJUNG PULANG': { actual: ['Actual In (RM SIJUNJUNG PULANG)'], plan: [], stage: 'unknown' },
+  'RM DAMAS RAYA PULANG': { actual: ['Actual In (RM DAMAS RAYA PULANG)'], plan: [], stage: 'unknown' },
+  'RM AREMA PULANG': { actual: ['Actual In (RM AREMA PULANG)'], plan: [], stage: 'unknown' },
+  'RM BMW PULANG': { actual: ['Actual In (RM BMW PULANG)'], plan: [], stage: 'unknown' },
 };
 
 export default function LeadTimePage({ isTAM = false }: { isTAM?: boolean }) {

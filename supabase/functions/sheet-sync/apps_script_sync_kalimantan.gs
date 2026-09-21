@@ -175,6 +175,7 @@ function syncKalimantanTrips() {
   const data = sheet.getRange(2, 1, lastRow - 1, lastCol).getValues();
   const displayData = sheet.getRange(2, 1, lastRow - 1, lastCol).getDisplayValues();
   const masterData = {};
+  const skippedDrivers = {}; // nama driver → jumlah baris ke-skip (belum terdaftar di tabel drivers)
 
   data.forEach((row, idx) => {
     const displayRow = displayData[idx];
@@ -183,7 +184,12 @@ function syncKalimantanTrips() {
     const driverName = C.driver > -1 ? String(displayRow[C.driver] || '').trim().replace(/\s+/g, ' ') : '';
     if (!date || !nopol || !driverName) return;
     const driverUuid = driversMap[driverName.toUpperCase()];
-    if (!driverUuid) return; // driver belum terdaftar di tabel drivers → skip kayak area lain
+    // trips.driver_id wajib FK ke tabel drivers — driver baru WAJIB didaftarkan dulu
+    // (lihat SQL di bawah fungsi ini). Tanpa ini barisnya ke-skip diam-diam.
+    if (!driverUuid) {
+      skippedDrivers[driverName] = (skippedDrivers[driverName] || 0) + 1;
+      return;
+    }
 
     const shift = C.shift > -1 ? (String(displayRow[C.shift] || '').trim() || 'DAY SHIFT') : 'DAY SHIFT';
     const ritase = 'RIT 1'; // sheet Kalimantan tanpa kolom ritase (1 baris = 1 trip)
@@ -211,7 +217,13 @@ function syncKalimantanTrips() {
 
   const finalBatch = Object.values(masterData);
   if (finalBatch.length === 0) {
-    SpreadsheetApp.getUi().alert('❌ 0 data trips valid (cek driver terdaftar & format tanggal).');
+    const skipped = Object.keys(skippedDrivers).map(n => n + ' (' + skippedDrivers[n] + ' baris)').join('\n');
+    SpreadsheetApp.getUi().alert(
+      '❌ 0 data trips valid.\n\n' +
+      (skipped
+        ? 'Driver ini belum terdaftar di tabel drivers:\n' + skipped + '\n\nDaftarkan dulu via SQL di bawah fungsi syncKalimantanTrips, lalu Run ulang.'
+        : 'Cek format kolom Tanggal (cth "2 Januari 2026").')
+    );
     return;
   }
 
@@ -220,8 +232,22 @@ function syncKalimantanTrips() {
     tanggal: uniqueDates,
     area: [KALIMANTAN_AREA],
   });
-  SpreadsheetApp.getUi().alert('✅ SYNC TRIPS KALIMANTAN BERHASIL!\nTotal ' + finalBatch.length + ' baris.');
+  const skipped = Object.keys(skippedDrivers).map(n => n + ' (' + skippedDrivers[n] + ')').join(', ');
+  SpreadsheetApp.getUi().alert(
+    '✅ SYNC TRIPS KALIMANTAN BERHASIL!\nTotal ' + finalBatch.length + ' baris.' +
+    (skipped ? '\n\n⚠️ Ke-skip (driver belum terdaftar): ' + skipped : '')
+  );
 }
+
+// ── SQL: daftarkan driver Kalimantan yang ke-skip ─────────────────────────────
+// Jalankan di Supabase Dashboard → SQL Editor, ganti NAMA_DRIVER & NIK-nya:
+//
+//   insert into public.drivers (name, nik, area)
+//   values ('IPNU HIDAYAT', null, 'KALIMANTAN')
+//   on conflict do nothing;
+//
+// Ulangi 1 baris per nama yang disebut di alert. Setelah itu Run ulang
+// "Sinkron Trips Kalimantan" — barisnya otomatis ikut tanpa ubah skrip.
 
 // ── Sync LEADTIMES Kalimantan (dual-write: checkpoints + status_info) ──────────
 function syncKalimantanLeadtime() {
