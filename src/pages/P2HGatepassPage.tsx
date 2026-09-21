@@ -10,6 +10,7 @@ import { P2HRecord } from '../types';
 import { TenkoRecord } from '../services/tenkoService';
 import { getP2HRecordsByDate, getTenkoRecordsByDate, matchResilientName, upsertP2HRecord } from '../services/gatepassService';
 import { P2H_CATEGORIES } from '../constants/p2hItems';
+import { canFillP2H } from '../constants/roles';
 import AuthModal from '../components/auth/AuthModal';
 import Avatar from '../components/common/Avatar';
 import P2HDocument from '../components/pdf/P2HDocument';
@@ -132,7 +133,18 @@ function P2HTab() {
 
   // Auth
   const [isAuthOpen, setIsAuthOpen] = useState(false);
+  const [userEmail, setUserEmail] = useState<string | null>(null);
   const pendingAction = useRef<(() => void) | null>(null);
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUserEmail(session?.user?.email ?? null);
+    });
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUserEmail(session?.user?.email ?? null);
+    });
+    return () => subscription.unsubscribe();
+  }, []);
 
   useEscapeKey(() => setIsAuthOpen(false), isAuthOpen);
   useEscapeKey(() => setEditing(null), !!editing);
@@ -179,6 +191,10 @@ function P2HTab() {
 
   const openInput = (d: ScheduledDriver) => {
     executeWithAuth(() => {
+      if (!canFillP2H(userEmail)) {
+        showToast('Hanya akun checker/MCC/tenko/owner yang bisa isi P2H', false);
+        return;
+      }
       const rec = p2hMap[d.id] || null;
       setEditingRecord(rec);
       setChecklist(rec?.checklist ? { ...rec.checklist } : {});
@@ -198,8 +214,12 @@ function P2HTab() {
     }
     setSaving(true);
     try {
-      const hasNG = Object.values(checklist).includes('NG');
       const { data: { session } } = await supabase.auth.getSession();
+      if (!canFillP2H(session?.user?.email)) {
+        showToast('Hanya akun checker/MCC/tenko/owner yang bisa isi P2H', false);
+        return;
+      }
+      const hasNG = Object.values(checklist).includes('NG');
       const rawUser = session?.user?.email?.split('@')[0] || 'Checker';
       const checkerName = rawUser.split(/[\._-]/).map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
 

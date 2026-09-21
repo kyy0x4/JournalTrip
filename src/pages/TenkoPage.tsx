@@ -16,7 +16,7 @@ import {
 } from 'recharts';
 import { supabase } from '../lib/supabase';
 import AuthModal from '../components/auth/AuthModal';
-import { isAdminUser } from '../constants/roles';
+import { canEdit } from '../constants/roles';
 import * as tenkoService from '../services/tenkoService';
 import {
   TenkoRecord,
@@ -229,7 +229,7 @@ export default function TenkoPage({ isTAM = false }: { isTAM?: boolean }) {
   const [evidenceMap, setEvidenceMap] = useState<Record<string, TensiEvidence>>({});
   const [evidenceForm, setEvidenceForm] = useState<TensiEvidence>({ ...EMPTY_EVIDENCE });
   const [uploadingSlot, setUploadingSlot] = useState<TensiEvidenceSlot | null>(null);
-  const isAdmin = isAdminUser(userEmail);
+  const isAdmin = canEdit(userEmail);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -291,8 +291,8 @@ export default function TenkoPage({ isTAM = false }: { isTAM?: boolean }) {
   const handleEvidenceUpload = async (slot: TensiEvidenceSlot, file: File | undefined) => {
     if (!file || !editingFaktor) return;
     const { data: { session } } = await supabase.auth.getSession();
-    if (!isAdminUser(session?.user?.email)) {
-      alert('Hanya owner/admin yang bisa upload evidence.');
+    if (!canEdit(session?.user?.email)) {
+      alert('Hanya owner/admin/tenko yang bisa upload evidence.');
       return;
     }
     if (!file.type.startsWith('image/')) {
@@ -335,8 +335,8 @@ export default function TenkoPage({ isTAM = false }: { isTAM?: boolean }) {
     if (!url) return;
     if (!confirm('Hapus foto evidence ini?')) return;
     const { data: { session } } = await supabase.auth.getSession();
-    if (!isAdminUser(session?.user?.email)) {
-      alert('Hanya owner/admin yang bisa hapus evidence.');
+    if (!canEdit(session?.user?.email)) {
+      alert('Hanya owner/admin/tenko yang bisa hapus evidence.');
       return;
     }
     try {

@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { motion } from 'motion/react';
-import { Crown, ShieldCheck, Eye, UserPlus, Users, RefreshCw, HeartPulse } from 'lucide-react';
-import { OWNER_EMAIL, ADMIN_EMAIL, TENKO_EMAIL, TAM_EMAIL, getRoleLabel, type RoleLabel } from '../constants/roles';
+import { Crown, ShieldCheck, Eye, UserPlus, Users, RefreshCw, HeartPulse, ClipboardCheck } from 'lucide-react';
+import { OWNER_EMAIL, ADMIN_EMAIL, TENKO_EMAIL, TAM_EMAIL, CHECKER_EMAIL, getRoleLabel, type RoleLabel } from '../constants/roles';
 
 interface ProfileRow {
   user_id: string;
@@ -36,6 +36,11 @@ const ROLE_META: Record<RoleLabel, { desc: string; badge: string; icon: typeof C
     badge: 'bg-blue-50 text-blue-600 dark:bg-blue-500/10 dark:text-blue-400',
     icon: Eye,
   },
+  Checker: {
+    desc: 'Checker lapangan. Satu-satunya role user biasa yang boleh isi P2H.',
+    badge: 'bg-teal-50 text-teal-600 dark:bg-teal-500/10 dark:text-teal-400',
+    icon: ClipboardCheck,
+  },
   User: {
     desc: 'View standar (cth: opsmonitoring). Tidak bisa edit, Admin Foto disembunyikan.',
     badge: 'bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400',
@@ -47,6 +52,7 @@ const KNOWN_ACCOUNTS: { email: string; note: string }[] = [
   { email: OWNER_EMAIL, note: 'Owner' },
   { email: ADMIN_EMAIL, note: 'Admin (MCC)' },
   { email: TENKO_EMAIL, note: 'Tenko' },
+  { email: CHECKER_EMAIL, note: 'Checker (isi P2H)' },
   { email: TAM_EMAIL, note: 'TAM' },
 ];
 
@@ -78,7 +84,7 @@ export default function UserManagementPage() {
       </div>
 
       {/* ── Struktur role ── */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {(Object.keys(ROLE_META) as RoleLabel[]).map(role => {
           const meta = ROLE_META[role];
           const Icon = meta.icon;

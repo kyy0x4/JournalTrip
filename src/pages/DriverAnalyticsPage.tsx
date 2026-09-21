@@ -16,6 +16,8 @@ import {
 } from '../services/driverAnalyticsService';
 import { EcoViolation } from '../services/ecoDataFetcher';
 import { DriverViolationMonth, DriverCoachingSession } from '../types';
+import { canEdit } from '../constants/roles';
+import { supabase } from '../lib/supabase';
 
 export default function DriverAnalyticsPage({ isTAM = false }: { isTAM?: boolean }) {
   const now = new Date();
@@ -37,6 +39,8 @@ export default function DriverAnalyticsPage({ isTAM = false }: { isTAM?: boolean
   const [page, setPage] = useState(1);
   const perPage = 12;
   const [isSavingCoaching, setIsSavingCoaching] = useState(false);
+  const [userEmail, setUserEmail] = useState<string | null>(null);
+  const canEditCoaching = canEdit(userEmail);
 
   // ── Custom Toast ──
   const [toast, setToast] = useState<{ type: 'success' | 'error'; message: string; detail?: string } | null>(null);
@@ -110,6 +114,16 @@ export default function DriverAnalyticsPage({ isTAM = false }: { isTAM?: boolean
   }, [selectedMonth, selectedArea]);
 
   useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUserEmail(session?.user?.email ?? null);
+    });
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUserEmail(session?.user?.email ?? null);
+    });
+    return () => subscription.unsubscribe();
+  }, []);
+
+  useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       const target = event.target as Node;
       if (areaDropdownOpen && areaDropdownRef.current && !areaDropdownRef.current.contains(target) && areaBtnRef.current && !areaBtnRef.current.contains(target)) {
@@ -177,6 +191,10 @@ export default function DriverAnalyticsPage({ isTAM = false }: { isTAM?: boolean
 
   const markAsCoached = async (violation: EcoViolation) => {
     if (!detailDriver || isSavingCoaching) return;
+    if (!canEditCoaching) {
+      showToast('error', 'Hanya owner/admin/tenko yang bisa menandai coaching.');
+      return;
+    }
     setIsSavingCoaching(true);
     try {
       const res = await createManualCoachingSession({
@@ -206,6 +224,10 @@ export default function DriverAnalyticsPage({ isTAM = false }: { isTAM?: boolean
 
   const unmarkCoached = async (sessionId: string) => {
     if (isSavingCoaching) return;
+    if (!canEditCoaching) {
+      showToast('error', 'Hanya owner/admin/tenko yang bisa membatalkan coaching.');
+      return;
+    }
     setIsSavingCoaching(true);
     try {
       const res = await deleteCoachingSession(sessionId);
@@ -795,7 +817,7 @@ export default function DriverAnalyticsPage({ isTAM = false }: { isTAM?: boolean
                                     <p className="text-xs font-black text-slate-700 dark:text-slate-300">{v.tanggal}</p>
                                     <p className="text-[9px] text-slate-400 font-bold">{v.waktu}</p>
                                   </div>
-                                  {coached ? (
+                                  {canEditCoaching && (coached ? (
                                     <button
                                       onClick={() => unmarkCoached(coached.id)}
                                       disabled={isSavingCoaching}
@@ -813,7 +835,7 @@ export default function DriverAnalyticsPage({ isTAM = false }: { isTAM?: boolean
                                     >
                                       <UserCheck className="w-3 h-3" /> Tandai
                                     </button>
-                                  )}
+                                  ))}
                                 </div>
                                 );
                               })}

@@ -1,10 +1,12 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 // APPS SCRIPT — FILE UTAMA: SEND DATA (trips + leadtimes monitoring)
 //
-// Project Apps Script spreadsheet Monitoring berisi 3 file:
+// Project Apps Script spreadsheet Monitoring berisi 4 file:
 //   1. send data      → file INI (onOpen + callSync + sync trips/leadtime)
 //   2. otomatisasi    → tidak ada kode sync, biarkan
 //   3. sync sulawesi  → cuma berisi syncLeadTimeSulawesi + helper-nya (tanpa onOpen)
+//   4. sync kalimantan → syncKalimantanTrips + syncKalimantanLeadtime + helper-nya
+//                        (tanpa onOpen; sheet "Monitoring TAM Kalimantan")
 //
 // CATATAN PENTING:
 //   - Hanya SATU onOpen per project (ada di file ini).
@@ -32,6 +34,8 @@ function onOpen() {
     .addItem('⏱️ Sinkron Leadtime (Ke Leadtimes)', 'uploadLeadtimeAll')
     .addSeparator()
     .addItem('⏱️ Sinkron LeadTime Sulawesi', 'syncLeadTimeSulawesi')
+    .addItem('🇮🇩 Sinkron Trips Kalimantan', 'syncKalimantanTrips')
+    .addItem('⏱️ Sinkron LeadTime Kalimantan', 'syncKalimantanLeadtime')
     .addSeparator()
     .addItem('🗑️ Hapus Webhook Log', 'clearWebhookLog')
     .addToUi();

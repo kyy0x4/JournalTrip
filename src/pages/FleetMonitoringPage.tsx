@@ -21,7 +21,7 @@ import { fetchFleetMonitoringData } from '../services/dataFetcher';
 import { supabase } from '../lib/supabase';
 import { useNotifications } from '../context/NotificationContext';
 import AuthModal from '../components/auth/AuthModal';
-import { isAdminUser } from '../constants/roles';
+import { canEdit } from '../constants/roles';
 
 // Status Types for Fleet
 type FleetStatus = 'In Pool' | 'OTW PDC' | 'In PDC' | 'OTW Destination' | 'At Destination' | 'Finished';
@@ -153,7 +153,7 @@ export default function FleetMonitoringPage({ isTAM = false }: { isTAM?: boolean
   const [adminEmail, setAdminEmail] = useState<string | null>(null);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [pendingEval, setPendingEval] = useState<{ target: any | any[]; faktor: string; bulkKey: string | null } | null>(null);
-  const isAdmin = isAdminUser(adminEmail);
+  const isAdmin = canEdit(adminEmail);
   const dateInputRef = useRef<HTMLInputElement>(null);
   const [selectedDate, setSelectedDate] = useState(() => {
     const now = new Date();
@@ -214,7 +214,7 @@ export default function FleetMonitoringPage({ isTAM = false }: { isTAM?: boolean
 
   const persistEvals = useCallback(async (target: any | any[], faktor: string, bulkKey: string | null) => {
     const { data: { session } } = await supabase.auth.getSession();
-    if (!isAdminUser(session?.user?.email)) return false;
+    if (!canEdit(session?.user?.email)) return false;
     const list = (Array.isArray(target) ? target : [target]).filter(t => t?.id);
     if (list.length === 0) return false;
     if (bulkKey) setSavingEvalBulk(bulkKey);
@@ -251,8 +251,8 @@ export default function FleetMonitoringPage({ isTAM = false }: { isTAM?: boolean
         setIsAuthModalOpen(true);
         return;
       }
-      if (!isAdminUser(session?.user?.email)) {
-        alert('Hanya owner/admin yang bisa mengisi evaluasi cancel.');
+      if (!canEdit(session?.user?.email)) {
+        alert('Hanya owner/admin/tenko yang bisa mengisi evaluasi cancel.');
         return;
       }
       await persistEvals(target, faktor, bulkKey);
@@ -266,8 +266,8 @@ export default function FleetMonitoringPage({ isTAM = false }: { isTAM?: boolean
       setPendingEval(null);
       void (async () => {
         const { data: { session } } = await supabase.auth.getSession();
-        if (!isAdminUser(session?.user?.email)) {
-          alert('Hanya owner/admin yang bisa mengisi evaluasi cancel.');
+        if (!canEdit(session?.user?.email)) {
+          alert('Hanya owner/admin/tenko yang bisa mengisi evaluasi cancel.');
           return;
         }
         await persistEvals(target, faktor, bulkKey);

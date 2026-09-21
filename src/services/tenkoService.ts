@@ -602,8 +602,9 @@ export async function updateTensiFaktor(
   });
 
   if (!rpcError) {
-    const rows = Array.isArray(rpcData) ? rpcData : rpcData ? [rpcData] : [];
-    if (rows.length > 0) return { success: true };
+    // RPC baru balikin single uuid (bukan SETOF rows) — null = baris tidak ketemu.
+    const updatedId = Array.isArray(rpcData) ? rpcData[0] : rpcData;
+    if (updatedId) return { success: true };
     return {
       success: false,
       error: 'Baris tenko tidak ketemu (mungkin sudah terhapus saat sync ulang).',

@@ -55,6 +55,7 @@ import { jsPDF } from 'jspdf';
 import * as htmlToImage from 'html-to-image';
 import AuthModal from '../components/auth/AuthModal';
 import { supabase } from '../lib/supabase';
+import { canFillP2H } from '../constants/roles';
 import { TrainingMonthlyRecord } from '../types';
 import { getTrainingByDriverId } from '../services/trainingService';
 
@@ -95,6 +96,7 @@ export default function DriverDetailPage() {
     catatan: ''
   });
   const [isSaving, setIsSaving] = useState(false);
+  const [userEmail, setUserEmail] = useState<string | null>(null);
 
   // States for Auth & Printing
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
@@ -135,6 +137,14 @@ export default function DriverDetailPage() {
     if (tenko.status === 'OK' && p2h === 'OK') return 'READY';
     return 'PENDING';
   }, [getTenkoStatus, getP2HStatus]);
+
+  const openP2HModal = () => {
+    if (!canFillP2H(userEmail)) {
+      alert('Hanya akun checker/MCC/tenko/owner yang bisa isi P2H.');
+      return;
+    }
+    void executeWithAuth(() => setShowP2HModal(true));
+  };
 
   const executeWithAuth = async (action: () => void) => {
     const { data: { session } } = await supabase.auth.getSession();
@@ -204,6 +214,11 @@ export default function DriverDetailPage() {
   const handleSaveP2H = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!driver) return;
+    const { data: { session: saverSession } } = await supabase.auth.getSession();
+    if (!canFillP2H(saverSession?.user?.email)) {
+      alert('Hanya akun checker/MCC/tenko/owner yang bisa isi P2H.');
+      return;
+    }
     setIsSaving(true);
     try {
       const todayStr = new Date(new Date().getTime() - (new Date().getTimezoneOffset() * 60000)).toISOString().split('T')[0];
@@ -380,6 +395,16 @@ export default function DriverDetailPage() {
     loadProfile();
     setCurrentPage(1); // Reset page on month change
   }, [loadProfile]);
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUserEmail(session?.user?.email ?? null);
+    });
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUserEmail(session?.user?.email ?? null);
+    });
+    return () => subscription.unsubscribe();
+  }, []);
 
   const toggleRitase = (ritaseId: string | number) => {
     setExpandedIds(prev => {
@@ -604,7 +629,7 @@ export default function DriverDetailPage() {
                             )}
                           </div>
                           <button
-                            onClick={() => executeWithAuth(() => setShowP2HModal(true))}
+                            onClick={() => openP2HModal()}
                             className="px-3 py-1.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700/50 rounded-xl text-[9px] font-black uppercase text-slate-600 dark:text-slate-350 transition-all border border-slate-200/30"
                           >
                             Update
@@ -624,7 +649,7 @@ export default function DriverDetailPage() {
                             )}
                           </div>
                           <button
-                            onClick={() => executeWithAuth(() => setShowP2HModal(true))}
+                            onClick={() => openP2HModal()}
                             className="px-3 py-1.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700/50 rounded-xl text-[9px] font-black uppercase text-slate-600 dark:text-slate-355 transition-all border border-slate-200/30"
                           >
                             Update
@@ -639,7 +664,7 @@ export default function DriverDetailPage() {
                             BELUM DIISI
                           </span>
                           <button
-                            onClick={() => executeWithAuth(() => setShowP2HModal(true))}
+                            onClick={() => openP2HModal()}
                             className="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-xl text-[9px] font-black uppercase tracking-wider transition-all shadow-md shadow-amber-500/10 active:scale-95"
                           >
                             Isi P2H

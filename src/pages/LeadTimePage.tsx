@@ -110,6 +110,13 @@ const TIMELINE_FLOWS: Record<string, string[]> = {
     'Paguat PULANG', 'Santigi PULANG', 'Kasimbar PULANG', 'Kebon Kopi PULANG', 'Sarjo PULANG', 'Karrosa PULANG', 'Mamuju PULANG', 'Majene PULANG', 'Pinrang PULANG',
     'InPool'
   ],
+  'KALIMANTAN': [
+    'OutPool', 'InPDC', 'OutPDC',
+    'KM 38', 'RING ROAD SAMARINDA', 'GUNUNG MENANGIS',
+    'Unloading',
+    'GUNUNG MENANGIS PULANG', 'RING ROAD SAMARINDA PULANG', 'KM 38 PULANG',
+    'InPool'
+  ],
   'DEFAULT': ['OutPool', 'InPDC', 'OutPDC', 'Unloading', 'InPool']
 };
 
@@ -145,6 +152,12 @@ const KEY_MAP: Record<string, {actual: string[], plan: string[], stage: string}>
   'Mamuju PULANG': { actual: ['Actual (Mamuju PULANG)'], plan: [], stage: 'unknown' },
   'Majene PULANG': { actual: ['Actual (Majene PULANG)'], plan: [], stage: 'unknown' },
   'Pinrang PULANG': { actual: ['Actual (Pinrang PULANG)'], plan: [], stage: 'unknown' },
+  'KM 38': { actual: ['Actual (KM 38)'], plan: [], stage: 'unknown' },
+  'RING ROAD SAMARINDA': { actual: ['Actual (RING ROAD SAMARINDA)'], plan: [], stage: 'unknown' },
+  'GUNUNG MENANGIS': { actual: ['Actual (GUNUNG MENANGIS)'], plan: [], stage: 'unknown' },
+  'GUNUNG MENANGIS PULANG': { actual: ['Actual (GUNUNG MENANGIS PULANG)'], plan: [], stage: 'unknown' },
+  'RING ROAD SAMARINDA PULANG': { actual: ['Actual (RING ROAD SAMARINDA PULANG)'], plan: [], stage: 'unknown' },
+  'KM 38 PULANG': { actual: ['Actual (KM 38 PULANG)'], plan: [], stage: 'unknown' },
 };
 
 export default function LeadTimePage({ isTAM = false }: { isTAM?: boolean }) {
