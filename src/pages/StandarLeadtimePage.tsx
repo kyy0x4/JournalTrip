@@ -55,7 +55,7 @@ const routes: Route[] = [
     columns: ['No', 'From', 'To', 'Standar LT'],
     data: [
       { no: 1, from: 'Pool Karawang', to: 'NVDC Karawang', lt: '30 Menit' },
-      { no: 2, from: 'Pool Karawang', to: 'NVDC Cibitung', lt: '1j 30m' },
+      { no: 2, from: 'Pool Karawang', to: 'NVDC Cibitung', lt: '2 Jam' },
       { no: 3, from: 'Pool Karawang', to: 'NVDC Sunter, Priok', lt: '3 Jam' },
       { no: 4, from: 'Pool Karawang', to: 'Patimban', lt: '4 Jam' },
       { no: 5, from: 'Pool Karawang', to: 'EKY', lt: '1 Jam' },
