@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   GraduationCap, Users, Award, CheckCircle2, TrendingUp,
-  BarChart3, Calendar, Star, AlertTriangle, ChevronDown, User, MapPin
+  BarChart3, Calendar, Star, AlertTriangle, ChevronDown, User, MapPin, Download, Loader2
 } from 'lucide-react';
 import {
   ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid,
@@ -22,6 +22,17 @@ const MONTH_LABELS: Record<string, string> = {
 };
 const currentYear = new Date().getFullYear();
 const YEARS = [currentYear, currentYear - 1];
+
+// ── Rolling 3-month window buat tab Q ──────────────────────────────
+function getQMonths(yr: number): string[] {
+  const now = new Date();
+  const threeMonthsAgo = new Date(now);
+  threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
+  return MONTHS_ORDER.filter((_, idx) => {
+    const monthDate = new Date(yr, idx, 1);
+    return monthDate >= threeMonthsAgo && monthDate <= now;
+  });
+}
 
 // ── Custom Tooltip ──────────────────────────────────────────────
 function ChartTooltip({ active, payload, label }: any) {
@@ -64,6 +75,7 @@ export default function TrainingDashboardPage() {
   const [allDrivers, setAllDrivers] = useState<DriverRow[]>([]);
   const [listPage, setListPage] = useState(1);
   const LIST_PAGE_SIZE = 15;
+  const [isExportingQ, setIsExportingQ] = useState(false);
 
   // ── Fetch all training records with driver names ────────────────
   useEffect(() => {
@@ -161,41 +173,29 @@ export default function TrainingDashboardPage() {
   }, [filteredRecords]);
 
   // ── Q1 Compliance (rolling 3-month window) ─────────────────────
+  // Basis = semua driver di area terpilih (dari tabel drivers), bukan cuma
+  // yang pernah punya record training — biar yang belum pernah training pun
+  // muncul sebagai "Kurang" dan ikut ke-export ke PDF.
+  const qMonths = useMemo(() => getQMonths(year), [year]);
+  const qMonthLabel = qMonths.map(m => MONTH_LABELS[m]).join(' · ') || '—';
   const q1Compliance = useMemo(() => {
-    const now = new Date();
-    const threeMonthsAgo = new Date(now);
-    threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
-
-    const relevantMonths = MONTHS_ORDER.filter((_, idx) => {
-      const monthDate = new Date(year, idx, 1);
-      return monthDate >= threeMonthsAgo && monthDate <= now;
-    });
-
-    const driverCounts: Record<string, { name: string; avatar?: string; count: number }> = {};
+    const driverCounts: Record<string, number> = {};
     filteredRecords
-      .filter(r => relevantMonths.includes(r.bulan?.toUpperCase()) && (r.kehadiran > 0 || r.post_test > 0))
-      .forEach(r => {
-        if (!driverCounts[r.driver_id]) driverCounts[r.driver_id] = { name: r.driverName, avatar: r.driverAvatar, count: 0 };
-        driverCounts[r.driver_id].count++;
-      });
+      .filter(r => qMonths.includes(r.bulan?.toUpperCase()) && (r.kehadiran > 0 || r.post_test > 0))
+      .forEach(r => { driverCounts[r.driver_id] = (driverCounts[r.driver_id] || 0) + 1; });
 
-    // Build a map of all driver names from the complete allRecords list (not just 3-month active ones)
-    const allDriverNames: Record<string, { name: string; avatar?: string }> = {};
-    filteredRecords.forEach(r => {
-      if (!allDriverNames[r.driver_id]) {
-        allDriverNames[r.driver_id] = { name: r.driverName, avatar: r.driverAvatar };
-      }
-    });
+    const baseDrivers = (allDrivers.length > 0 ? allDrivers : []).filter(d =>
+      !selectedArea || selectedArea === 'ALL' || d.area === selectedArea
+    );
 
-    const allDriverIds = [...new Set(filteredRecords.map(r => r.driver_id))];
-    return allDriverIds.map(id => ({
-      id,
-      name: allDriverNames[id]?.name || driverCounts[id]?.name || 'Driver',
-      avatar: allDriverNames[id]?.avatar || driverCounts[id]?.avatar,
-      count: driverCounts[id]?.count || 0,
-      compliant: (driverCounts[id]?.count || 0) >= 1,
-    })).sort((a, b) => b.count - a.count);
-  }, [filteredRecords, year]);
+    return baseDrivers.map(d => ({
+      id: d.id,
+      name: d.name || 'Driver Tidak Dikenal',
+      avatar: d.avatar_url,
+      count: driverCounts[d.id] || 0,
+      compliant: (driverCounts[d.id] || 0) >= 1,
+    })).sort((a, b) => b.count - a.count || a.name.localeCompare(b.name));
+  }, [filteredRecords, qMonths, allDrivers, selectedArea]);
 
   const q1Compliant = q1Compliance.filter(d => d.compliant).length;
   const q1Total = q1Compliance.length;
@@ -252,6 +252,67 @@ export default function TrainingDashboardPage() {
   // Pagination list driver
   const listTotalPages = Math.max(1, Math.ceil(driverListByMonth.length / LIST_PAGE_SIZE));
   const pagedDrivers = driverListByMonth.slice((listPage - 1) * LIST_PAGE_SIZE, listPage * LIST_PAGE_SIZE);
+
+  // ── Export PDF Kehadiran Q (multi-halaman, semua driver area terpilih) ──
+  const exportQPDF = async () => {
+    if (isExportingQ || q1Compliance.length === 0) return;
+    setIsExportingQ(true);
+    try {
+      const { default: jsPDFDefault, jsPDF } = await import('jspdf');
+      const JsPDFCtor = jsPDF || jsPDFDefault;
+      const pdf = new JsPDFCtor('p', 'mm', 'a4');
+      const esc = (v: any) => String(v ?? '')
+        .replace(/\\/g, '\\\\').replace(/\(/g, '\\(').replace(/\)/g, '\\)');
+      const areaLabel = !selectedArea || selectedArea === 'ALL' ? 'Semua Area' : selectedArea;
+      const title = `Kehadiran Training Q (${qMonthLabel} ${year}) — ${areaLabel}`;
+      const colX = [12, 22, 110, 145, 172];
+      const colW = [8, 86, 33, 25, 26];
+      const rowH = 7.5;
+      const rowsPerPage = 26;
+      const totalPages = Math.max(1, Math.ceil(q1Compliance.length / rowsPerPage));
+      for (let page = 0; page < totalPages; page++) {
+        if (page > 0) pdf.addPage();
+        pdf.setFont('helvetica', 'bold'); pdf.setFontSize(13);
+        pdf.text(esc(title), 12, 16, { maxWidth: 170 });
+        pdf.setFont('helvetica', 'normal'); pdf.setFontSize(9); pdf.setTextColor(100);
+        pdf.text(esc(`${q1Compliant}/${q1Total} memenuhi standar (>=1 hadir) — K Line Fleet Monitoring`), 12, 22);
+        pdf.setTextColor(0);
+        const headY = 28;
+        pdf.setFillColor(59, 130, 246);
+        pdf.setTextColor(255); pdf.setFont('helvetica', 'bold'); pdf.setFontSize(9);
+        const headers = ['NO', 'NAMA DRIVER', 'KEHADIRAN', 'JUMLAH', 'STATUS'];
+        headers.forEach((h, i) => {
+          pdf.rect(colX[i], headY, colW[i], rowH, 'F');
+          pdf.text(h, colX[i] + (i <= 1 ? 2 : colW[i] / 2), headY + 5, { align: i <= 1 ? 'left' : 'center' });
+        });
+        pdf.setTextColor(0); pdf.setFont('helvetica', 'normal'); pdf.setFontSize(9);
+        const slice = q1Compliance.slice(page * rowsPerPage, (page + 1) * rowsPerPage);
+        slice.forEach((d, r) => {
+          const y = headY + rowH * (r + 1);
+          if (r % 2 === 1) { pdf.setFillColor(248, 250, 252); pdf.rect(colX[0], y, 186, rowH, 'F'); }
+          pdf.setDrawColor(226, 232, 240);
+          colW.forEach((w, i) => pdf.rect(colX[i], y, w, rowH));
+          pdf.text(String(page * rowsPerPage + r + 1), colX[0] + colW[0] / 2, y + 5, { align: 'center' });
+          pdf.text(esc(d.name), colX[1] + 2, y + 5, { maxWidth: colW[1] - 4 });
+          pdf.text(esc(qMonthLabel), colX[2] + colW[2] / 2, y + 5, { align: 'center', maxWidth: colW[2] - 4 });
+          pdf.text(`${d.count}x`, colX[3] + colW[3] / 2, y + 5, { align: 'center' });
+          if (d.compliant) pdf.setTextColor(16, 122, 87); else pdf.setTextColor(190, 18, 60);
+          pdf.setFont('helvetica', 'bold');
+          pdf.text(d.compliant ? 'OK' : 'KURANG', colX[4] + colW[4] / 2, y + 5, { align: 'center' });
+          pdf.setFont('helvetica', 'normal'); pdf.setTextColor(0);
+        });
+        pdf.setFontSize(8); pdf.setTextColor(130);
+        pdf.text(`Halaman ${page + 1}/${totalPages}`, 198, 290, { align: 'right' });
+        pdf.setTextColor(0);
+      }
+      pdf.save(`Kehadiran_Q_${year}_${String(areaLabel).replace(/\s+/g, '_')}.pdf`);
+    } catch (e) {
+      console.error(e);
+      alert('Gagal export PDF. Silakan coba kembali.');
+    } finally {
+      setIsExportingQ(false);
+    }
+  };
 
   const TABS: { key: 'monthly' | 'leaderboard' | 'q1' | 'drivers'; label: string }[] = [
     { key: 'monthly', label: 'Per Bulan' },
@@ -625,11 +686,17 @@ export default function TrainingDashboardPage() {
               </div>
 
               <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-100 dark:border-slate-800 p-6">
-                <h3 className="font-black text-base mb-1 flex items-center gap-2">
-                  <TrendingUp className="w-4 h-4 text-violet-500" /> Status Kehadiran Per Driver
-                  <span className="text-slate-400 font-normal text-sm">(3 Bulan Terakhir)</span>
-                </h3>
-                <p className="text-xs text-slate-400 mb-4">Standar: minimal 1–2 kali training dalam periode 3 bulan</p>
+                <div className="flex items-start justify-between gap-4 mb-1">
+                  <h3 className="font-black text-base flex items-center gap-2">
+                    <TrendingUp className="w-4 h-4 text-violet-500" /> Status Kehadiran Per Driver
+                    <span className="text-slate-400 font-normal text-sm">({qMonthLabel} {year})</span>
+                  </h3>
+                  <button onClick={exportQPDF} disabled={isExportingQ || q1Compliance.length === 0}
+                    className="flex items-center gap-2 px-3.5 py-2 bg-violet-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-violet-700 transition-all disabled:opacity-50 shrink-0">
+                    {isExportingQ ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5" />} PDF
+                  </button>
+                </div>
+                <p className="text-xs text-slate-400 mb-4">Standar: minimal 1–2 kali training dalam periode 3 bulan · {q1Total} driver</p>
                 {isLoading ? (
                   <div className="space-y-3">{[...Array(5)].map((_, i) => <div key={i} className="h-12 bg-slate-100 dark:bg-slate-800 rounded-xl animate-pulse" />)}</div>
                 ) : (
