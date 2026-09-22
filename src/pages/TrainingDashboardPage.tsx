@@ -34,6 +34,37 @@ function getQMonths(yr: number): string[] {
   });
 }
 
+// ── Nilai tertinggi per driver ───────────────────────────────────
+// Satu driver bisa training 2-3x (multi tanggal / multi skor mingguan
+// "80, 75, 90" di hasil_post_test) — yang dipakai cuma skor tertinggi.
+const PASSING_SCORE = 80;
+
+function parseScoreList(val: string | null | undefined): number[] {
+  if (!val) return [];
+  return String(val).split(',').map(s => parseFloat(s.trim())).filter(n => Number.isFinite(n) && n > 0);
+}
+
+function getBestScore(r: TrainingMonthlyRecord): number {
+  return Math.max(Number(r.post_test) || 0, Number(r.total_nilai) || 0, ...parseScoreList(r.hasil_post_test), 0);
+}
+
+function hasTrained(r: TrainingMonthlyRecord): boolean {
+  return (Number(r.kehadiran) || 0) > 0 || getBestScore(r) > 0 || !!(r.tanggal_training && r.tanggal_training.trim());
+}
+
+function isPassing(r: TrainingMonthlyRecord): boolean {
+  return r.kelulusan === 'L' || getBestScore(r) >= PASSING_SCORE;
+}
+
+function pickBestRecord(recs: TrainingWithDriver[]): TrainingWithDriver {
+  return recs.reduce((best, r) => {
+    const sb = getBestScore(best), sr = getBestScore(r);
+    if (sr !== sb) return sr > sb ? r : best;
+    if ((r.kelulusan === 'L') !== (best.kelulusan === 'L')) return r.kelulusan === 'L' ? r : best;
+    return (Number(r.kehadiran) || 0) >= (Number(best.kehadiran) || 0) ? r : best;
+  });
+}
+
 // ── Custom Tooltip ──────────────────────────────────────────────
 function ChartTooltip({ active, payload, label }: any) {
   if (!active || !payload?.length) return null;
@@ -76,6 +107,7 @@ export default function TrainingDashboardPage() {
   const [listPage, setListPage] = useState(1);
   const LIST_PAGE_SIZE = 15;
   const [isExportingQ, setIsExportingQ] = useState(false);
+  const [isExportingList, setIsExportingList] = useState(false);
 
   // ── Fetch all training records with driver names ────────────────
   useEffect(() => {
@@ -135,7 +167,7 @@ export default function TrainingDashboardPage() {
     return isNaN(parsed) ? null : parsed;
   };
 
-  // ── Monthly stats ──────────────────────────────────────────────
+  // ── Monthly stats (per driver pakai record nilai tertinggi) ───
   const monthlyStats = useMemo(() => {
     return MONTHS_ORDER.map(month => {
       const monthRecs = filteredRecords.filter(r => {
@@ -143,15 +175,20 @@ export default function TrainingDashboardPage() {
         const recYear = getTrainingYear(r.tanggal_training);
         return bulan === month && (recYear === year || recYear === null);
       });
-      const uniqueDrivers = new Set(monthRecs.filter(r => r.kehadiran > 0 || r.post_test > 0).map(r => r.driver_id));
-      const passing = new Set(monthRecs.filter(r => r.kelulusan === 'L').map(r => r.driver_id));
+      const byDriver: Record<string, TrainingWithDriver[]> = {};
+      monthRecs.forEach(r => { (byDriver[r.driver_id] ||= []).push(r); });
+      const entries = Object.values(byDriver);
+      const trainedDrivers = entries.filter(recs => recs.some(hasTrained));
+      const passingDrivers = entries.filter(recs => recs.some(hasTrained) && isPassing(pickBestRecord(recs)));
+      const peserta = trainedDrivers.length;
+      const lulus = passingDrivers.length;
       return {
         month,
         label: MONTH_LABELS[month],
-        peserta: uniqueDrivers.size,
-        lulus: passing.size,
-        pctPeserta: visibleTotalDrivers > 0 ? Math.round((uniqueDrivers.size / visibleTotalDrivers) * 100) : 0,
-        pctLulus: uniqueDrivers.size > 0 ? Math.round((passing.size / uniqueDrivers.size) * 100) : 0,
+        peserta,
+        lulus,
+        pctPeserta: visibleTotalDrivers > 0 ? Math.round((peserta / visibleTotalDrivers) * 100) : 0,
+        pctLulus: peserta > 0 ? Math.round((lulus / peserta) * 100) : 0,
       };
     });
   }, [filteredRecords, year, visibleTotalDrivers]);
@@ -160,11 +197,11 @@ export default function TrainingDashboardPage() {
   const leaderboard = useMemo(() => {
     const counts: Record<string, { name: string; avatar?: string; count: number; passed: number }> = {};
     filteredRecords
-      .filter(r => r.kehadiran > 0 || r.post_test > 0)
+      .filter(hasTrained)
       .forEach(r => {
         if (!counts[r.driver_id]) counts[r.driver_id] = { name: r.driverName, avatar: r.driverAvatar, count: 0, passed: 0 };
         counts[r.driver_id].count++;
-        if (r.kelulusan === 'L') counts[r.driver_id].passed++;
+        if (isPassing(r)) counts[r.driver_id].passed++;
       });
     return Object.entries(counts)
       .map(([id, v]) => ({ id, ...v, pctPass: v.count > 0 ? Math.round((v.passed / v.count) * 100) : 0 }))
@@ -181,7 +218,7 @@ export default function TrainingDashboardPage() {
   const q1Compliance = useMemo(() => {
     const driverCounts: Record<string, number> = {};
     filteredRecords
-      .filter(r => qMonths.includes(r.bulan?.toUpperCase()) && (r.kehadiran > 0 || r.post_test > 0))
+      .filter(r => qMonths.includes(r.bulan?.toUpperCase()) && hasTrained(r))
       .forEach(r => { driverCounts[r.driver_id] = (driverCounts[r.driver_id] || 0) + 1; });
 
     const baseDrivers = (allDrivers.length > 0 ? allDrivers : []).filter(d =>
@@ -205,11 +242,14 @@ export default function TrainingDashboardPage() {
   const avgMonthlyLulus = nonZeroMonths.length > 0
     ? nonZeroMonths.reduce((s, m) => s + m.pctLulus, 0) / nonZeroMonths.length : 0;
 
-  // ── List driver per bulan (yang training & yang nggak) ──────────
+  // ── List driver per bulan (per driver pakai record nilai tertinggi) ──
   const driverListByMonth = useMemo(() => {
-    const monthRecs = filteredRecords.filter(r => r.bulan?.toUpperCase() === listMonth);
-    const trainedIds = new Set(monthRecs.filter(r => r.kehadiran > 0 || r.post_test > 0).map(r => r.driver_id));
-    const passedIds = new Set(monthRecs.filter(r => r.kelulusan === 'L').map(r => r.driver_id));
+    const monthRecs = filteredRecords.filter(r => {
+      const recYear = getTrainingYear(r.tanggal_training);
+      return r.bulan?.toUpperCase() === listMonth && (recYear === year || recYear === null);
+    });
+    const byDriver: Record<string, TrainingWithDriver[]> = {};
+    monthRecs.forEach(r => { (byDriver[r.driver_id] ||= []).push(r); });
 
     // Basis driver: ikut filter area global (selectedArea)
     const baseDrivers = (allDrivers.length > 0 ? allDrivers : []).filter(d =>
@@ -217,8 +257,9 @@ export default function TrainingDashboardPage() {
     );
 
     const rows = baseDrivers.map(d => {
-      const rec = monthRecs.find(r => r.driver_id === d.id);
-      const trained = trainedIds.has(d.id);
+      const recs = byDriver[d.id] || [];
+      const trained = recs.some(hasTrained);
+      const best = trained ? pickBestRecord(recs.filter(hasTrained)) : undefined;
       return {
         id: d.id,
         name: d.name || 'Driver Tidak Dikenal',
@@ -226,12 +267,12 @@ export default function TrainingDashboardPage() {
         avatar: d.avatar_url,
         area: d.area || '-',
         trained,
-        passed: passedIds.has(d.id),
-        kehadiran: rec?.kehadiran || 0,
-        post_test: rec?.post_test ?? null,
-        kelulusan: rec?.kelulusan ?? null,
-        total_nilai: rec?.total_nilai ?? null,
-        q_kehadiran: rec?.q_kehadiran ?? null,
+        passed: trained ? isPassing(best!) : false,
+        kehadiran: best ? Math.max(...recs.filter(hasTrained).map(r => Number(r.kehadiran) || 0), 0) : 0,
+        post_test: best ? getBestScore(best) : null,
+        kelulusan: best?.kelulusan ?? null,
+        total_nilai: best?.total_nilai ?? null,
+        q_kehadiran: best?.q_kehadiran ?? null,
       };
     }).filter(d => {
       if (listFilter === 'TRAINED' && !d.trained) return false;
@@ -241,7 +282,7 @@ export default function TrainingDashboardPage() {
     }).sort((a, b) => Number(b.trained) - Number(a.trained) || a.name.localeCompare(b.name));
 
     return rows;
-  }, [filteredRecords, listMonth, listFilter, listSearch, allDrivers, selectedArea]);
+  }, [filteredRecords, listMonth, listFilter, listSearch, allDrivers, selectedArea, year]);
 
   const trainedCount = driverListByMonth.filter(d => d.trained).length;
   const notTrainedCount = driverListByMonth.length - trainedCount;
@@ -311,6 +352,73 @@ export default function TrainingDashboardPage() {
       alert('Gagal export PDF. Silakan coba kembali.');
     } finally {
       setIsExportingQ(false);
+    }
+  };
+
+  // ── Export PDF List Driver 1 bulan ───────────────────────────────
+  const exportListPDF = async () => {
+    if (isExportingList || driverListByMonth.length === 0) return;
+    setIsExportingList(true);
+    try {
+      const { default: jsPDFDefault, jsPDF } = await import('jspdf');
+      const JsPDFCtor = jsPDF || jsPDFDefault;
+      const pdf = new JsPDFCtor('p', 'mm', 'a4');
+      const esc = (v: any) => String(v ?? '')
+        .replace(/\\/g, '\\\\').replace(/\(/g, '\\(').replace(/\)/g, '\\)');
+      const areaLabel = !selectedArea || selectedArea === 'ALL' ? 'Semua Area' : selectedArea;
+      const title = `Status Training ${MONTH_LABELS[listMonth]} ${year} — ${areaLabel}`;
+      const colX = [12, 22, 112, 142, 162, 178];
+      const colW = [8, 88, 28, 18, 14, 20];
+      const rowH = 7.5;
+      const rowsPerPage = 26;
+      const trainedN = driverListByMonth.filter(d => d.trained).length;
+      const notTrainedN = driverListByMonth.length - trainedN;
+      const totalPages = Math.max(1, Math.ceil(driverListByMonth.length / rowsPerPage));
+      for (let page = 0; page < totalPages; page++) {
+        if (page > 0) pdf.addPage();
+        pdf.setFont('helvetica', 'bold'); pdf.setFontSize(13);
+        pdf.text(esc(title), 12, 16, { maxWidth: 170 });
+        pdf.setFont('helvetica', 'normal'); pdf.setFontSize(9); pdf.setTextColor(100);
+        pdf.text(esc(`${trainedN} training · ${notTrainedN} belum — K Line Fleet Monitoring`), 12, 22);
+        pdf.setTextColor(0);
+        const headY = 28;
+        pdf.setFillColor(59, 130, 246);
+        pdf.setTextColor(255); pdf.setFont('helvetica', 'bold'); pdf.setFontSize(9);
+        const headers = ['NO', 'NAMA DRIVER', 'NIK', 'AREA', 'NILAI', 'STATUS'];
+        headers.forEach((h, i) => {
+          pdf.rect(colX[i], headY, colW[i], rowH, 'F');
+          pdf.text(h, colX[i] + (i <= 2 ? 2 : colW[i] / 2), headY + 5, { align: i <= 2 ? 'left' : 'center' });
+        });
+        pdf.setTextColor(0); pdf.setFont('helvetica', 'normal'); pdf.setFontSize(9);
+        const slice = driverListByMonth.slice(page * rowsPerPage, (page + 1) * rowsPerPage);
+        slice.forEach((d, r) => {
+          const y = headY + rowH * (r + 1);
+          if (r % 2 === 1) { pdf.setFillColor(248, 250, 252); pdf.rect(colX[0], y, 186, rowH, 'F'); }
+          pdf.setDrawColor(226, 232, 240);
+          colW.forEach((w, i) => pdf.rect(colX[i], y, w, rowH));
+          pdf.text(String(page * rowsPerPage + r + 1), colX[0] + colW[0] / 2, y + 5, { align: 'center' });
+          pdf.text(esc(d.name), colX[1] + 2, y + 5, { maxWidth: colW[1] - 4 });
+          pdf.text(esc(d.nik), colX[2] + 2, y + 5, { maxWidth: colW[2] - 4 });
+          pdf.text(esc(d.area), colX[3] + colW[3] / 2, y + 5, { align: 'center', maxWidth: colW[3] - 4 });
+          pdf.text(d.trained && d.post_test ? String(d.post_test) : '—', colX[4] + colW[4] / 2, y + 5, { align: 'center' });
+          const status = !d.trained ? 'BELUM' : d.passed ? 'LULUS' : 'TRAINING';
+          if (!d.trained) pdf.setTextColor(190, 18, 60);
+          else if (d.passed) pdf.setTextColor(16, 122, 87);
+          else pdf.setTextColor(29, 78, 216);
+          pdf.setFont('helvetica', 'bold');
+          pdf.text(status, colX[5] + colW[5] / 2, y + 5, { align: 'center' });
+          pdf.setFont('helvetica', 'normal'); pdf.setTextColor(0);
+        });
+        pdf.setFontSize(8); pdf.setTextColor(130);
+        pdf.text(`Halaman ${page + 1}/${totalPages}`, 198, 290, { align: 'right' });
+        pdf.setTextColor(0);
+      }
+      pdf.save(`Training_${listMonth}_${year}_${String(areaLabel).replace(/\s+/g, '_')}.pdf`);
+    } catch (e) {
+      console.error(e);
+      alert('Gagal export PDF. Silakan coba kembali.');
+    } finally {
+      setIsExportingList(false);
     }
   };
 
@@ -495,10 +603,16 @@ export default function TrainingDashboardPage() {
 
               {/* Tabel driver */}
               <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-100 dark:border-slate-800 p-6">
-                <h3 className="font-black text-base mb-1 flex items-center gap-2">
-                  <Users className="w-4 h-4 text-blue-500" /> Status Training Driver
-                  <span className="text-slate-400 font-normal text-sm">{MONTH_LABELS[listMonth]} {year}</span>
-                </h3>
+                <div className="flex items-start justify-between gap-4 mb-1">
+                  <h3 className="font-black text-base flex items-center gap-2">
+                    <Users className="w-4 h-4 text-blue-500" /> Status Training Driver
+                    <span className="text-slate-400 font-normal text-sm">{MONTH_LABELS[listMonth]} {year}</span>
+                  </h3>
+                  <button onClick={exportListPDF} disabled={isExportingList || driverListByMonth.length === 0}
+                    className="flex items-center gap-2 px-3.5 py-2 bg-blue-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-blue-700 transition-all disabled:opacity-50 shrink-0">
+                    {isExportingList ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5" />} PDF
+                  </button>
+                </div>
                 <p className="text-xs text-slate-400 mb-4">{driverListByMonth.length} driver ditampilkan</p>
                 {isLoading ? (
                   <div className="space-y-3">{[...Array(5)].map((_, i) => <div key={i} className="h-12 bg-slate-100 dark:bg-slate-800 rounded-xl animate-pulse" />)}</div>
