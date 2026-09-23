@@ -1306,8 +1306,8 @@ function StageBox({ title, icon, stats, prevStats, eff, stage, activeFilter, set
   const onTimeData = stats?.chartData?.find((d: any) => d.name === 'OnTime');
   const delayData = stats?.chartData?.find((d: any) => d.name === 'Delay');
   const advanceData = stats?.chartData?.find((d: any) => d.name === 'Advance');
-  const isInPdc = title === 'IN-PDC';
-  const total = stats?.totalRecords || 0;
+  const totalRecords = stats?.totalRecords || 0;
+  const entered = stats?.total || 0;
   
   return (
     <div className="bg-white dark:bg-slate-900/60 rounded-2xl sm:rounded-4xl border border-slate-200/60 dark:border-slate-800/60 shadow-2xl shadow-blue-500/5 p-3 sm:p-8 flex flex-col h-full hover:border-blue-500/30 transition-all duration-500 group overflow-hidden w-full max-w-full box-border">
@@ -1361,9 +1361,10 @@ function StageBox({ title, icon, stats, prevStats, eff, stage, activeFilter, set
           </ResponsiveContainer>
         </div>
         <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-          <span className="text-2xl sm:text-3xl font-black text-slate-800 dark:text-white tracking-tighter">{total}</span>
+          <span className="text-2xl sm:text-3xl font-black text-slate-800 dark:text-white tracking-tighter">{totalRecords}</span>
           <span className="text-[7px] sm:text-[9px] font-bold text-slate-400 mt-0.5 uppercase tracking-widest">TRIPS</span>
           <span className="text-[8px] sm:text-[10px] font-black text-blue-500 mt-1 uppercase tracking-widest">{eff}</span>
+          <span className="text-[7px] sm:text-[9px] font-bold text-slate-400 mt-0.5 uppercase tracking-widest">{entered} masuk stage</span>
         </div>
       </div>
     </div>
