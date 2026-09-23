@@ -86,6 +86,58 @@ const parseDurationHours = (str?: string | null): number | null => {
 
 const ITEMS_PER_PAGE = 15;
 
+const isFilledActual = (v: any): boolean => {
+  if (v === null || v === undefined) return false;
+  const t = String(v).trim();
+  return t !== '' && t !== '-' && !t.startsWith('#');
+};
+
+const hasCheckpointValue = (points: Record<string, any>, names: string[]): boolean => {
+  for (const n of names) {
+    if (isFilledActual((points as any)[n])) return true;
+  }
+  const lows = names.map(n => n.toLowerCase());
+  for (const key in points) {
+    if (key.toLowerCase().includes('plan')) continue;
+    if (lows.includes(key.toLowerCase()) && isFilledActual((points as any)[key])) return true;
+  }
+  return false;
+};
+
+const UNLOAD_ACTUAL_KEYS = [
+  'Actual (Unloading)', 'Actual Unloading',
+  'UNLOADING PDC (LAMPUNG,PALEMBANG,PEKANBARU)', 'UNLOADING PDC POLYGON', 'UNLOADING PDC',
+];
+
+const BTP_ACTUAL_KEYS = [
+  'Actual (BackToPool)', 'Actual BackToPool', 'Actual (Back To Pool)', 'BACK TO POOL',
+];
+
+const hasArrivedAtDestination = (areaName: string, points: Record<string, any>): boolean => {
+  if (areaName === 'KALIMANTAN') return hasCheckpointValue(points, ['Actual (GUNUNG MENANGIS)']);
+  return hasCheckpointValue(points, UNLOAD_ACTUAL_KEYS);
+};
+
+const hasBackToPoolActual = (points: Record<string, any>): boolean =>
+  hasCheckpointValue(points, BTP_ACTUAL_KEYS);
+
+const INPDC_ACTUAL_KEYS: Record<string, string[]> = {
+  JBK: ['In PDC'],
+  TMMIN: ['In PDC'],
+  NGORO: ['IN PDC'],
+  SUMATERA: ['IN PDC', 'Actual'],
+  PADANG: ['Actual Tiba PDC', 'Actual Loading PDC'],
+  KALIMANTAN: ['IN PDC'],
+  'SINGLE CARRIER': ['In PDC'],
+  'DOUBLE DECK': ['In PDC'],
+};
+
+const hasInPdcActual = (areaName: string, points: Record<string, any>): boolean => {
+  const keys = INPDC_ACTUAL_KEYS[areaName];
+  if (!keys) return true;
+  return hasCheckpointValue(points, keys);
+};
+
 const TIMELINE_FLOWS: Record<string, string[]> = {
   'SINGLE CARRIER': ['OutPool', 'InPDC', 'OutPDC', 'Unloading'],
   'DOUBLE DECK': ['OutPool', 'InPDC', 'OutPDC', 'Unloading'],
@@ -336,18 +388,28 @@ export default function LeadTimePage({ isTAM = false }: { isTAM?: boolean }) {
     }
 
     if (stage === 'inpdc') {
+      if (!hasInPdcActual(areaName, points)) return 'Unknown';
+      const planRaw = findExactOrInclude(points, ['Plan DCCP', 'PLAN', 'Plan']);
+      const actualRaw = findExactOrInclude(points, ['In PDC', 'Actual Tiba PDC', 'Actual Loading PDC', 'Actual']);
+      const pdcMuatRaw = findExactOrInclude(points, ['PDC Muat', 'PDC']);
+      const isTamNkrw = ['JBK', 'NGORO', 'SUMATERA', 'SINGLE CARRIER', 'DOUBLE DECK'].includes(areaName)
+        && pdcMuatRaw.toUpperCase().includes('NKRW');
+      const planMs = dateTimeToMs(planRaw);
+      const actualMs = dateTimeToMs(actualRaw);
+      const isEarly = isTamNkrw && planMs !== null && actualMs !== null && (actualMs - planMs) < 0;
       const val = findExactOrInclude(info, ['Evaluasi Kedatangan CC', 'Actual InPDC', 'Actual In PDC']).toLowerCase();
-      if (val.includes('advance')) return 'Advance';
+      if (val.includes('advance') || (isEarly && (val.includes('ontime') || val.includes('on time') || val.includes('ok')))) return 'Advance';
       if (val.includes('delay')) return 'Delay';
       if (val.includes('ontime') || val.includes('on time') || val.includes('ok')) return 'OnTime';
       const fall = findExactOrInclude(info, ['Keterangan']).toLowerCase();
-      if (fall.includes('advance')) return 'Advance';
+      if (fall.includes('advance') || (isEarly && (fall.includes('ontime') || fall.includes('on time') || fall.includes('ok')))) return 'Advance';
       if (fall.includes('delay')) return 'Delay';
       if (fall.includes('ontime') || fall.includes('on time') || fall.includes('ok')) return 'OnTime';
       return 'Unknown';
     }
 
     if (stage === 'delivery') {
+      if (!hasArrivedAtDestination(areaName, points)) return 'Unknown';
       let val = '';
       if (areaName === 'JBK') val = (findExactOrInclude(points, ['LeadTime Delivery']) || findExactOrInclude(info, ['Leadtime delivery'])).toLowerCase();
       else if (areaName === 'NGORO') val = findExactOrInclude(info, ['Status Leadtime Delivery']).toLowerCase();
@@ -383,6 +445,7 @@ export default function LeadTimePage({ isTAM = false }: { isTAM?: boolean }) {
       return 'Unknown';
     }
     if (stage === 'backtopool') {
+      if (areaName !== 'TMMIN' && !hasBackToPoolActual(points)) return 'Unknown';
       if (areaName === 'SUMATERA') {
         const destination = findExactOrInclude(info, ['Tujuan', 'Tujuan CC', 'Destination']).toUpperCase();
         const thresholdKey = ['LAMPUNG', 'PALEMBANG', 'PEKANBARU'].find(d => destination.includes(d)) || '';
@@ -781,7 +844,7 @@ const reasonDelay = config.stage !== 'unknown' ? (getReasonDelay(item, config.st
           )}
 
           {/* ── STAGE BOXES ── */}
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 sm:gap-6 w-full max-w-full overflow-hidden box-border">
+          <div className={`grid grid-cols-1 md:grid-cols-2 ${area === 'TMMIN' ? 'xl:grid-cols-3' : 'xl:grid-cols-4'} gap-4 sm:gap-6 w-full max-w-full overflow-hidden box-border`}>
             <StageBox
               title="OUTPOOL" icon={<Truck />} stats={stats?.outpool} prevStats={prevStats?.outpool}
               eff={calculateEfficiency('outpool')} stage="outpool" activeFilter={activeFilter} setActiveFilter={(f: any) => { setActiveFilter(f); setCurrentPage(1); }}
@@ -797,11 +860,13 @@ const reasonDelay = config.stage !== 'unknown' ? (getReasonDelay(item, config.st
               eff={calculateEfficiency('delivery')} stage="delivery" activeFilter={activeFilter} setActiveFilter={(f: any) => { setActiveFilter(f); setCurrentPage(1); }}
               prevPeriod={currentPeriodText}
             />
+            {area !== 'TMMIN' && (
             <StageBox
               title="BACK TO POOL" icon={<Home />} stats={stats?.backtopool} prevStats={prevStats?.backtopool}
               eff={calculateEfficiency('backtopool')} stage="backtopool" activeFilter={activeFilter} setActiveFilter={(f: any) => { setActiveFilter(f); setCurrentPage(1); }}
               prevPeriod={currentPeriodText}
             />
+            )}
           </div>
 
           {/* ── DELAY ANALYSIS CENTER ── */}
@@ -827,10 +892,12 @@ const reasonDelay = config.stage !== 'unknown' ? (getReasonDelay(item, config.st
                 onClickDelay={() => setDelayPopup({ title: 'DELIVERY DELAY REASONS', reasons: (stats?.delivery?.reasons || []).filter((r:any) => { const l=r.name.toLowerCase(); return !l.includes('delay')&&!l.includes('advance')&&!l.includes('ontime')&&l!=='ok'&&l!=='-'&&l!=='tidak ada'; }), delayCount: stats?.delivery?.chartData?.find((d:any)=>d.name==='Delay')?.value||0 })}
                 onSelect={(r: any) => { setReasonFilter(r.name); setCurrentPage(1); }}
               />
+              {area !== 'TMMIN' && (
               <ReasonSection title="BACK TO POOL DELAYS" stageStats={stats?.backtopool} color="text-purple-400"
                 onClickDelay={() => setDelayPopup({ title: 'BACK TO POOL DELAY REASONS', reasons: (stats?.backtopool?.reasons || []).filter((r:any) => { const l=r.name.toLowerCase(); return !l.includes('delay')&&!l.includes('advance')&&!l.includes('ontime')&&l!=='ok'&&l!=='-'&&l!=='tidak ada'; }), delayCount: stats?.backtopool?.chartData?.find((d:any)=>d.name==='Delay')?.value||0 })}
                 onSelect={(r: any) => { setReasonFilter(r.name); setCurrentPage(1); }}
               />
+              )}
             </div>
           </div>
 
@@ -843,7 +910,7 @@ const reasonDelay = config.stage !== 'unknown' ? (getReasonDelay(item, config.st
                   <p className="text-[7px] sm:text-xs text-slate-500 dark:text-slate-400 font-bold uppercase tracking-widest mt-1 truncate">Daily Efficiency (OnTime + Advance)</p>
                 </div>
                 <div className="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-xl border border-slate-200/50 dark:border-slate-700/50 w-fit">
-                  {(['outpool', 'inpdc', 'delivery', 'backtopool'] as const)
+                  {((area === 'TMMIN' ? ['outpool', 'inpdc', 'delivery'] : ['outpool', 'inpdc', 'delivery', 'backtopool']) as ('outpool' | 'inpdc' | 'delivery' | 'backtopool')[])
                     .map((s) => (
                     <button
                       key={s}
@@ -894,7 +961,7 @@ const reasonDelay = config.stage !== 'unknown' ? (getReasonDelay(item, config.st
               </div>
               <div className="flex flex-col lg:flex-row items-stretch lg:items-center gap-3 shrink-0">
                 <div className="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-xl border border-slate-200/50 dark:border-slate-700/50 w-full lg:w-fit overflow-x-auto scrollbar-hide">
-                  {(['ALL', 'outpool', 'inpdc', 'delivery', 'backtopool'] as const)
+                  {((area === 'TMMIN' ? ['ALL', 'outpool', 'inpdc', 'delivery'] : ['ALL', 'outpool', 'inpdc', 'delivery', 'backtopool']) as ('ALL' | 'outpool' | 'inpdc' | 'delivery' | 'backtopool')[])
                     .map((s) => (
                     <button
                       key={s}
