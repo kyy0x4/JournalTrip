@@ -48,7 +48,8 @@ import { fetchEcoViolations, EcoViolation } from '../services/ecoDataFetcher';
 import { Driver, Ritase } from '../types';
 import RitaseItem from '../components/dashboard/RitaseItem';
 import * as gatepassService from '../services/gatepassService';
-import { TenkoRecord, TENSI_FAKTOR_OPTIONS, isHipertensi, formatTensiFaktorDisplay } from '../services/tenkoService';
+import { TenkoRecord, TENSI_FAKTOR_OPTIONS, isHipertensi, isHipotensi, formatTensiFaktorDisplay } from '../services/tenkoService';
+import { ALKOHOL_NEGATIF, SUHU_DEMAM_C } from '../constants/standarParameter';
 import { P2HRecord } from '../types';
 import Logo from '../image/Logo.png';
 import { jsPDF } from 'jspdf';
@@ -108,16 +109,16 @@ export default function DriverDetailPage() {
   const getTenkoStatus = useCallback((): { status: 'OK' | 'NG' | 'PENDING'; details?: string } => {
     if (!tenkoRecord) return { status: 'PENDING' };
     const isHipertensiVal = isHipertensi(tenkoRecord.sistolik, tenkoRecord.diastolik);
-    const isHipotensi = tenkoRecord.sistolik < 90 || tenkoRecord.diastolik < 60;
-    const isDemam = tenkoRecord.suhu_tubuh >= 37.5;
-    const isPositifAlkohol = Number(tenkoRecord.alkohol) > 0;
+    const isHipotensiVal = isHipotensi(tenkoRecord.sistolik, tenkoRecord.diastolik);
+    const isDemam = tenkoRecord.suhu_tubuh >= SUHU_DEMAM_C;
+    const isPositifAlkohol = Number(tenkoRecord.alkohol) > ALKOHOL_NEGATIF;
     const isLelah = tenkoRecord.fatigue?.toUpperCase() === 'LELAH';
     
     if (isHipertensiVal) {
       const faktor = formatTensiFaktorDisplay(tenkoRecord);
       return { status: 'NG', details: faktor ? `Hipertensi — ${faktor}` : 'Hipertensi' };
     }
-    if (isHipotensi) return { status: 'NG', details: 'Hipotensi' };
+    if (isHipotensiVal) return { status: 'NG', details: 'Hipotensi' };
     if (isDemam) return { status: 'NG', details: 'Suhu Tinggi' };
     if (isPositifAlkohol) return { status: 'NG', details: 'Positif Alkohol' };
     if (isLelah) return { status: 'NG', details: 'Fatigue/Lelah' };

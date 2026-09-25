@@ -1,6 +1,7 @@
 import { useState, type ReactElement } from 'react';
 import { motion } from 'motion/react';
-import { Timer, Map, MapPin, Navigation, Route as RouteIcon, Clock, ChevronLeft, ChevronRight, Leaf, Zap, AlertTriangle, TrendingDown, RotateCcw, ParkingCircle, Wind, Ship } from 'lucide-react';
+import { Timer, Map, MapPin, Navigation, Route as RouteIcon, Clock, ChevronLeft, ChevronRight, Leaf, HeartPulse, AlertTriangle, Ship } from 'lucide-react';
+import { ECO_DRIVING_STANDARDS, TENKO_STANDARDS, type ParameterDef } from '../constants/standarParameter';
 
 const ROWS_PER_PAGE = 6;
 
@@ -133,6 +134,31 @@ const colorMap: Record<string, { bg: string; text: string; border: string; pill:
   amber:   { bg: 'bg-amber-50 dark:bg-amber-500/10',  text: 'text-amber-600 dark:text-amber-400',  border: 'border-amber-200 dark:border-amber-500/30',  pill: 'bg-amber-100 dark:bg-amber-500/20 text-amber-700 dark:text-amber-300' },
   purple:  { bg: 'bg-purple-50 dark:bg-purple-500/10',text: 'text-purple-600 dark:text-purple-400',border: 'border-purple-200 dark:border-purple-500/30',pill: 'bg-purple-100 dark:bg-purple-500/20 text-purple-700 dark:text-purple-300' },
   indigo:  { bg: 'bg-indigo-50 dark:bg-indigo-500/10',text: 'text-indigo-600 dark:text-indigo-400',border: 'border-indigo-200 dark:border-indigo-500/30',pill: 'bg-indigo-100 dark:bg-indigo-500/20 text-indigo-700 dark:text-indigo-300' },
+};
+
+const PARAM_COLORS: Record<string, { bg: string; text: string; border: string; pill: string; badge: string }> = {
+  red:     { bg: 'bg-rose-50 dark:bg-rose-500/10',      text: 'text-rose-600 dark:text-rose-400',      border: 'border-rose-100 dark:border-rose-500/20',      pill: 'bg-rose-100 dark:bg-rose-500/20 text-rose-700 dark:text-rose-300',      badge: 'bg-rose-500' },
+  blue:    { bg: 'bg-blue-50 dark:bg-blue-500/10',      text: 'text-blue-600 dark:text-blue-400',      border: 'border-blue-100 dark:border-blue-500/20',      pill: 'bg-blue-100 dark:bg-blue-500/20 text-blue-700 dark:text-blue-300',      badge: 'bg-blue-500' },
+  amber:   { bg: 'bg-amber-50 dark:bg-amber-500/10',    text: 'text-amber-600 dark:text-amber-400',    border: 'border-amber-100 dark:border-amber-500/20',    pill: 'bg-amber-100 dark:bg-amber-500/20 text-amber-700 dark:text-amber-300',    badge: 'bg-amber-500' },
+  purple:  { bg: 'bg-purple-50 dark:bg-purple-500/10',  text: 'text-purple-600 dark:text-purple-400',  border: 'border-purple-100 dark:border-purple-500/20',  pill: 'bg-purple-100 dark:bg-purple-500/20 text-purple-700 dark:text-purple-300',  badge: 'bg-purple-500' },
+  orange:  { bg: 'bg-orange-50 dark:bg-orange-500/10',  text: 'text-orange-600 dark:text-orange-400',  border: 'border-orange-100 dark:border-orange-500/20',  pill: 'bg-orange-100 dark:bg-orange-500/20 text-orange-700 dark:text-orange-300',  badge: 'bg-orange-500' },
+  slate:   { bg: 'bg-slate-50 dark:bg-slate-800/60',    text: 'text-slate-600 dark:text-slate-400',    border: 'border-slate-100 dark:border-slate-700',       pill: 'bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300',       badge: 'bg-slate-500' },
+  emerald: { bg: 'bg-emerald-50 dark:bg-emerald-500/10',text: 'text-emerald-600 dark:text-emerald-400',border: 'border-emerald-100 dark:border-emerald-500/20',pill: 'bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300',badge: 'bg-emerald-500' },
+};
+
+const PARAM_TONES: Record<string, { header: string; border: string; iconWrap: string; iconText: string }> = {
+  emerald: {
+    header: 'border-emerald-100 dark:border-emerald-500/20 bg-emerald-50 dark:bg-emerald-500/10',
+    border: 'border-emerald-200 dark:border-emerald-500/30',
+    iconWrap: 'bg-white/60 dark:bg-slate-900/40',
+    iconText: 'text-emerald-600 dark:text-emerald-400',
+  },
+  rose: {
+    header: 'border-rose-100 dark:border-rose-500/20 bg-rose-50 dark:bg-rose-500/10',
+    border: 'border-rose-200 dark:border-rose-500/30',
+    iconWrap: 'bg-white/60 dark:bg-slate-900/40',
+    iconText: 'text-rose-600 dark:text-rose-400',
+  },
 };
 
 function RouteCard({ route, delay }: { route: Route; delay: number }) {
@@ -275,7 +301,81 @@ function RouteCard({ route, delay }: { route: Route; delay: number }) {
   );
 }
 
-export default function StandarLeadtimePage() {
+function ParameterSection({ title, subtitle, tone, icon, items, delay }: {
+  title: string;
+  subtitle: string;
+  tone: 'emerald' | 'rose';
+  icon: ReactElement;
+  items: ParameterDef[];
+  delay: number;
+}) {
+  const t = PARAM_TONES[tone];
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.4, delay }}
+      className="bg-white dark:bg-slate-900 rounded-[24px] border border-slate-200 dark:border-slate-800 shadow-lg overflow-hidden"
+    >
+      {/* Section Header */}
+      <div className={`px-6 sm:px-8 py-5 border-b flex items-center gap-3 ${t.header}`}>
+        <div className={`p-2.5 rounded-xl border ${t.border} ${t.iconWrap}`}>
+          <span className={t.iconText}>{icon}</span>
+        </div>
+        <div>
+          <h3 className={`text-[11px] sm:text-sm font-black uppercase tracking-tight ${t.iconText}`}>
+            {title}
+          </h3>
+          <p className="text-[9px] text-slate-400 font-bold tracking-widest uppercase mt-0.5">{subtitle}</p>
+        </div>
+      </div>
+
+      {/* Parameter Grid */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-0 divide-y divide-slate-100 dark:divide-slate-800 sm:divide-y-0">
+        {items.map((param, i) => {
+          const c = PARAM_COLORS[param.color];
+          const Icon = param.icon;
+          return (
+            <div
+              key={param.code}
+              className={`relative p-5 sm:p-6 flex flex-col gap-3 hover:bg-slate-50/70 dark:hover:bg-slate-800/30 transition-colors ${i < 3 ? 'sm:border-b sm:border-slate-100 sm:dark:border-slate-800' : ''} ${i % 3 !== 2 ? 'lg:border-r lg:border-slate-100 lg:dark:border-slate-800' : ''} ${i % 2 === 0 ? 'sm:border-r sm:border-slate-100 sm:dark:border-slate-800 lg:border-r-0' : ''} ${[0,1,3,4].includes(i) ? 'sm:border-r' : ''}`}
+            >
+              {/* Top row: icon + code badge */}
+              <div className="flex items-center justify-between">
+                <div className={`p-2 rounded-xl ${c.bg} border ${c.border}`}>
+                  <span className={c.text}><Icon className={param.flipIcon ? 'w-4 h-4 rotate-180' : 'w-4 h-4'} /></span>
+                </div>
+                <span className={`text-[8px] font-black px-2 py-1 rounded-lg tracking-widest uppercase ${c.pill}`}>
+                  {param.code}
+                </span>
+              </div>
+
+              {/* Label */}
+              <div>
+                <p className="text-[11px] sm:text-xs font-black text-slate-900 dark:text-white uppercase tracking-tight leading-tight">
+                  {param.label}
+                </p>
+                <p className="text-[9px] sm:text-[10px] text-slate-500 dark:text-slate-400 font-medium leading-relaxed mt-1.5">
+                  {param.desc}
+                </p>
+              </div>
+
+              {/* Threshold pill */}
+              <div className="mt-auto">
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 text-[9px] font-black text-slate-600 dark:text-slate-300 uppercase tracking-wide">
+                  <AlertTriangle className="w-2.5 h-2.5 text-slate-400" />
+                  {param.threshold}
+                </span>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </motion.div>
+  );
+}
+
+export default function StandarParameterPage() {
   return (
     <div className="w-full max-w-7xl mx-auto space-y-6 sm:space-y-8 pb-10">
 
@@ -293,10 +393,10 @@ export default function StandarLeadtimePage() {
             <Timer className="w-3.5 h-3.5" /> Reference Guide
           </div>
           <h1 className="text-2xl sm:text-4xl font-black text-slate-900 dark:text-white uppercase tracking-tight leading-none mb-3">
-            Standar Leadtime
+            Standar Parameter
           </h1>
           <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 font-bold max-w-xl leading-relaxed">
-            Panduan durasi waktu tempuh standar (Leadtime) untuk armada di berbagai wilayah. Jadikan sebagai acuan performa driver.
+            Acuan standar LeadTime, Tenko, dan Eco Driving yang dipakai dashboard untuk menilai performa driver.
           </p>
         </div>
       </motion.div>
@@ -309,123 +409,24 @@ export default function StandarLeadtimePage() {
       </div>
 
       {/* ── ECO DRIVING PARAMETERS ── */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4, delay: 0.35 }}
-        className="bg-white dark:bg-slate-900 rounded-[24px] border border-slate-200 dark:border-slate-800 shadow-lg overflow-hidden"
-      >
-        {/* Section Header */}
-        <div className="px-6 sm:px-8 py-5 border-b border-emerald-100 dark:border-emerald-500/20 bg-emerald-50 dark:bg-emerald-500/10 flex items-center gap-3">
-          <div className="p-2.5 rounded-xl border border-emerald-200 dark:border-emerald-500/30 bg-white/60 dark:bg-slate-900/40">
-            <Leaf className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-          </div>
-          <div>
-            <h3 className="text-[11px] sm:text-sm font-black uppercase tracking-tight text-emerald-600 dark:text-emerald-400">
-              Standar Parameter Eco Driving
-            </h3>
-            <p className="text-[9px] text-slate-400 font-bold tracking-widest uppercase mt-0.5">6 parameter pelanggaran</p>
-          </div>
-        </div>
+      <ParameterSection
+        title="Standar Parameter Eco Driving"
+        subtitle={`${ECO_DRIVING_STANDARDS.length} parameter pelanggaran`}
+        tone="emerald"
+        icon={<Leaf className="w-4 h-4" />}
+        items={ECO_DRIVING_STANDARDS}
+        delay={0.35}
+      />
 
-        {/* Parameter Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-0 divide-y divide-slate-100 dark:divide-slate-800 sm:divide-y-0">
-          {[
-            {
-              icon: <Zap className="w-4 h-4" />,
-              color: 'red',
-              code: 'OverSpeed',
-              label: 'Over Speed',
-              desc: 'Kecepatan Melebihi 80 KM/jam',
-              threshold: '> 80 km/jam',
-            },
-            {
-              icon: <TrendingDown className="w-4 h-4 rotate-180" />,
-              color: 'blue',
-              code: 'HA',
-              label: 'Harsh Acceleration',
-              desc: 'Kenaikan Kecepatan 2.5 m/s atau 10 km/jam dalam 1 detik',
-              threshold: '≥ 2.5 m/s² dalam 1 detik',
-            },
-            {
-              icon: <TrendingDown className="w-4 h-4" />,
-              color: 'amber',
-              code: 'HB',
-              label: 'Harsh Braking',
-              desc: 'Penurunan Kecepatan 2.5 m/s atau 10 km/jam dalam 1 detik',
-              threshold: '≥ 2.5 m/s² dalam 1 detik',
-            },
-            {
-              icon: <RotateCcw className="w-4 h-4" />,
-              color: 'purple',
-              code: 'HC',
-              label: 'Hot Cornering',
-              desc: 'Bila kendaraan berbelok lebih dari 20 derajat dalam 1 detik',
-              threshold: '> 20° dalam 1 detik',
-            },
-            {
-              icon: <ParkingCircle className="w-4 h-4" />,
-              color: 'orange',
-              code: 'IS',
-              label: 'Illegal Stop',
-              desc: 'Berhenti lebih dari 15 menit di tempat yang bukan Rest Point',
-              threshold: '> 15 menit di non-RP',
-            },
-            {
-              icon: <Wind className="w-4 h-4" />,
-              color: 'slate',
-              code: 'IT',
-              label: 'Idle Time',
-              desc: 'Mesin menyala lebih dari 30 menit tanpa pergerakan',
-              threshold: '> 30 menit tanpa gerak',
-            },
-          ].map((param, i) => {
-            const colorStyles: Record<string, { bg: string; text: string; border: string; pill: string; badge: string }> = {
-              red:    { bg: 'bg-rose-50 dark:bg-rose-500/10',     text: 'text-rose-600 dark:text-rose-400',     border: 'border-rose-100 dark:border-rose-500/20',     pill: 'bg-rose-100 dark:bg-rose-500/20 text-rose-700 dark:text-rose-300',     badge: 'bg-rose-500' },
-              blue:   { bg: 'bg-blue-50 dark:bg-blue-500/10',   text: 'text-blue-600 dark:text-blue-400',   border: 'border-blue-100 dark:border-blue-500/20',   pill: 'bg-blue-100 dark:bg-blue-500/20 text-blue-700 dark:text-blue-300',   badge: 'bg-blue-500' },
-              amber:  { bg: 'bg-amber-50 dark:bg-amber-500/10', text: 'text-amber-600 dark:text-amber-400', border: 'border-amber-100 dark:border-amber-500/20', pill: 'bg-amber-100 dark:bg-amber-500/20 text-amber-700 dark:text-amber-300', badge: 'bg-amber-500' },
-              purple: { bg: 'bg-purple-50 dark:bg-purple-500/10',text: 'text-purple-600 dark:text-purple-400',border: 'border-purple-100 dark:border-purple-500/20',pill: 'bg-purple-100 dark:bg-purple-500/20 text-purple-700 dark:text-purple-300',badge: 'bg-purple-500' },
-              orange: { bg: 'bg-orange-50 dark:bg-orange-500/10',text: 'text-orange-600 dark:text-orange-400',border: 'border-orange-100 dark:border-orange-500/20',pill: 'bg-orange-100 dark:bg-orange-500/20 text-orange-700 dark:text-orange-300',badge: 'bg-orange-500' },
-              slate:  { bg: 'bg-slate-50 dark:bg-slate-800/60', text: 'text-slate-600 dark:text-slate-400', border: 'border-slate-100 dark:border-slate-700',     pill: 'bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300', badge: 'bg-slate-500' },
-            };
-            const c = colorStyles[param.color];
-            return (
-              <div
-                key={param.code}
-                className={`relative p-5 sm:p-6 flex flex-col gap-3 hover:bg-slate-50/70 dark:hover:bg-slate-800/30 transition-colors ${i < 3 ? 'sm:border-b sm:border-slate-100 sm:dark:border-slate-800' : ''} ${i % 3 !== 2 ? 'lg:border-r lg:border-slate-100 lg:dark:border-slate-800' : ''} ${i % 2 === 0 ? 'sm:border-r sm:border-slate-100 sm:dark:border-slate-800 lg:border-r-0' : ''} ${[0,1,3,4].includes(i) ? 'sm:border-r' : ''}`}
-              >
-                {/* Top row: icon + code badge */}
-                <div className="flex items-center justify-between">
-                  <div className={`p-2 rounded-xl ${c.bg} border ${c.border}`}>
-                    <span className={c.text}>{param.icon}</span>
-                  </div>
-                  <span className={`text-[8px] font-black px-2 py-1 rounded-lg tracking-widest uppercase ${c.pill}`}>
-                    {param.code}
-                  </span>
-                </div>
-
-                {/* Label */}
-                <div>
-                  <p className="text-[11px] sm:text-xs font-black text-slate-900 dark:text-white uppercase tracking-tight leading-tight">
-                    {param.label}
-                  </p>
-                  <p className="text-[9px] sm:text-[10px] text-slate-500 dark:text-slate-400 font-medium leading-relaxed mt-1.5">
-                    {param.desc}
-                  </p>
-                </div>
-
-                {/* Threshold pill */}
-                <div className="mt-auto">
-                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 text-[9px] font-black text-slate-600 dark:text-slate-300 uppercase tracking-wide">
-                    <AlertTriangle className="w-2.5 h-2.5 text-slate-400" />
-                    {param.threshold}
-                  </span>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </motion.div>
+      {/* ── TENKO PARAMETERS ── */}
+      <ParameterSection
+        title="Standar Parameter Tenko"
+        subtitle={`${TENKO_STANDARDS.length} parameter pemeriksaan kesehatan`}
+        tone="rose"
+        icon={<HeartPulse className="w-4 h-4" />}
+        items={TENKO_STANDARDS}
+        delay={0.45}
+      />
 
     </div>
   );

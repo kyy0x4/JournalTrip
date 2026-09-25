@@ -22,6 +22,7 @@ import {
   CartesianGrid
 } from 'recharts';
 import { leadtimeService, LeadTimeData } from '../services/leadtimeService';
+import { SUMATERA_THRESHOLDS } from '../constants/standarParameter';
 
 const STATUS_COLORS = {
   ontime: '#10b981', // Emerald/Green
@@ -29,13 +30,6 @@ const STATUS_COLORS = {
   delay: '#ef4444',   // Red
   navy: '#1e3a8a',
   slate: '#94a3b8'
-};
-
-// Standard Leadtime (jam) per tujuan di area SUMATERA
-const SUMATERA_THRESHOLDS: Record<string, number> = {
-  LAMPUNG: 24,
-  PALEMBANG: 36,
-  PEKANBARU: 72,
 };
 
 const MONTH_ID: Record<string, number> = {
@@ -136,6 +130,24 @@ const hasInPdcActual = (areaName: string, points: Record<string, any>): boolean 
   const keys = INPDC_ACTUAL_KEYS[areaName];
   if (!keys) return true;
   return hasCheckpointValue(points, keys);
+};
+
+// TMMIN: OUTPOOL & BACK TO POOL dihitung per ARMADA — satu unit cuma sekali keluar
+// dan sekali balik ke pool walau ritase-nya dua (RIT 1 & RIT 2 jam exit/balik-nya sama).
+// IN-PDC & DELIVERY tetap per rit, karena tiap rit memang tiba dan bongkar sendiri.
+const ARMADA_STAGES = ['outpool', 'backtopool'];
+
+const isArmadaStage = (areaName: string, stage: string): boolean =>
+  areaName === 'TMMIN' && ARMADA_STAGES.includes(stage);
+
+const dedupeByArmada = (rows: LeadTimeData[]): LeadTimeData[] => {
+  const seen = new Map<string, LeadTimeData>();
+  rows.forEach(t => {
+    const key = `${t.no_polisi}|${t.tanggal}|${t.shift}`;
+    const prev = seen.get(key);
+    if (!prev || (t.ritase_ke || '').trim().toUpperCase() === 'RIT 1') seen.set(key, t);
+  });
+  return [...seen.values()];
 };
 
 const TIMELINE_FLOWS: Record<string, string[]> = {
@@ -354,14 +366,17 @@ export default function LeadTimePage({ isTAM = false }: { isTAM?: boolean }) {
     setIsLoading(false);
   };
 
-  const getTripCounts = (trip: LeadTimeData, filter: string, areaName: string) => {
+  const getTripCounts = (trips: LeadTimeData[], filter: string, areaName: string) => {
     let counts = { onTime: 0, advance: 0, delay: 0 };
     const stages = filter === 'ALL' ? ['outpool', 'inpdc', 'delivery', 'backtopool'] : [filter];
     stages.forEach(s => {
-      const stat = getRowStatus(trip, s);
-      if (stat === 'OnTime') counts.onTime++;
-      else if (stat === 'Advance') counts.advance++;
-      else if (stat === 'Delay') counts.delay++;
+      const rows = isArmadaStage(areaName, s) ? dedupeByArmada(trips) : trips;
+      rows.forEach(t => {
+        const stat = getRowStatus(t, s);
+        if (stat === 'OnTime') counts.onTime++;
+        else if (stat === 'Advance') counts.advance++;
+        else if (stat === 'Delay') counts.delay++;
+      });
     });
     return counts;
   };
@@ -383,6 +398,9 @@ export default function LeadTimePage({ isTAM = false }: { isTAM?: boolean }) {
 
     if (stage === 'outpool') {
       const val = findExactOrInclude(info, ['Evaluasi Keluar Pool', 'Abnormalty', 'Actual OutPool']).toLowerCase();
+      // TMMIN: evaluasi keluar pool baru ada datanya sekarang — baris yang belum
+      // punya actual exit pool / evaluasi jangan dihitung OnTime.
+      if (areaName === 'TMMIN' && (!val || !hasCheckpointValue(points, ['Actual Exit Pool']))) return 'Unknown';
       if (val.includes('delay')) return 'Delay';
       return 'OnTime';
     }
@@ -445,7 +463,7 @@ export default function LeadTimePage({ isTAM = false }: { isTAM?: boolean }) {
       return 'Unknown';
     }
     if (stage === 'backtopool') {
-      if (areaName !== 'TMMIN' && !hasBackToPoolActual(points)) return 'Unknown';
+      if (!hasBackToPoolActual(points)) return 'Unknown';
       if (areaName === 'SUMATERA') {
         const destination = findExactOrInclude(info, ['Tujuan', 'Tujuan CC', 'Destination']).toUpperCase();
         const thresholdKey = ['LAMPUNG', 'PALEMBANG', 'PEKANBARU'].find(d => destination.includes(d)) || '';
@@ -460,7 +478,7 @@ export default function LeadTimePage({ isTAM = false }: { isTAM?: boolean }) {
         return totalHours > threshold ? 'Delay' : 'OnTime';
       }
 
-      const val = findExactOrInclude(info, ['Status Leadtime Back To Pool', 'Actual BackToPool', 'Actual Back To Pool', 'Evaluasi Kembali Pool', 'Back To Pool']).toLowerCase();
+      const val = findExactOrInclude(info, ['KETERANGAN Back To Pool', 'Status Leadtime Back To Pool', 'Actual BackToPool', 'Evaluasi Kembali Pool', 'Back To Pool']).toLowerCase();
       if (val.includes('delay')) return 'Delay';
       if (val.includes('ontime') || val.includes('on time') || val.includes('ok')) return 'OnTime';
       return 'Unknown';
@@ -473,16 +491,25 @@ export default function LeadTimePage({ isTAM = false }: { isTAM?: boolean }) {
     return data.filter(d => d.driver === globalDriverFilter);
   }, [data, globalDriverFilter]);
 
+  // Stage yang lagi dibuka di rincian (klik box / filter tabel). Kalau stage-nya
+  // per-armada (TMMIN outpool/backtopool), rincian & tabel juga dihitung per armada.
+  const scopeStage = activeFilter?.stage || (tableStageFilter !== 'ALL' ? tableStageFilter : '');
+  const scopeIsArmada = !!scopeStage && isArmadaStage(area.toUpperCase(), scopeStage);
+
   const stats = useMemo(() => {
     if (baseData.length === 0) return null;
     const totalRecords = baseData.length;
+    const armadaData = area.toUpperCase() === 'TMMIN' ? dedupeByArmada(baseData) : [];
 
     const getStageStats = (stage: string, reasonKeywords: string[]) => {
       const counts: Record<string, number> = { 'OnTime': 0, 'Delay': 0, 'Advance': 0 };
       let unknown = 0;
       const reasons: Record<string, number> = {};
+      const isArmada = isArmadaStage(area.toUpperCase(), stage);
+      const rows = isArmada ? armadaData : baseData;
+      const recordTotal = rows.length;
 
-      baseData.forEach(item => {
+      rows.forEach(item => {
         const status = getRowStatus(item, stage);
         if (counts[status] !== undefined) counts[status]++;
         else unknown++;
@@ -503,17 +530,20 @@ export default function LeadTimePage({ isTAM = false }: { isTAM?: boolean }) {
       }));
 
       // coverage = berapa % dari total records yang punya data di stage ini
-      const coverage = totalRecords > 0 ? Math.round((total / totalRecords) * 100) : 0;
+      const coverage = recordTotal > 0 ? Math.round((total / recordTotal) * 100) : 0;
 
       return {
-        chartData, total, unknown, coverage, totalRecords,
+        chartData, total, unknown, coverage, totalRecords: recordTotal,
+        unitLabel: isArmada ? 'ARMADA' : 'TRIPS',
         reasons: Object.entries(reasons).map(([name, value]) => ({ name, value })).sort((a,b) => b.value - a.value).slice(0, 8)
       };
     };
 
     const getTrend = (stage: string) => {
       const dailyData: Record<string, any> = {};
-      baseData.forEach(item => {
+      const isArmada = isArmadaStage(area.toUpperCase(), stage);
+      const rows = isArmada ? armadaData : baseData;
+      rows.forEach(item => {
         const date = new Date(item.tanggal).toLocaleDateString('id-ID', { day: '2-digit', month: 'short' });
         if (!dailyData[date]) dailyData[date] = { date, OnTime: 0, Delay: 0, Advance: 0, Total: 0 };
         const status = getRowStatus(item, stage);
@@ -534,13 +564,14 @@ export default function LeadTimePage({ isTAM = false }: { isTAM?: boolean }) {
       trend: getTrend(trendStage),
       totalRecords
     };
-  }, [baseData, trendStage]);
+  }, [baseData, trendStage, area]);
 
   const prevStats = useMemo(() => {
     if (prevData.length === 0) return null;
+    const prevArmadaData = area.toUpperCase() === 'TMMIN' ? dedupeByArmada(prevData) : [];
     const getStageStats = (stage: string) => {
       const counts: Record<string, number> = { 'OnTime': 0, 'Delay': 0, 'Advance': 0 };
-      prevData.forEach(item => {
+      (isArmadaStage(area.toUpperCase(), stage) ? prevArmadaData : prevData).forEach(item => {
         const status = getRowStatus(item, stage);
         if (counts[status] !== undefined) counts[status]++;
       });
@@ -556,7 +587,7 @@ export default function LeadTimePage({ isTAM = false }: { isTAM?: boolean }) {
       delivery: getStageStats('delivery'),
       backtopool: getStageStats('backtopool')
     };
-  }, [prevData]);
+  }, [prevData, area]);
 
   const prevPeriodText = useMemo(() => {
     let prevStart, prevEnd;
@@ -622,8 +653,13 @@ export default function LeadTimePage({ isTAM = false }: { isTAM?: boolean }) {
         return stages.some(s => getRowStatus(item, s) !== 'Unknown');
       });
     }
+    // Kalau yang lagi dilihat stage per-armada (TMMIN outpool/backtopool), rinciannya
+    // juga per armada biar jumlahnya sama dengan box-nya.
+    if (scopeIsArmada) {
+      result = dedupeByArmada(result);
+    }
     return result;
-  }, [baseData, searchQuery, activeFilter, reasonFilter, tableStageFilter]);
+  }, [baseData, searchQuery, activeFilter, reasonFilter, tableStageFilter, scopeIsArmada]);
 
   const groupedData = useMemo(() => {
     const map: Record<string, {
@@ -655,11 +691,16 @@ export default function LeadTimePage({ isTAM = false }: { isTAM?: boolean }) {
           trips: []
         };
       }
-      const counts = getTripCounts(item, tableStageFilter, area);
-      map[key].onTime += counts.onTime;
-      map[key].advance += counts.advance;
-      map[key].delay += counts.delay;
       map[key].trips.push(item);
+    });
+
+    // Hitung setelah semua trip driver terkumpul, supaya stage per-armada
+    // (TMMIN outpool/backtopool) bisa di-dedupe lintas ritase.
+    Object.values(map).forEach(group => {
+      const counts = getTripCounts(group.trips, tableStageFilter, area);
+      group.onTime = counts.onTime;
+      group.advance = counts.advance;
+      group.delay = counts.delay;
     });
 
     return Object.values(map).sort((a, b) => {
@@ -844,7 +885,7 @@ const reasonDelay = config.stage !== 'unknown' ? (getReasonDelay(item, config.st
           )}
 
           {/* ── STAGE BOXES ── */}
-          <div className={`grid grid-cols-1 md:grid-cols-2 ${area === 'TMMIN' ? 'xl:grid-cols-3' : 'xl:grid-cols-4'} gap-4 sm:gap-6 w-full max-w-full overflow-hidden box-border`}>
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 sm:gap-6 w-full max-w-full overflow-hidden box-border">
             <StageBox
               title="OUTPOOL" icon={<Truck />} stats={stats?.outpool} prevStats={prevStats?.outpool}
               eff={calculateEfficiency('outpool')} stage="outpool" activeFilter={activeFilter} setActiveFilter={(f: any) => { setActiveFilter(f); setCurrentPage(1); }}
@@ -860,13 +901,11 @@ const reasonDelay = config.stage !== 'unknown' ? (getReasonDelay(item, config.st
               eff={calculateEfficiency('delivery')} stage="delivery" activeFilter={activeFilter} setActiveFilter={(f: any) => { setActiveFilter(f); setCurrentPage(1); }}
               prevPeriod={currentPeriodText}
             />
-            {area !== 'TMMIN' && (
             <StageBox
               title="BACK TO POOL" icon={<Home />} stats={stats?.backtopool} prevStats={prevStats?.backtopool}
               eff={calculateEfficiency('backtopool')} stage="backtopool" activeFilter={activeFilter} setActiveFilter={(f: any) => { setActiveFilter(f); setCurrentPage(1); }}
               prevPeriod={currentPeriodText}
             />
-            )}
           </div>
 
           {/* ── DELAY ANALYSIS CENTER ── */}
@@ -892,12 +931,10 @@ const reasonDelay = config.stage !== 'unknown' ? (getReasonDelay(item, config.st
                 onClickDelay={() => setDelayPopup({ title: 'DELIVERY DELAY REASONS', reasons: (stats?.delivery?.reasons || []).filter((r:any) => { const l=r.name.toLowerCase(); return !l.includes('delay')&&!l.includes('advance')&&!l.includes('ontime')&&l!=='ok'&&l!=='-'&&l!=='tidak ada'; }), delayCount: stats?.delivery?.chartData?.find((d:any)=>d.name==='Delay')?.value||0 })}
                 onSelect={(r: any) => { setReasonFilter(r.name); setCurrentPage(1); }}
               />
-              {area !== 'TMMIN' && (
               <ReasonSection title="BACK TO POOL DELAYS" stageStats={stats?.backtopool} color="text-purple-400"
                 onClickDelay={() => setDelayPopup({ title: 'BACK TO POOL DELAY REASONS', reasons: (stats?.backtopool?.reasons || []).filter((r:any) => { const l=r.name.toLowerCase(); return !l.includes('delay')&&!l.includes('advance')&&!l.includes('ontime')&&l!=='ok'&&l!=='-'&&l!=='tidak ada'; }), delayCount: stats?.backtopool?.chartData?.find((d:any)=>d.name==='Delay')?.value||0 })}
                 onSelect={(r: any) => { setReasonFilter(r.name); setCurrentPage(1); }}
               />
-              )}
             </div>
           </div>
 
@@ -910,7 +947,7 @@ const reasonDelay = config.stage !== 'unknown' ? (getReasonDelay(item, config.st
                   <p className="text-[7px] sm:text-xs text-slate-500 dark:text-slate-400 font-bold uppercase tracking-widest mt-1 truncate">Daily Efficiency (OnTime + Advance)</p>
                 </div>
                 <div className="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-xl border border-slate-200/50 dark:border-slate-700/50 w-fit">
-                  {((area === 'TMMIN' ? ['outpool', 'inpdc', 'delivery'] : ['outpool', 'inpdc', 'delivery', 'backtopool']) as ('outpool' | 'inpdc' | 'delivery' | 'backtopool')[])
+                  {((['outpool', 'inpdc', 'delivery', 'backtopool']) as ('outpool' | 'inpdc' | 'delivery' | 'backtopool')[])
                     .map((s) => (
                     <button
                       key={s}
@@ -961,7 +998,7 @@ const reasonDelay = config.stage !== 'unknown' ? (getReasonDelay(item, config.st
               </div>
               <div className="flex flex-col lg:flex-row items-stretch lg:items-center gap-3 shrink-0">
                 <div className="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-xl border border-slate-200/50 dark:border-slate-700/50 w-full lg:w-fit overflow-x-auto scrollbar-hide">
-                  {((area === 'TMMIN' ? ['ALL', 'outpool', 'inpdc', 'delivery'] : ['ALL', 'outpool', 'inpdc', 'delivery', 'backtopool']) as ('ALL' | 'outpool' | 'inpdc' | 'delivery' | 'backtopool')[])
+                  {((['ALL', 'outpool', 'inpdc', 'delivery', 'backtopool']) as ('ALL' | 'outpool' | 'inpdc' | 'delivery' | 'backtopool')[])
                     .map((s) => (
                     <button
                       key={s}
@@ -1021,7 +1058,7 @@ const reasonDelay = config.stage !== 'unknown' ? (getReasonDelay(item, config.st
                         </td>
                         <td className="px-4 py-4 overflow-hidden">
                           <div className="text-[9px] sm:text-[11px] font-bold text-slate-800 dark:text-slate-200 uppercase truncate">{item.driver}</div>
-                          <div className="text-[7px] sm:text-[8px] text-blue-500 font-black mt-0.5 uppercase tracking-widest truncate">{item.trips.length} TRIP{item.trips.length > 1 ? 'S' : ''}</div>
+                          <div className="text-[7px] sm:text-[8px] text-blue-500 font-black mt-0.5 uppercase tracking-widest truncate">{item.trips.length} {scopeIsArmada ? `ARMADA` : `TRIP${item.trips.length > 1 ? 'S' : ''}`}</div>
                         </td>
                         <td className="px-4 py-4 overflow-hidden">
                           <div className="text-[9px] sm:text-[11px] font-bold text-slate-800 dark:text-slate-200 uppercase truncate">{item.no_polisi}</div>
@@ -1362,7 +1399,7 @@ function StageBox({ title, icon, stats, prevStats, eff, stage, activeFilter, set
         </div>
         <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
           <span className="text-2xl sm:text-3xl font-black text-slate-800 dark:text-white tracking-tighter">{totalRecords}</span>
-          <span className="text-[7px] sm:text-[9px] font-bold text-slate-400 mt-0.5 uppercase tracking-widest">TRIPS</span>
+          <span className="text-[7px] sm:text-[9px] font-bold text-slate-400 mt-0.5 uppercase tracking-widest">{stats?.unitLabel || 'TRIPS'}</span>
           <span className="text-[8px] sm:text-[10px] font-black text-blue-500 mt-1 uppercase tracking-widest">{eff}</span>
           <span className="text-[7px] sm:text-[9px] font-bold text-slate-400 mt-0.5 uppercase tracking-widest">{entered} masuk stage</span>
         </div>

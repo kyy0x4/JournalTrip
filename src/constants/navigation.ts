@@ -79,7 +79,7 @@ export const NAV_GROUPS: NavGroup[] = [
       { id: 'dashboard', label: 'Dashboard', sub: 'Overview', path: '/dashboard', icon: LayoutDashboard },
       { id: 'drivers', label: 'Drivers', sub: 'Data Pengemudi', path: '/drivers', icon: Users, tamHidden: true },
       { id: 'driver-analytics', label: 'Driver Analytics', sub: 'Violations & Coaching', path: '/driver-analytics', icon: UserCheck },
-      { id: 'standar-leadtime', label: 'Standar Leadtime', sub: 'Reference Guide', path: '/standar-leadtime', icon: Timer },
+      { id: 'standar-parameter', label: 'Standar Parameter', sub: 'Reference Guide', path: '/standar-parameter', icon: Timer },
       { id: 'training', label: 'Training Center', sub: 'Analytics', path: '/training', icon: GraduationCap },
       { id: 'kr-schedule', label: 'Jadwal KR', sub: 'Operasional', path: '/kr-schedule', icon: ShieldCheck },
       { id: 'kr-report', label: 'Report KR', sub: 'SOP, APD & Incident', path: '/kr-report', icon: ClipboardCheck, tamHidden: true },

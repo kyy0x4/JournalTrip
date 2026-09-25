@@ -27,9 +27,11 @@ import {
   TENKO_HEALTH_METRICS,
   TENSI_FAKTOR_OPTIONS,
   isHipertensi,
+  isHipotensi,
   getHipertensiTypeLabel,
   formatTensiFaktorDisplay,
 } from '../services/tenkoService';
+import { ALKOHOL_NEGATIF, SUHU_DEMAM_C } from '../constants/standarParameter';
 
 const COLORS = {
   normal: '#10b981',
@@ -526,7 +528,7 @@ export default function TenkoPage({ isTAM = false }: { isTAM?: boolean }) {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <StatCard icon={Activity} label="Total Checkups" value={crossSummary?.totalCheckups || 0} sub={hasActiveCrossFilter ? 'Filtered results' : 'Drivers verified'} color="text-blue-500" bgColor="bg-blue-500/10" />
         <StatCard icon={Heart} label="Abnormal Tensi" value={(crossSummary?.tensi.hipertensi || 0) + (crossSummary?.tensi.hipotensi || 0)} sub="Requires monitoring" color="text-rose-500" bgColor="bg-rose-500/10" trend={crossSummary ? `${((((crossSummary.tensi.hipertensi + crossSummary.tensi.hipotensi) / (crossSummary.totalCheckups || 1)) || 0) * 100).toFixed(1)}%` : '0%'} />
-        <StatCard icon={Thermometer} label="Body Temp Alert" value={crossSummary?.suhu.demam || 0} sub="Over 37.5°C" color="text-orange-500" bgColor="bg-orange-500/10" />
+        <StatCard icon={Thermometer} label="Body Temp Alert" value={crossSummary?.suhu.demam || 0} sub={`Over ${SUHU_DEMAM_C}°C`} color="text-orange-500" bgColor="bg-orange-500/10" />
         <StatCard icon={Wine} label="Alcohol Check" value={crossSummary?.alkohol.positif || 0} sub="Positive cases" color={crossSummary?.alkohol.positif ? 'text-rose-600' : 'text-emerald-500'} bgColor={crossSummary?.alkohol.positif ? 'bg-rose-500/10' : 'bg-emerald-500/10'} />
       </div>
 
@@ -814,12 +816,12 @@ export default function TenkoPage({ isTAM = false }: { isTAM?: boolean }) {
                     <div className="space-y-1.5">
                       <div className="flex items-center gap-2">
                         <motion.span 
-                          animate={(r.sistolik >= 160 || r.diastolik >= 100 || r.sistolik < 90 || r.diastolik < 60) ? { 
+                          animate={(isHipertensi(r.sistolik, r.diastolik) || isHipotensi(r.sistolik, r.diastolik)) ? { 
                             opacity: [1, 0.4, 1],
                           } : {}}
                           transition={{ repeat: Infinity, duration: 3, ease: "easeInOut" }}
                           className={`px-2 py-1 rounded-lg text-[10px] font-black ${
-                            isHipertensi(r.sistolik, r.diastolik) ? 'bg-rose-500/10 text-rose-500 shadow-lg shadow-rose-500/20' : (r.sistolik < 90 || r.diastolik < 60) ? 'bg-amber-500/10 text-amber-500 shadow-lg shadow-amber-500/20' : 'bg-emerald-500/10 text-emerald-500'
+                            isHipertensi(r.sistolik, r.diastolik) ? 'bg-rose-500/10 text-rose-500 shadow-lg shadow-rose-500/20' : isHipotensi(r.sistolik, r.diastolik) ? 'bg-amber-500/10 text-amber-500 shadow-lg shadow-amber-500/20' : 'bg-emerald-500/10 text-emerald-500'
                           }`}>
                           {r.tensi}
                         </motion.span>
@@ -869,9 +871,9 @@ export default function TenkoPage({ isTAM = false }: { isTAM?: boolean }) {
                   </td>
                   <td className="px-6 py-5"><p className="text-xs font-black text-slate-700 dark:text-slate-300">{r.suhu_tubuh}°C</p><p className="text-[10px] font-bold text-slate-400 uppercase mt-1">{r.denyut_nadi} BPM</p></td>
                   <td className="px-6 py-5"><p className="text-xs font-black text-slate-700 dark:text-slate-300">{r.oxygen_saturation}% O₂</p><p className="text-[10px] font-bold text-slate-400 uppercase mt-1">{r.rest_time}h Rest</p></td>
-                  <td className="px-6 py-5"><div className="flex items-center gap-2"><StatusBadge label="Alc" ok={Number(r.alkohol) === 0} /><StatusBadge label="Eye" ok={r.mata === 'OK'} /><StatusBadge label="Fat" ok={r.fatigue === 'NORMAL'} /></div></td>
+                  <td className="px-6 py-5"><div className="flex items-center gap-2"><StatusBadge label="Alc" ok={Number(r.alkohol) === ALKOHOL_NEGATIF} /><StatusBadge label="Eye" ok={r.mata === 'OK'} /><StatusBadge label="Fat" ok={r.fatigue === 'NORMAL'} /></div></td>
                   <td className="px-8 py-5 text-right">
-                    {r.sistolik < 160 && r.diastolik < 100 && r.suhu_tubuh < 37.5 && Number(r.alkohol) === 0 ? (
+                    {!isHipertensi(r.sistolik, r.diastolik) && r.suhu_tubuh < SUHU_DEMAM_C && Number(r.alkohol) === ALKOHOL_NEGATIF ? (
                       <span className="flex items-center justify-end gap-1.5 text-[10px] font-black text-emerald-500 uppercase">
                         <CheckCircle2 className="w-3.5 h-3.5" /> FIT TO DRIVE
                       </span>

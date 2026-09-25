@@ -7,7 +7,8 @@ import {
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { P2HRecord } from '../types';
-import { TenkoRecord } from '../services/tenkoService';
+import { TenkoRecord, isHipertensi, isHipotensi } from '../services/tenkoService';
+import { ALKOHOL_NEGATIF, SPO2_MIN, SUHU_DEMAM_C } from '../constants/standarParameter';
 import { getP2HRecordsByDate, getTenkoRecordsByDate, matchResilientName, upsertP2HRecord } from '../services/gatepassService';
 import { P2H_CATEGORIES } from '../constants/p2hItems';
 import { canFillP2H } from '../constants/roles';
@@ -55,12 +56,12 @@ interface DriverCheck {
 }
 
 function getTenkoHealth(r: TenkoRecord): { ok: boolean; reason?: string } {
-  if (Number(r.alkohol) > 0) return { ok: false, reason: 'Positif Alkohol' };
-  if (r.sistolik >= 160 || r.diastolik >= 100) return { ok: false, reason: 'Hipertensi' };
-  if (r.sistolik < 90 || r.diastolik < 60) return { ok: false, reason: 'Hipotensi' };
-  if (r.suhu_tubuh >= 37.5) return { ok: false, reason: 'Suhu Tinggi' };
+  if (Number(r.alkohol) > ALKOHOL_NEGATIF) return { ok: false, reason: 'Positif Alkohol' };
+  if (isHipertensi(r.sistolik, r.diastolik)) return { ok: false, reason: 'Hipertensi' };
+  if (isHipotensi(r.sistolik, r.diastolik)) return { ok: false, reason: 'Hipotensi' };
+  if (r.suhu_tubuh >= SUHU_DEMAM_C) return { ok: false, reason: 'Suhu Tinggi' };
   if ((r.fatigue || '').toUpperCase() === 'LELAH') return { ok: false, reason: 'Fatigue / Lelah' };
-  if (r.oxygen_saturation < 95) return { ok: false, reason: 'SpO2 Rendah' };
+  if (r.oxygen_saturation < SPO2_MIN) return { ok: false, reason: 'SpO2 Rendah' };
   return { ok: true };
 }
 

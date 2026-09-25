@@ -249,14 +249,18 @@ function getColumnConfig(sheetName) {
       driver: 4,       // E
       shift: 6,        // G
       ritase: 7,       // H
-      outpool: 10,     // K
-      pdc_muat: 12,    // M
-      plan_dccp: 13,   // N
-      in_pdc: 14,      // O
-      out_pdc: 15,     // P (Fixed index)
-      pdc_bongkar: 27, // AB
-      plan_unload: 28, // AC
-      actual_unload: 29 // AD
+      // L: evaluasi keluar pool (OnTime/Delay). Header di sheet masih salah tulis
+      // "Evaluasi Kedatangan CC" — kembar sama kolom S — jadi dipetakan by index,
+      // bukan by header (lihat mapToLeadtimesTable).
+      eval_outpool: 11,
+      outpool: 10,     // K: Actual Exit Pool
+      pdc_muat: 13,    // N: PDC Muat
+      plan_dccp: 14,   // O: Plan DCCP
+      in_pdc: 15,      // P: In PDC
+      out_pdc: 17,     // R: Out PDC
+      pdc_bongkar: 28, // AC: PDC Bongkar
+      plan_unload: 29, // AD: Plan (Unloading)
+      actual_unload: 30 // AE: Actual (Unloading)
     };
   } else if (name.includes("SINGLE CARRIER")) {
     // Sheet gabungan Single Carrier + Double Deck (1 sheet, tanpa kolom area).
@@ -363,6 +367,15 @@ function mapToLeadtimesTable(row, displayRow, headers, cfg, driverId) {
         checkpoints[head] = formatTime(valStr) || valStr;
       }
     });
+
+    // TMMIN: evaluasi keluar pool dipetakan by index karena headernya kembar dengan
+    // evaluasi kedatangan CC — kalau lewat loop header di atas, nilainya ketimpa.
+    if (cfg.eval_outpool !== undefined && cfg.eval_outpool !== null) {
+      const evalOutpool = displayRow[cfg.eval_outpool];
+      if (evalOutpool !== "" && evalOutpool !== null && evalOutpool !== "-") {
+        statusInfo['Evaluasi Keluar Pool'] = evalOutpool;
+      }
+    }
 
     return {
       tanggal: date,

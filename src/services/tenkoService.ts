@@ -1,4 +1,5 @@
 import { supabase } from '../lib/supabase';
+import { ALKOHOL_NEGATIF, NADI_NORMAL, REST_CUKUP_JAM, SUHU_DEMAM_C, TENSI_STANDARD } from '../constants/standarParameter';
 
 export interface TenkoRecord {
   id: string;
@@ -42,11 +43,11 @@ export const TENSI_FAKTOR_OPTIONS = [
 export type TensiFaktor = (typeof TENSI_FAKTOR_OPTIONS)[number];
 
 export function isHipertensi(sistolik: number, diastolik: number) {
-  return sistolik >= 160 || diastolik >= 100;
+  return sistolik >= TENSI_STANDARD.hipertensi.sistolik || diastolik >= TENSI_STANDARD.hipertensi.diastolik;
 }
 
 export function isHipotensi(sistolik: number, diastolik: number) {
-  return sistolik < 90 || diastolik < 60;
+  return sistolik < TENSI_STANDARD.hipotensi.sistolik || diastolik < TENSI_STANDARD.hipotensi.diastolik;
 }
 
 export function isAbnormalTensi(sistolik: number, diastolik: number) {
@@ -54,8 +55,8 @@ export function isAbnormalTensi(sistolik: number, diastolik: number) {
 }
 
 export function getHipertensiTypeLabel(sistolik: number, diastolik: number): string {
-  const sysHigh = sistolik >= 160;
-  const diaHigh = diastolik >= 100;
+  const sysHigh = sistolik >= TENSI_STANDARD.hipertensi.sistolik;
+  const diaHigh = diastolik >= TENSI_STANDARD.hipertensi.diastolik;
   if (sysHigh && diaHigh) return 'Sistolik & Diastolik Tinggi';
   if (sysHigh) return 'Sistolik Tinggi';
   if (diaHigh) return 'Diastolik Tinggi';
@@ -130,20 +131,20 @@ export function classifyTensiRecord(r: TenkoRecord) {
 }
 
 export function classifySuhuRecord(r: TenkoRecord) {
-  return r.suhu_tubuh >= 37.5 ? 'demam' : 'normal';
+  return r.suhu_tubuh >= SUHU_DEMAM_C ? 'demam' : 'normal';
 }
 
 export function classifyRestRecord(r: TenkoRecord) {
-  return Number(r.rest_time) >= 6 ? 'cukup' : 'kurang';
+  return Number(r.rest_time) >= REST_CUKUP_JAM ? 'cukup' : 'kurang';
 }
 
 export function classifyNadiRecord(r: TenkoRecord) {
   const n = Number(r.denyut_nadi) || 0;
-  return n >= 60 && n <= 100 ? 'normal' : 'abnormal';
+  return n >= NADI_NORMAL.min && n <= NADI_NORMAL.max ? 'normal' : 'abnormal';
 }
 
 export function classifyAlkoholRecord(r: TenkoRecord) {
-  return Number(r.alkohol) === 0 ? 'negatif' : 'positif';
+  return Number(r.alkohol) === ALKOHOL_NEGATIF ? 'negatif' : 'positif';
 }
 
 export function classifyFatigueRecord(r: TenkoRecord) {
@@ -173,7 +174,7 @@ export const TENKO_HEALTH_METRICS: TenkoMetricConfig[] = [
     classify: classifySuhuRecord,
     categories: [
       { key: 'normal', label: 'Normal', shortLabel: 'Normal', color: '#10b981' },
-      { key: 'demam', label: 'Demam (≥37.5°C)', shortLabel: 'Demam', color: '#f97316' },
+      { key: 'demam', label: `Demam (≥${SUHU_DEMAM_C}°C)`, shortLabel: 'Demam', color: '#f97316' },
     ],
   },
   {
@@ -182,8 +183,8 @@ export const TENKO_HEALTH_METRICS: TenkoMetricConfig[] = [
     pieTitle: 'Istirahat Percentage',
     classify: classifyRestRecord,
     categories: [
-      { key: 'cukup', label: 'Cukup (≥6 Jam)', shortLabel: 'Cukup', color: '#10b981' },
-      { key: 'kurang', label: 'Kurang (<6 Jam)', shortLabel: 'Kurang', color: '#f59e0b' },
+      { key: 'cukup', label: `Cukup (≥${REST_CUKUP_JAM} Jam)`, shortLabel: 'Cukup', color: '#10b981' },
+      { key: 'kurang', label: `Kurang (<${REST_CUKUP_JAM} Jam)`, shortLabel: 'Kurang', color: '#f59e0b' },
     ],
   },
   {
@@ -192,7 +193,7 @@ export const TENKO_HEALTH_METRICS: TenkoMetricConfig[] = [
     pieTitle: 'Nadi Percentage',
     classify: classifyNadiRecord,
     categories: [
-      { key: 'normal', label: 'Normal (60–100 BPM)', shortLabel: 'Normal', color: '#10b981' },
+      { key: 'normal', label: `Normal (${NADI_NORMAL.min}–${NADI_NORMAL.max} BPM)`, shortLabel: 'Normal', color: '#10b981' },
       { key: 'abnormal', label: 'Abnormal', shortLabel: 'Abnormal', color: '#ef4444' },
     ],
   },
@@ -379,8 +380,8 @@ const MONTH_LABELS = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'S
 function classifyTensiStatus(sistolik: number, diastolik: number): 'normal' | 'hipertensi' | 'hipotensi' {
   const sis = parseInt(String(sistolik)) || 0;
   const dia = parseInt(String(diastolik)) || 0;
-  if (sis >= 160 || dia >= 100) return 'hipertensi';
-  if (sis < 90 || dia < 60) return 'hipotensi';
+  if (isHipertensi(sis, dia)) return 'hipertensi';
+  if (isHipotensi(sis, dia)) return 'hipotensi';
   return 'normal';
 }
 
@@ -522,8 +523,8 @@ export async function fetchTenkoData(startDate: string, endDate: string, custome
       const sis = parseInt(String(item.sistolik)) || 0;
       const dia = parseInt(String(item.diastolik)) || 0;
       
-      if (sis >= 160 || dia >= 100) dailyMap[date].hipertensi++;
-      else if (sis < 90 || dia < 60) dailyMap[date].hipotensi++;
+      if (isHipertensi(sis, dia)) dailyMap[date].hipertensi++;
+      else if (isHipotensi(sis, dia)) dailyMap[date].hipotensi++;
       else dailyMap[date].normal++;
       dailyMap[date].total++;
     });

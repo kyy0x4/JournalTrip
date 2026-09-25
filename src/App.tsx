@@ -15,7 +15,7 @@ const DriverDetailPage = lazy(() => import('./pages/DriverDetailPage'));
 const FleetMonitoringPage = lazy(() => import('./pages/FleetMonitoringPage'));
 const EcoDrivingPage = lazy(() => import('./pages/EcoDrivingPage'));
 const LeadTimePage = lazy(() => import('./pages/LeadTimePage'));
-const StandarLeadtimePage = lazy(() => import('./pages/StandarLeadtimePage'));
+const StandarParameterPage = lazy(() => import('./pages/StandarParameterPage'));
 const CarbonNeutralPage = lazy(() => import('./pages/CarbonNeutralPage'));
 const TenkoPage = lazy(() => import('./pages/TenkoPage'));
 const DashboardPage = lazy(() => import('./pages/DashboardPage'));
@@ -468,7 +468,8 @@ const AnimatedRoutes = ({
       <Route path="/monitoring" element={<FleetMonitoringPage isTAM={isTAM} />} />
       <Route path="/leadtime" element={<LeadTimePage isTAM={isTAM} />} />
       <Route path="/route-analytics" element={<RouteAnalyticsPage isTAM={isTAM} />} />
-      <Route path="/standar-leadtime" element={<StandarLeadtimePage />} />
+      <Route path="/standar-parameter" element={<StandarParameterPage />} />
+      <Route path="/standar-leadtime" element={<Navigate to="/standar-parameter" replace />} />
       <Route path="/eco" element={<EcoDrivingPage isTAM={isTAM} />} />
       <Route path="/carbon" element={<CarbonNeutralPage />} />
       <Route path="/tenko" element={<TenkoPage isTAM={isTAM} />} />

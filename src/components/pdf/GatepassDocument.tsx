@@ -1,5 +1,6 @@
 import { P2HRecord } from '../../types';
 import { TenkoRecord } from '../../services/tenkoService';
+import { ALKOHOL_NEGATIF } from '../../constants/standarParameter';
 import Logo from '../../image/Logo.png';
 
 interface GatepassDocumentProps {
@@ -109,7 +110,7 @@ export default function GatepassDocument({
               <div className="text-[10px] space-y-1 text-slate-700">
                 <p>Tensi Darah: <span className="font-bold">{tenkoRecord.tensi} mmHg</span></p>
                 <p>Suhu Tubuh: <span className="font-bold">{tenkoRecord.suhu_tubuh} °C</span></p>
-                <p>Alkohol: <span className="font-bold">{Number(tenkoRecord.alkohol) > 0 ? 'POSITIF' : 'NEGATIF (0.00%)'}</span></p>
+                <p>Alkohol: <span className="font-bold">{Number(tenkoRecord.alkohol) > ALKOHOL_NEGATIF ? 'POSITIF' : 'NEGATIF (0.00%)'}</span></p>
                 <p>Fatigue: <span className="font-bold">{tenkoRecord.fatigue || 'NORMAL'}</span></p>
               </div>
             )}
