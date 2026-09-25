@@ -3,6 +3,7 @@ import { Link, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import { ChevronDown, X } from 'lucide-react';
 import { NavGroup } from '../../constants/navigation';
+import { useLanguage } from '../../context/LanguageContext';
 import Logo from '../../image/Logo.png';
 
 interface MobileNavProps {
@@ -13,6 +14,7 @@ interface MobileNavProps {
 
 export default function MobileNav({ open, onClose, groups }: MobileNavProps) {
   const location = useLocation();
+  const { t } = useLanguage();
   const [expanded, setExpanded] = useState<string | null>(null);
 
   const isItemActive = (path: string) =>
@@ -48,7 +50,7 @@ export default function MobileNav({ open, onClose, groups }: MobileNavProps) {
               <button
                 onClick={onClose}
                 className="ml-auto p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-lg hover:bg-slate-100 dark:hover:bg-white/[0.06] transition-colors"
-                aria-label="Tutup menu"
+                aria-label={t('nav.closeMenu')}
               >
                 <X className="w-5 h-5" />
               </button>
@@ -73,7 +75,7 @@ export default function MobileNav({ open, onClose, groups }: MobileNavProps) {
                       `}
                     >
                       <Icon className="w-4.5 h-4.5 shrink-0" />
-                      <span className="text-sm font-bold flex-1 text-left">{group.label}</span>
+                      <span className="text-sm font-bold flex-1 text-left">{t(group.labelKey)}</span>
                       <motion.span
                         animate={{ rotate: isOpen ? 180 : 0 }}
                         transition={{ duration: 0.2, ease: 'easeOut' }}
@@ -109,9 +111,9 @@ export default function MobileNav({ open, onClose, groups }: MobileNavProps) {
                                 >
                                   <ItemIcon className="w-4 h-4 shrink-0 text-slate-400 dark:text-slate-500" />
                                   <span className="flex-1 text-left min-w-0">
-                                    <span className="block text-xs font-bold leading-tight truncate">{item.label}</span>
+                                    <span className="block text-xs font-bold leading-tight truncate">{t(item.labelKey)}</span>
                                     <span className={`block text-[9px] font-semibold leading-tight truncate ${active ? 'text-red-500/70' : 'text-slate-400 dark:text-slate-500'}`}>
-                                      {item.sub}
+                                      {t(item.subKey)}
                                     </span>
                                   </span>
                                   {active && <span className="w-1.5 h-1.5 rounded-full bg-red-500 shrink-0" />}

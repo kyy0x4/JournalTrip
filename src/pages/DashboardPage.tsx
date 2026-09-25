@@ -14,6 +14,8 @@ import { supabase } from '../lib/supabase';
 import { fetchEcoViolations, buildMonthFiltersForRange } from '../services/ecoDataFetcher';
 import { leadtimeService } from '../services/leadtimeService';
 import { fetchTenkoData } from '../services/tenkoService';
+import { useLanguage } from '../context/LanguageContext';
+import type { TranslationKey } from '../i18n';
 
 interface DashboardProps {
   isTAM?: boolean;
@@ -35,18 +37,25 @@ const last7Days = () => {
   return {
     start: start.toISOString().split('T')[0],
     end: end.toISOString().split('T')[0],
-    label: '7 Hari Terakhir'
   };
 };
 
 const fmtNum = (n: number) => n.toLocaleString('id-ID');
 
 const ECO_COLORS: Record<string, string> = {
-  'Akselerasi': '#3b82f6',
-  'Perlambatan': '#f59e0b',
-  'Kecepatan': '#ef4444',
-  'Tikungan': '#8b5cf6',
-  'Lainnya': '#64748b'
+  acceleration: '#3b82f6',
+  deceleration: '#f59e0b',
+  speed: '#ef4444',
+  cornering: '#8b5cf6',
+  other: '#64748b',
+};
+
+const ECO_TYPE_KEYS: Record<string, TranslationKey> = {
+  acceleration: 'dashboard.ecoType.acceleration',
+  deceleration: 'dashboard.ecoType.deceleration',
+  speed: 'dashboard.ecoType.speed',
+  cornering: 'dashboard.ecoType.cornering',
+  other: 'dashboard.ecoType.other',
 };
 
 // ── STAT CARD ────────────────────────────────────────────
@@ -77,6 +86,7 @@ function StatCard({ label, value, sub, icon, color, to }: {
 
 // ── SECTION HEADER ───────────────────────────────────────
 function SectionHeader({ icon, title, sub, to }: { icon: React.ReactNode; title: string; sub: string; to: string }) {
+  const { t } = useLanguage();
   return (
     <div className="flex items-center justify-between mb-4">
       <div className="flex items-center gap-3">
@@ -87,7 +97,7 @@ function SectionHeader({ icon, title, sub, to }: { icon: React.ReactNode; title:
         </div>
       </div>
       <Link to={to} className="flex items-center gap-1 text-[9px] font-black text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 uppercase tracking-widest transition-colors group">
-        Lihat <ArrowRight className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" />
+        {t('dashboard.seeMore')} <ArrowRight className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" />
       </Link>
     </div>
   );
@@ -134,7 +144,9 @@ const renderPieLabel = ({ percent, x, y, cx }: any) => {
 
 // ── DASHBOARD PAGE ───────────────────────────────────────
 export default function DashboardPage({ isTAM = false }: DashboardProps) {
+  const { t, locale } = useLanguage();
   const period = last7Days();
+  const periodLabel = t('dashboard.period7days');
   const [isLoading, setIsLoading] = useState(true);
   const [lastRefresh, setLastRefresh] = useState(new Date());
   const [ltData, setLtData] = useState<any[]>([]);
@@ -250,19 +262,19 @@ export default function DashboardPage({ isTAM = false }: DashboardProps) {
     const typeMap: Record<string, number> = {};
     ecoData.forEach((v: any) => {
       const j = (v.jenis_peringatan || '').toLowerCase();
-      let t = 'Lainnya';
-      if (j.includes('akselerasi')) t = 'Akselerasi';
-      else if (j.includes('perlambatan')) t = 'Perlambatan';
-      else if (j.includes('kecepatan')) t = 'Kecepatan';
-      else if (j.includes('tikungan')) t = 'Tikungan';
-      
-      typeMap[t] = (typeMap[t] || 0) + 1;
+      let key = 'other';
+      if (j.includes('akselerasi')) key = 'acceleration';
+      else if (j.includes('perlambatan')) key = 'deceleration';
+      else if (j.includes('kecepatan')) key = 'speed';
+      else if (j.includes('tikungan')) key = 'cornering';
+
+      typeMap[key] = (typeMap[key] || 0) + 1;
     });
     const pie = Object.entries(typeMap)
       .sort(([, a], [, b]) => b - a)
-      .map(([name, value]) => ({ name, value }));
+      .map(([key, value]) => ({ key, name: t(ECO_TYPE_KEYS[key]), value }));
     return { total: ecoData.length, pie };
-  }, [ecoData]);
+  }, [ecoData, t]);
 
   // ── Tenko stats ──────────────────────────────────────
   const tenkoStats = useMemo(() => {
@@ -281,16 +293,16 @@ export default function DashboardPage({ isTAM = false }: DashboardProps) {
   }, [tenkoSummary]);
 
   const tenkoPie = useMemo(() => [
-    { name: 'Normal', value: tenkoStats.normal, fill: '#10b981' },
-    { name: 'Abnormal', value: tenkoStats.abnormal, fill: '#ef4444' },
-  ], [tenkoStats]);
+    { name: t('dashboard.normal'), value: tenkoStats.normal, fill: '#10b981' },
+    { name: t('dashboard.abnormal'), value: tenkoStats.abnormal, fill: '#ef4444' },
+  ], [tenkoStats, t]);
 
   const Skeleton = ({ h = 'h-48' }: { h?: string }) => (
     <div className={`w-full ${h} bg-slate-100 dark:bg-slate-800/50 rounded-2xl animate-pulse`} />
   );
 
   const now = new Date();
-  const dateStr = now.toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+  const dateStr = now.toLocaleDateString(locale, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
 
   return (
     <div className="flex flex-col gap-6 pb-20 w-full max-w-[100vw] overflow-x-hidden box-border">
@@ -303,9 +315,9 @@ export default function DashboardPage({ isTAM = false }: DashboardProps) {
               <BarChart3 className="w-6 h-6 md:w-7 md:h-7 text-white" />
             </div>
             <div>
-              <h1 className="text-lg md:text-2xl font-black text-slate-900 dark:text-white tracking-tighter uppercase">Dashboard</h1>
+              <h1 className="text-lg md:text-2xl font-black text-slate-900 dark:text-white tracking-tighter uppercase">{t('dashboard.title')}</h1>
               <p className="text-[10px] md:text-xs font-bold text-slate-400 uppercase tracking-widest mt-0.5">
-                {dateStr} · {period.label}
+                {dateStr} · {periodLabel}
               </p>
             </div>
           </div>
@@ -315,9 +327,9 @@ export default function DashboardPage({ isTAM = false }: DashboardProps) {
             className="flex items-center gap-2 px-4 py-2.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-2xl text-[10px] font-black text-slate-600 dark:text-slate-300 uppercase tracking-widest transition-all disabled:opacity-50"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin' : ''}`} />
-            Refresh
+            {t('dashboard.refresh')}
             <span className="text-slate-400 font-bold normal-case">
-              {lastRefresh.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}
+              {lastRefresh.toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' })}
             </span>
           </button>
         </div>
@@ -325,19 +337,19 @@ export default function DashboardPage({ isTAM = false }: DashboardProps) {
 
       {/* ── STAT CARDS ── */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <StatCard label="Delivery On-Time" value={isLoading ? '—' : `${ltStats.rate}%`} sub={`${fmtNum(ltStats.ontime)} dari ${fmtNum(ltStats.total)} trips`} icon={<Truck className="w-5 h-5 text-blue-600" />} color="bg-blue-50 dark:bg-blue-500/10" to="/leadtime" />
-        <StatCard label="Eco Violations" value={isLoading ? '—' : fmtNum(ecoStats.total)} sub={`Bulan ${period.label}`} icon={<Leaf className="w-5 h-5 text-emerald-600" />} color="bg-emerald-50 dark:bg-emerald-500/10" to="/eco" />
-        <StatCard label="Tenko Normal" value={isLoading ? '—' : `${tenkoStats.rate}%`} sub={`${fmtNum(tenkoStats.normal)} / ${fmtNum(tenkoStats.total)} checkup`} icon={<Activity className="w-5 h-5 text-purple-600" />} color="bg-purple-50 dark:bg-purple-500/10" to="/tenko" />
-        <StatCard label="Check-up Hari Ini" value={isLoading ? '—' : fmtNum(checkinCount)} sub="Driver terdaftar hari ini" icon={<Shield className="w-5 h-5 text-amber-600" />} color="bg-amber-50 dark:bg-amber-500/10" to="/monitoring" />
+        <StatCard label={t('dashboard.stat.deliveryOnTime')} value={isLoading ? '—' : `${ltStats.rate}%`} sub={t('dashboard.stat.deliverySub', { ontime: fmtNum(ltStats.ontime), total: fmtNum(ltStats.total) })} icon={<Truck className="w-5 h-5 text-blue-600" />} color="bg-blue-50 dark:bg-blue-500/10" to="/leadtime" />
+        <StatCard label={t('dashboard.stat.ecoViolations')} value={isLoading ? '—' : fmtNum(ecoStats.total)} sub={t('dashboard.stat.ecoSub', { period: periodLabel })} icon={<Leaf className="w-5 h-5 text-emerald-600" />} color="bg-emerald-50 dark:bg-emerald-500/10" to="/eco" />
+        <StatCard label={t('dashboard.stat.tenkoNormal')} value={isLoading ? '—' : `${tenkoStats.rate}%`} sub={t('dashboard.stat.tenkoSub', { normal: fmtNum(tenkoStats.normal), total: fmtNum(tenkoStats.total) })} icon={<Activity className="w-5 h-5 text-purple-600" />} color="bg-purple-50 dark:bg-purple-500/10" to="/tenko" />
+        <StatCard label={t('dashboard.stat.checkupToday')} value={isLoading ? '—' : fmtNum(checkinCount)} sub={t('dashboard.stat.checkupSub')} icon={<Shield className="w-5 h-5 text-amber-600" />} color="bg-amber-50 dark:bg-amber-500/10" to="/monitoring" />
       </div>
 
       {/* ── MAIN ROW: LeadTime Trend + Eco Pie ── */}
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
         {/* LeadTime Trend */}
         <div className="xl:col-span-2 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-3xl sm:rounded-4xl p-6 shadow-sm">
-          <SectionHeader icon={<Clock className="w-4 h-4" />} title="LeadTime Delivery Trend" sub={`Harian · ${period.label}`} to="/leadtime" />
+          <SectionHeader icon={<Clock className="w-4 h-4" />} title={t('dashboard.trend.leadtime')} sub={t('dashboard.trend.daily', { period: periodLabel })} to="/leadtime" />
           {isLoading ? <Skeleton h="h-56" /> : ltStats.trend.length === 0 ? (
-            <div className="h-56 flex items-center justify-center text-[9px] font-black text-slate-300 uppercase tracking-widest border border-dashed border-slate-100 dark:border-slate-800 rounded-xl">Belum ada data</div>
+            <div className="h-56 flex items-center justify-center text-[9px] font-black text-slate-300 uppercase tracking-widest border border-dashed border-slate-100 dark:border-slate-800 rounded-xl">{t('dashboard.noData')}</div>
           ) : (
             <div className="h-56">
               <ResponsiveContainer width="100%" height="100%">
@@ -356,8 +368,8 @@ export default function DashboardPage({ isTAM = false }: DashboardProps) {
                   <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fontSize: 8, fontWeight: 900, fill: '#94a3b8' }} />
                   <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 8, fontWeight: 900, fill: '#94a3b8' }} />
                   <Tooltip content={<CustomTooltip />} />
-                  <Area type="monotone" dataKey="ontime" name="OnTime" stroke="#10b981" strokeWidth={2.5} fill="url(#gOntime)" dot={false} activeDot={{ r: 4, fill: '#10b981' }} />
-                  <Area type="monotone" dataKey="delay" name="Delay" stroke="#ef4444" strokeWidth={2.5} fill="url(#gDelay)" dot={false} activeDot={{ r: 4, fill: '#ef4444' }} />
+                  <Area type="monotone" dataKey="ontime" name={t('dashboard.onTime')} stroke="#10b981" strokeWidth={2.5} fill="url(#gOntime)" dot={false} activeDot={{ r: 4, fill: '#10b981' }} />
+                  <Area type="monotone" dataKey="delay" name={t('dashboard.delay')} stroke="#ef4444" strokeWidth={2.5} fill="url(#gDelay)" dot={false} activeDot={{ r: 4, fill: '#ef4444' }} />
                 </AreaChart>
               </ResponsiveContainer>
             </div>
@@ -372,24 +384,24 @@ export default function DashboardPage({ isTAM = false }: DashboardProps) {
                   className="h-full bg-emerald-500 rounded-full"
                 />
               </div>
-              <span className="text-[9px] font-black text-emerald-600 dark:text-emerald-400 shrink-0">{ltStats.rate}% OnTime</span>
-              <span className="text-[9px] font-black text-rose-500 shrink-0">{fmtNum(ltStats.delay)} Delay</span>
+              <span className="text-[9px] font-black text-emerald-600 dark:text-emerald-400 shrink-0">{ltStats.rate}% {t('dashboard.onTime')}</span>
+              <span className="text-[9px] font-black text-rose-500 shrink-0">{fmtNum(ltStats.delay)} {t('dashboard.delay')}</span>
             </div>
           )}
         </div>
 
         {/* Eco Violations Pie */}
         <div className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-3xl sm:rounded-4xl p-6 shadow-sm flex flex-col">
-          <SectionHeader icon={<Leaf className="w-4 h-4" />} title="Eco Violations" sub="Per tipe pelanggaran" to="/eco" />
+          <SectionHeader icon={<Leaf className="w-4 h-4" />} title={t('dashboard.stat.ecoViolations')} sub={t('dashboard.eco.sub')} to="/eco" />
           {isLoading ? <Skeleton h="h-52" /> : ecoStats.total === 0 ? (
-            <div className="flex-1 h-52 flex items-center justify-center text-[9px] font-black text-slate-300 uppercase tracking-widest border border-dashed border-slate-100 dark:border-slate-800 rounded-xl">Tidak ada pelanggaran</div>
+            <div className="flex-1 h-52 flex items-center justify-center text-[9px] font-black text-slate-300 uppercase tracking-widest border border-dashed border-slate-100 dark:border-slate-800 rounded-xl">{t('dashboard.noViolations')}</div>
           ) : (
             <>
               <div className="flex-1 w-full" style={{ minHeight: '160px' }}>
                 <ResponsiveContainer width="100%" height={165}>
                   <PieChart>
                     <Pie data={ecoStats.pie} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius={36} outerRadius={58} paddingAngle={3} label={renderPieLabel} labelLine={false}>
-                      {ecoStats.pie.map((entry, i) => <Cell key={i} fill={ECO_COLORS[entry.name] || '#64748b'} />)}
+                      {ecoStats.pie.map((entry, i) => <Cell key={i} fill={ECO_COLORS[entry.key] || '#64748b'} />)}
                     </Pie>
                     <Tooltip content={<CustomTooltip />} />
                   </PieChart>
@@ -399,7 +411,7 @@ export default function DashboardPage({ isTAM = false }: DashboardProps) {
                 {ecoStats.pie.slice(0, 4).map((item, i) => (
                   <div key={i} className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <span className="w-2 h-2 rounded-full shrink-0" style={{ background: ECO_COLORS[item.name] || '#64748b' }} />
+                      <span className="w-2 h-2 rounded-full shrink-0" style={{ background: ECO_COLORS[item.key] || '#64748b' }} />
                       <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider truncate max-w-[130px]">{item.name}</span>
                     </div>
                     <span className="text-[10px] font-black text-slate-800 dark:text-slate-100">{fmtNum(item.value)}</span>
@@ -416,9 +428,9 @@ export default function DashboardPage({ isTAM = false }: DashboardProps) {
 
         {/* Tenko Health */}
         <div className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-3xl sm:rounded-4xl p-6 shadow-sm flex flex-col">
-          <SectionHeader icon={<Activity className="w-4 h-4" />} title="Tenko Health" sub="Status kesehatan driver" to="/tenko" />
+          <SectionHeader icon={<Activity className="w-4 h-4" />} title={t('dashboard.tenko.title')} sub={t('dashboard.tenko.sub')} to="/tenko" />
           {isLoading ? <Skeleton h="h-48" /> : tenkoStats.total === 0 ? (
-            <div className="h-48 flex items-center justify-center text-[9px] font-black text-slate-300 uppercase tracking-widest border border-dashed border-slate-100 dark:border-slate-800 rounded-xl">Belum ada data</div>
+            <div className="h-48 flex items-center justify-center text-[9px] font-black text-slate-300 uppercase tracking-widest border border-dashed border-slate-100 dark:border-slate-800 rounded-xl">{t('dashboard.noData')}</div>
           ) : (
             <div className="flex items-center gap-6">
               <div className="relative shrink-0" style={{ width: 160, height: 160 }}>
@@ -432,20 +444,20 @@ export default function DashboardPage({ isTAM = false }: DashboardProps) {
                 </ResponsiveContainer>
                 <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
                   <span className="text-xl font-black text-slate-900 dark:text-white">{tenkoStats.rate}%</span>
-                  <span className="text-[8px] font-bold text-slate-400 uppercase">Normal</span>
+                  <span className="text-[8px] font-bold text-slate-400 uppercase">{t('dashboard.normal')}</span>
                 </div>
               </div>
               <div className="flex-1 space-y-3">
                 <div className="p-3 bg-emerald-50 dark:bg-emerald-500/10 rounded-2xl">
-                  <p className="text-[9px] font-black text-emerald-600 uppercase tracking-widest">Normal</p>
+                  <p className="text-[9px] font-black text-emerald-600 uppercase tracking-widest">{t('dashboard.normal')}</p>
                   <p className="text-2xl font-black text-emerald-700 dark:text-emerald-400">{fmtNum(tenkoStats.normal)}</p>
                 </div>
                 <div className="p-3 bg-rose-50 dark:bg-rose-500/10 rounded-2xl">
-                  <p className="text-[9px] font-black text-rose-500 uppercase tracking-widest">Abnormal</p>
+                  <p className="text-[9px] font-black text-rose-500 uppercase tracking-widest">{t('dashboard.abnormal')}</p>
                   <p className="text-2xl font-black text-rose-600 dark:text-rose-400">{fmtNum(tenkoStats.abnormal)}</p>
                 </div>
                 <div className="p-3 bg-slate-50 dark:bg-slate-800/50 rounded-2xl">
-                  <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Total Checkup</p>
+                  <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">{t('dashboard.totalCheckup')}</p>
                   <p className="text-2xl font-black text-slate-900 dark:text-white">{fmtNum(tenkoStats.total)}</p>
                 </div>
               </div>
@@ -455,9 +467,9 @@ export default function DashboardPage({ isTAM = false }: DashboardProps) {
 
         {/* Eco Breakdown Bar */}
         <div className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-3xl sm:rounded-4xl p-6 shadow-sm flex flex-col">
-          <SectionHeader icon={<BarChart3 className="w-4 h-4" />} title="Eco Breakdown" sub="Jumlah per tipe pelanggaran" to="/eco" />
+          <SectionHeader icon={<BarChart3 className="w-4 h-4" />} title={t('dashboard.ecoBreakdown')} sub={t('dashboard.ecoBreakdownSub')} to="/eco" />
           {isLoading ? <Skeleton h="h-48" /> : ecoStats.total === 0 ? (
-            <div className="h-48 flex items-center justify-center text-[9px] font-black text-slate-300 uppercase tracking-widest border border-dashed border-slate-100 dark:border-slate-800 rounded-xl">Tidak ada data</div>
+            <div className="h-48 flex items-center justify-center text-[9px] font-black text-slate-300 uppercase tracking-widest border border-dashed border-slate-100 dark:border-slate-800 rounded-xl">{t('dashboard.noData')}</div>
           ) : (
             <div className="flex-1 w-full" style={{ minHeight: '200px' }}>
               <ResponsiveContainer width="100%" height={220}>
@@ -466,8 +478,8 @@ export default function DashboardPage({ isTAM = false }: DashboardProps) {
                   <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 8, fontWeight: 900, fill: '#94a3b8' }} tickFormatter={(v) => v.split(' ')[0]} />
                   <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 8, fontWeight: 900, fill: '#94a3b8' }} />
                   <Tooltip content={<CustomTooltip />} />
-                  <Bar dataKey="value" name="Pelanggaran" radius={[6, 6, 0, 0]}>
-                    {ecoStats.pie.map((entry, i) => <Cell key={i} fill={ECO_COLORS[entry.name] || '#64748b'} />)}
+                  <Bar dataKey="value" name={t('dashboard.violation')} radius={[6, 6, 0, 0]}>
+                    {ecoStats.pie.map((entry, i) => <Cell key={i} fill={ECO_COLORS[entry.key] || '#64748b'} />)}
                     <LabelList dataKey="value" position="top" style={{ fontSize: 9, fontWeight: 800, fill: '#64748b' }} />
                   </Bar>
                 </BarChart>
@@ -479,15 +491,15 @@ export default function DashboardPage({ isTAM = false }: DashboardProps) {
 
       {/* ── QUICK LINKS ── */}
       <div className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-3xl sm:rounded-4xl p-6 shadow-sm">
-        <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Akses Cepat</h3>
+        <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">{t('dashboard.quickAccess')}</h3>
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
           {[
-            { label: 'Journal Trip', sub: 'Ritase', path: '/', icon: <Truck className="w-5 h-5" />, color: 'text-blue-600 dark:text-blue-400', bg: 'bg-blue-50 dark:bg-blue-500/10' },
-            { label: 'LeadTime', sub: 'Analytics', path: '/leadtime', icon: <Clock className="w-5 h-5" />, color: 'text-violet-600 dark:text-violet-400', bg: 'bg-violet-50 dark:bg-violet-500/10' },
-            { label: 'Eco Driving', sub: 'Violations', path: '/eco', icon: <Leaf className="w-5 h-5" />, color: 'text-emerald-600 dark:text-emerald-400', bg: 'bg-emerald-50 dark:bg-emerald-500/10' },
-            { label: 'Tenko', sub: 'Health Check', path: '/tenko', icon: <Activity className="w-5 h-5" />, color: 'text-purple-600 dark:text-purple-400', bg: 'bg-purple-50 dark:bg-purple-500/10' },
-            { label: 'Tenko', sub: 'Health Check', icon: <Shield className="w-5 h-5" />, color: 'text-amber-600 dark:text-amber-400', bg: 'bg-amber-50 dark:bg-amber-500/10' },
-            { label: 'Carbon Neutral', sub: 'CO₂ Track', path: '/carbon', icon: <CheckCircle className="w-5 h-5" />, color: 'text-teal-600 dark:text-teal-400', bg: 'bg-teal-50 dark:bg-teal-500/10' },
+            { label: t('dashboard.quick.journalTrip'), sub: t('dashboard.quick.sub.ritase'), path: '/', icon: <Truck className="w-5 h-5" />, color: 'text-blue-600 dark:text-blue-400', bg: 'bg-blue-50 dark:bg-blue-500/10' },
+            { label: t('dashboard.quick.leadtime'), sub: t('dashboard.quick.sub.analytics'), path: '/leadtime', icon: <Clock className="w-5 h-5" />, color: 'text-violet-600 dark:text-violet-400', bg: 'bg-violet-50 dark:bg-violet-500/10' },
+            { label: t('dashboard.quick.eco'), sub: t('dashboard.quick.sub.violations'), path: '/eco', icon: <Leaf className="w-5 h-5" />, color: 'text-emerald-600 dark:text-emerald-400', bg: 'bg-emerald-50 dark:bg-emerald-500/10' },
+            { label: t('dashboard.quick.tenko'), sub: t('dashboard.quick.sub.healthCheck'), path: '/tenko', icon: <Activity className="w-5 h-5" />, color: 'text-purple-600 dark:text-purple-400', bg: 'bg-purple-50 dark:bg-purple-500/10' },
+            { label: t('dashboard.quick.tenko'), sub: t('dashboard.quick.sub.healthCheck'), icon: <Shield className="w-5 h-5" />, color: 'text-amber-600 dark:text-amber-400', bg: 'bg-amber-50 dark:bg-amber-500/10' },
+            { label: t('dashboard.quick.carbon'), sub: t('dashboard.quick.sub.co2'), path: '/carbon', icon: <CheckCircle className="w-5 h-5" />, color: 'text-teal-600 dark:text-teal-400', bg: 'bg-teal-50 dark:bg-teal-500/10' },
           ].map((item) => (
             <Link key={item.path} to={item.path}
               className="flex flex-col items-center gap-2 p-4 rounded-2xl border border-slate-100 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-600 hover:shadow-sm transition-all group">

@@ -104,7 +104,7 @@
 }
 
 :root {
-  --font-sans: "Ginto Normal", "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: "Ginto Normal", "Plus Jakarta Sans", "Hiragino Kaku Gothic ProN", "Yu Gothic", Meiryo, ui-sans-serif, system-ui, sans-serif;
   --font-serif: "Anthropic Serif", "Source Serif 4", Georgia, "Times New Roman", serif;
 
   --bg-app: #faf9f5;

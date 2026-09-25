@@ -2,6 +2,8 @@ import { useState, type ReactElement } from 'react';
 import { motion } from 'motion/react';
 import { Timer, Map, MapPin, Navigation, Route as RouteIcon, Clock, ChevronLeft, ChevronRight, Leaf, HeartPulse, AlertTriangle, Ship } from 'lucide-react';
 import { ECO_DRIVING_STANDARDS, TENKO_STANDARDS, type ParameterDef } from '../constants/standarParameter';
+import { useLanguage } from '../context/LanguageContext';
+import type { TranslationKey } from '../i18n';
 
 const ROWS_PER_PAGE = 6;
 
@@ -14,18 +16,18 @@ type RouteRow = {
 };
 
 type RouteFooter = {
-  label: string;
+  labelKey: TranslationKey;
   lt?: string;
   rest?: string;
 };
 
 type Route = {
   id: string;
-  title: string;
+  titleKey: TranslationKey;
   icon: ReactElement;
   color: string;
   hasRest: boolean;
-  columns: string[];
+  columnKeys: TranslationKey[];
   data: RouteRow[];
   footer?: RouteFooter[];
 };
@@ -33,11 +35,11 @@ type Route = {
 const routes: Route[] = [
   {
     id: 'palembang',
-    title: 'Palembang - Padang',
+    titleKey: 'standar.route.palembang',
     icon: <Map className="w-4 h-4" />,
     color: 'emerald',
     hasRest: true,
-    columns: ['No', 'From', 'To', 'Standar LT', 'Istirahat'],
+    columnKeys: ['standar.col.no', 'standar.col.from', 'standar.col.to', 'standar.col.standardLt', 'standar.col.rest'],
     data: [
       { no: 1, from: 'RVDC Poligon', to: 'Sungai Lilin', lt: '6 Jam', rest: '5 Jam' },
       { no: 2, from: 'Sungai Lilin', to: 'Muara Tebo', lt: '7 Jam', rest: '6 Jam' },
@@ -49,11 +51,11 @@ const routes: Route[] = [
   },
   {
     id: 'jawa',
-    title: 'JBK / Karawang - Ngoro',
+    titleKey: 'standar.route.jawa',
     icon: <RouteIcon className="w-4 h-4" />,
     color: 'blue',
     hasRest: false,
-    columns: ['No', 'From', 'To', 'Standar LT'],
+    columnKeys: ['standar.col.no', 'standar.col.from', 'standar.col.to', 'standar.col.standardLt'],
     data: [
       { no: 1, from: 'Pool Karawang', to: 'NVDC Karawang', lt: '30 Menit' },
       { no: 2, from: 'Pool Karawang', to: 'NVDC Cibitung', lt: '2 Jam' },
@@ -73,11 +75,11 @@ const routes: Route[] = [
   },
   {
     id: 'kalimantan',
-    title: 'Rute Kalimantan',
+    titleKey: 'standar.route.kalimantan',
     icon: <MapPin className="w-4 h-4" />,
     color: 'amber',
     hasRest: false,
-    columns: ['No', 'From', 'To', 'Standar LT'],
+    columnKeys: ['standar.col.no', 'standar.col.from', 'standar.col.to', 'standar.col.standardLt'],
     data: [
       { no: 1, from: 'Balikpapan', to: 'Samarinda', lt: '5 Jam' },
       { no: 2, from: 'Balikpapan', to: 'Tenggarong', lt: '8 Jam' },
@@ -91,11 +93,11 @@ const routes: Route[] = [
   },
   {
     id: 'sulawesi',
-    title: 'Rute Sulawesi',
+    titleKey: 'standar.route.sulawesi',
     icon: <Navigation className="w-4 h-4" />,
     color: 'purple',
     hasRest: false,
-    columns: ['No', 'From', 'To', 'Standar LT'],
+    columnKeys: ['standar.col.no', 'standar.col.from', 'standar.col.to', 'standar.col.standardLt'],
     data: [
       { no: 1, from: 'Pool Makassar', to: 'Port Makassar', lt: '1 Jam' },
       { no: 2, from: 'Port Makassar', to: 'Poros Pinrang', lt: '4 Jam' },
@@ -112,18 +114,18 @@ const routes: Route[] = [
   },
   {
     id: 'sumatera',
-    title: 'Rute Sumatera (Delivery)',
+    titleKey: 'standar.route.sumatera',
     icon: <Ship className="w-4 h-4" />,
     color: 'indigo',
     hasRest: false,
-    columns: ['No', 'Tujuan', 'Standar LT'],
+    columnKeys: ['standar.col.no', 'standar.col.destination', 'standar.col.standardLt'],
     data: [
       { no: 1, from: 'Palembang', to: '', lt: '36 Jam' },
       { no: 2, from: 'Lampung', to: '', lt: '24 Jam' },
       { no: 3, from: 'Pekanbaru', to: '', lt: '72 Jam' },
     ],
     footer: [
-      { label: 'Termasuk waktu penyeberangan ferry Merak–Bakauheni' },
+      { labelKey: 'standar.route.sumateraFooter' },
     ],
   },
 ];
@@ -163,6 +165,7 @@ const PARAM_TONES: Record<string, { header: string; border: string; iconWrap: st
 
 function RouteCard({ route, delay }: { route: Route; delay: number }) {
   const [page, setPage] = useState(1);
+  const { t } = useLanguage();
   const c = colorMap[route.color];
   const totalPages = Math.ceil(route.data.length / ROWS_PER_PAGE);
   const paged = route.data.slice((page - 1) * ROWS_PER_PAGE, page * ROWS_PER_PAGE);
@@ -181,8 +184,8 @@ function RouteCard({ route, delay }: { route: Route; delay: number }) {
           <span className={c.text}>{route.icon}</span>
         </div>
         <div className="flex-1 min-w-0">
-          <h3 className={`text-[11px] sm:text-sm font-black uppercase tracking-tight truncate ${c.text}`}>{route.title}</h3>
-          <p className="text-[9px] text-slate-400 font-bold tracking-widest uppercase mt-0.5">{route.data.length} titik perjalanan</p>
+          <h3 className={`text-[11px] sm:text-sm font-black uppercase tracking-tight truncate ${c.text}`}>{t(route.titleKey)}</h3>
+          <p className="text-[9px] text-slate-400 font-bold tracking-widest uppercase mt-0.5">{t('standar.routePoints', { n: route.data.length })}</p>
         </div>
         {totalPages > 1 && (
           <span className={`text-[9px] font-black px-2 py-1 rounded-lg ${c.pill}`}>
@@ -196,9 +199,9 @@ function RouteCard({ route, delay }: { route: Route; delay: number }) {
         <table className="w-full text-left border-collapse min-w-[340px]">
           <thead>
             <tr className="bg-slate-50/80 dark:bg-slate-800/40">
-              {route.columns.map((col, i) => (
-                <th key={col} className={`px-3 sm:px-4 py-3 text-[8px] sm:text-[9px] font-black uppercase tracking-widest text-slate-400 border-b border-slate-100 dark:border-slate-800 ${i === 0 ? 'w-10 text-center' : ''}`}>
-                  {col}
+              {route.columnKeys.map((colKey, i) => (
+                <th key={colKey} className={`px-3 sm:px-4 py-3 text-[8px] sm:text-[9px] font-black uppercase tracking-widest text-slate-400 border-b border-slate-100 dark:border-slate-800 ${i === 0 ? 'w-10 text-center' : ''}`}>
+                  {t(colKey)}
                 </th>
               ))}
             </tr>
@@ -216,7 +219,7 @@ function RouteCard({ route, delay }: { route: Route; delay: number }) {
                     </span>
                   </td>
                 )}
-                {row.to === '' && route.columns.length === 3 && (
+                {row.to === '' && route.columnKeys.length === 3 && (
                   <td />
                 )}
                 <td className="px-3 sm:px-4 py-3">
@@ -246,9 +249,9 @@ function RouteCard({ route, delay }: { route: Route; delay: number }) {
           {route.footer && isLastPage && (
             <tfoot className="bg-slate-50 dark:bg-slate-800/40 border-t-2 border-slate-200 dark:border-slate-700">
               {route.footer.map((f) => (
-                <tr key={f.label}>
+                <tr key={f.labelKey}>
                   <td colSpan={3} className="px-3 sm:px-4 py-3 text-[9px] font-black uppercase tracking-widest text-right text-slate-500 dark:text-slate-400">
-                    {f.label}
+                    {t(f.labelKey)}
                   </td>
                   <td className="px-3 sm:px-4 py-3">
                     {f.lt && (
@@ -277,7 +280,7 @@ function RouteCard({ route, delay }: { route: Route; delay: number }) {
       {totalPages > 1 && (
         <div className="flex items-center justify-between px-4 py-3 border-t border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/20">
           <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest">
-            Hal. {page} dari {totalPages}
+            {t('standar.pagination', { page, total: totalPages })}
           </p>
           <div className="flex items-center gap-1.5">
             <button
@@ -309,7 +312,8 @@ function ParameterSection({ title, subtitle, tone, icon, items, delay }: {
   items: ParameterDef[];
   delay: number;
 }) {
-  const t = PARAM_TONES[tone];
+  const { t } = useLanguage();
+  const theme = PARAM_TONES[tone];
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -318,12 +322,12 @@ function ParameterSection({ title, subtitle, tone, icon, items, delay }: {
       className="bg-white dark:bg-slate-900 rounded-[24px] border border-slate-200 dark:border-slate-800 shadow-lg overflow-hidden"
     >
       {/* Section Header */}
-      <div className={`px-6 sm:px-8 py-5 border-b flex items-center gap-3 ${t.header}`}>
-        <div className={`p-2.5 rounded-xl border ${t.border} ${t.iconWrap}`}>
-          <span className={t.iconText}>{icon}</span>
+      <div className={`px-6 sm:px-8 py-5 border-b flex items-center gap-3 ${theme.header}`}>
+        <div className={`p-2.5 rounded-xl border ${theme.border} ${theme.iconWrap}`}>
+          <span className={theme.iconText}>{icon}</span>
         </div>
         <div>
-          <h3 className={`text-[11px] sm:text-sm font-black uppercase tracking-tight ${t.iconText}`}>
+          <h3 className={`text-[11px] sm:text-sm font-black uppercase tracking-tight ${theme.iconText}`}>
             {title}
           </h3>
           <p className="text-[9px] text-slate-400 font-bold tracking-widest uppercase mt-0.5">{subtitle}</p>
@@ -353,10 +357,10 @@ function ParameterSection({ title, subtitle, tone, icon, items, delay }: {
               {/* Label */}
               <div>
                 <p className="text-[11px] sm:text-xs font-black text-slate-900 dark:text-white uppercase tracking-tight leading-tight">
-                  {param.label}
+                  {t(param.labelKey)}
                 </p>
                 <p className="text-[9px] sm:text-[10px] text-slate-500 dark:text-slate-400 font-medium leading-relaxed mt-1.5">
-                  {param.desc}
+                  {t(param.descKey)}
                 </p>
               </div>
 
@@ -364,7 +368,7 @@ function ParameterSection({ title, subtitle, tone, icon, items, delay }: {
               <div className="mt-auto">
                 <span className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 text-[9px] font-black text-slate-600 dark:text-slate-300 uppercase tracking-wide">
                   <AlertTriangle className="w-2.5 h-2.5 text-slate-400" />
-                  {param.threshold}
+                  {t(param.thresholdKey, param.thresholdVars)}
                 </span>
               </div>
             </div>
@@ -376,6 +380,7 @@ function ParameterSection({ title, subtitle, tone, icon, items, delay }: {
 }
 
 export default function StandarParameterPage() {
+  const { t } = useLanguage();
   return (
     <div className="w-full max-w-7xl mx-auto space-y-6 sm:space-y-8 pb-10">
 
@@ -390,13 +395,13 @@ export default function StandarParameterPage() {
         </div>
         <div className="relative z-10">
           <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 text-[10px] sm:text-xs font-black tracking-widest uppercase mb-4 border border-blue-100 dark:border-blue-500/20">
-            <Timer className="w-3.5 h-3.5" /> Reference Guide
+            <Timer className="w-3.5 h-3.5" /> {t('standar.badge')}
           </div>
           <h1 className="text-2xl sm:text-4xl font-black text-slate-900 dark:text-white uppercase tracking-tight leading-none mb-3">
-            Standar Parameter
+            {t('standar.title')}
           </h1>
           <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 font-bold max-w-xl leading-relaxed">
-            Acuan standar LeadTime, Tenko, dan Eco Driving yang dipakai dashboard untuk menilai performa driver.
+            {t('standar.subtitle')}
           </p>
         </div>
       </motion.div>
@@ -410,8 +415,8 @@ export default function StandarParameterPage() {
 
       {/* ── ECO DRIVING PARAMETERS ── */}
       <ParameterSection
-        title="Standar Parameter Eco Driving"
-        subtitle={`${ECO_DRIVING_STANDARDS.length} parameter pelanggaran`}
+        title={t('standar.ecoTitle')}
+        subtitle={t('standar.ecoSubtitle', { n: ECO_DRIVING_STANDARDS.length })}
         tone="emerald"
         icon={<Leaf className="w-4 h-4" />}
         items={ECO_DRIVING_STANDARDS}
@@ -420,8 +425,8 @@ export default function StandarParameterPage() {
 
       {/* ── TENKO PARAMETERS ── */}
       <ParameterSection
-        title="Standar Parameter Tenko"
-        subtitle={`${TENKO_STANDARDS.length} parameter pemeriksaan kesehatan`}
+        title={t('standar.tenkoTitle')}
+        subtitle={t('standar.tenkoSubtitle', { n: TENKO_STANDARDS.length })}
         tone="rose"
         icon={<HeartPulse className="w-4 h-4" />}
         items={TENKO_STANDARDS}

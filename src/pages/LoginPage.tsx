@@ -7,6 +7,8 @@ import {
   Eye, EyeOff, Sparkles, Gauge, Clock, Radio
 } from 'lucide-react';
 import { useLoginStats } from '../hooks/useLoginStats';
+import { useLanguage } from '../context/LanguageContext';
+import LanguageSwitcher from '../components/layout/LanguageSwitcher';
 import Logo from '../image/Logo.png';
 import LoginImg from '../image/login.png';
 
@@ -18,6 +20,7 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [remember, setRemember] = useState(true);
   const navigate = useNavigate();
+  const { t, locale } = useLanguage();
   const { stats } = useLoginStats();
 
   // CountUp: animasi angka saat nilai berubah
@@ -29,7 +32,7 @@ export default function LoginPage() {
     return () => window.clearTimeout(id);
   }, [stats]);
 
-  const fmtActive = display.activeFleet.toLocaleString('id-ID');
+  const fmtActive = display.activeFleet.toLocaleString(locale);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -46,7 +49,7 @@ export default function LoginPage() {
 
       navigate('/dashboard', { replace: true });
     } catch (err: any) {
-      setError(err.message || 'Gagal login, periksa kembali email & password Anda.');
+      setError(err.message || t('login.error'));
     } finally {
       setLoading(false);
     }
@@ -64,6 +67,11 @@ export default function LoginPage() {
       <div className="aurora-bg" aria-hidden="true" />
       <div className="fixed top-0 right-0 w-[600px] h-[600px] bg-red-300/15 dark:bg-red-500/[0.07] rounded-full blur-[130px] -translate-y-1/3 translate-x-1/4" />
 
+      {/* ── LANGUAGE SWITCHER ── */}
+      <div className="absolute top-4 right-4 z-20">
+        <LanguageSwitcher />
+      </div>
+
       {/* ── LEFT COLUMN - FORM ── */}
       <div className="w-full lg:w-[42%] flex flex-col items-center justify-center p-6 md:p-10 relative z-10">
         <div className="w-full max-w-md">
@@ -76,7 +84,7 @@ export default function LoginPage() {
           >
             <img src={Logo} alt="KMDI" className="h-11 object-contain mb-2" />
             <p className="text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.28em]">
-              Fleet Monitoring
+              {t('login.brand')}
             </p>
           </motion.div>
 
@@ -91,7 +99,7 @@ export default function LoginPage() {
 
             <div className="mb-8">
               <h1 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight">
-                Selamat Datang
+                {t('login.welcome')}
                 <motion.span
                   initial={{ opacity: 0, scale: 0.6 }}
                   animate={{ opacity: 1, scale: 1 }}
@@ -102,7 +110,7 @@ export default function LoginPage() {
                 </motion.span>
               </h1>
               <p className="text-sm text-slate-500 dark:text-slate-400 mt-1.5">
-                Masuk untuk mengelola operasional armada Anda.
+                {t('login.subtitle')}
               </p>
             </div>
 
@@ -121,7 +129,7 @@ export default function LoginPage() {
               {/* Email */}
               <div className="space-y-2">
                 <label htmlFor="login-email" className="text-[11px] font-bold text-slate-700 dark:text-slate-300 uppercase tracking-widest">
-                  Email
+                  {t('login.email')}
                 </label>
                 <div className={inputWrap}>
                   <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-red-500 transition-colors duration-300" />
@@ -140,7 +148,7 @@ export default function LoginPage() {
               {/* Password */}
               <div className="space-y-2">
                 <label htmlFor="login-password" className="text-[11px] font-bold text-slate-700 dark:text-slate-300 uppercase tracking-widest">
-                  Password
+                  {t('login.password')}
                 </label>
                 <div className={inputWrap}>
                   <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-red-500 transition-colors duration-300" />
@@ -185,7 +193,7 @@ export default function LoginPage() {
                     <polyline points="20 6 9 17 4 12" />
                   </svg>
                 </span>
-                <span className="text-xs font-bold text-slate-700 dark:text-slate-300">Remember me</span>
+                <span className="text-xs font-bold text-slate-700 dark:text-slate-300">{t('login.remember')}</span>
               </label>
 
               {/* Submit */}
@@ -207,11 +215,11 @@ export default function LoginPage() {
                   {loading ? (
                     <>
                       <span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
-                      Signing In...
+                      {t('login.signingIn')}
                     </>
                   ) : (
                     <>
-                      Sign In
+                      {t('login.signIn')}
                       <motion.span
                         animate={{ x: [0, 4, 0] }}
                         transition={{ duration: 1.6, repeat: Infinity, ease: 'easeInOut' }}
@@ -250,17 +258,17 @@ export default function LoginPage() {
           className="relative z-10 text-center mb-8 mt-4"
         >
           <span className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-white/50 dark:bg-white/[0.06] border border-slate-200/60 dark:border-white/[0.08] text-[10px] font-black uppercase tracking-[0.18em] text-red-600 dark:text-red-400 mb-5">
-            <Sparkles className="w-3.5 h-3.5" /> Logistic System Platform
+            <Sparkles className="w-3.5 h-3.5" /> {t('login.platformBadge')}
           </span>
           <h1 className="text-4xl xl:text-[44px] font-black text-slate-900 dark:text-white tracking-tight leading-[1.12]">
-            Manage &amp; Verify
+            {t('login.headline1')}
             <br />
             <span className="claude-gradient bg-clip-text text-transparent">
-              Fleet Readiness
+              {t('login.headline2')}
             </span>
           </h1>
           <p className="text-sm text-slate-500 dark:text-slate-400 mt-4 max-w-sm mx-auto leading-relaxed">
-            Tenko, gatepass, monitoring ritase, dan analitik keselamatan dalam satu platform.
+            {t('login.headlineDesc')}
           </p>
         </motion.div>
 
@@ -303,7 +311,7 @@ export default function LoginPage() {
                     className="inline-block ml-1 w-1.5 h-1.5 rounded-full bg-emerald-500 align-middle animate-pulse"
                   />
                 </p>
-                <p className="text-[9px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mt-0.5">Armada Aktif</p>
+                <p className="text-[9px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mt-0.5">{t('login.statActiveFleet')}</p>
               </div>
             </motion.div>
 
@@ -318,8 +326,8 @@ export default function LoginPage() {
                 <Gauge className="w-4 h-4 text-red-500" />
               </div>
               <div>
-                <p className="text-sm font-black text-slate-900 dark:text-white leading-none">{display.onTimeRate.toLocaleString('id-ID')}%</p>
-                <p className="text-[9px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mt-0.5">On-Time Bulan Ini</p>
+                <p className="text-sm font-black text-slate-900 dark:text-white leading-none">{display.onTimeRate.toLocaleString(locale)}%</p>
+                <p className="text-[9px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mt-0.5">{t('login.statOnTime')}</p>
               </div>
             </motion.div>
 
@@ -335,9 +343,9 @@ export default function LoginPage() {
                 <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-blue-500 animate-ping" />
               </div>
               <div>
-                <p className="text-sm font-black text-slate-900 dark:text-white leading-none">{display.liveTrips.toLocaleString('id-ID')}</p>
+                <p className="text-sm font-black text-slate-900 dark:text-white leading-none">{display.liveTrips.toLocaleString(locale)}</p>
                 <p className="text-[9px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mt-0.5 flex items-center gap-1">
-                  <Radio className="w-2.5 h-2.5 text-blue-500" /> Trip Berjalan
+                  <Radio className="w-2.5 h-2.5 text-blue-500" /> {t('login.statLiveTrips')}
                 </p>
               </div>
             </motion.div>
@@ -352,15 +360,15 @@ export default function LoginPage() {
           className="relative z-10 flex items-center gap-3 mt-8 text-[10px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-500"
         >
           <span className="flex items-center gap-1.5">
-            <ShieldCheck className="w-3.5 h-3.5 text-red-500" /> Tenko
+            <ShieldCheck className="w-3.5 h-3.5 text-red-500" /> {t('login.featureTenko')}
           </span>
           <span className="w-1 h-1 rounded-full bg-slate-300 dark:bg-slate-600" />
           <span className="flex items-center gap-1.5">
-            <Clock className="w-3.5 h-3.5 text-red-500" /> LeadTime
+            <Clock className="w-3.5 h-3.5 text-red-500" /> {t('login.featureLeadTime')}
           </span>
           <span className="w-1 h-1 rounded-full bg-slate-300 dark:bg-slate-600" />
           <span className="flex items-center gap-1.5">
-            <Activity className="w-3.5 h-3.5 text-red-500" /> Live Tracking
+            <Activity className="w-3.5 h-3.5 text-red-500" /> {t('login.featureLiveTracking')}
           </span>
         </motion.div>
       </div>

@@ -9,9 +9,11 @@ import { motion, AnimatePresence } from 'motion/react';
 import { supabase } from '../../lib/supabase';
 import Logo from '../../image/Logo.png';
 import NotificationBell from './NotificationBell';
+import LanguageSwitcher from './LanguageSwitcher';
 import MobileNav from './MobileNav';
 import JournalTripControls from '../dashboard/JournalTripControls';
 import { filterNavGroups, NavGroup } from '../../constants/navigation';
+import { useLanguage } from '../../context/LanguageContext';
 
 interface NavbarProps {
   selectedDate: string;
@@ -45,6 +47,7 @@ export default function Navbar({
   isOwner = false,
 }: NavbarProps) {
   const location = useLocation();
+  const { t } = useLanguage();
   const profileRef = useRef<HTMLDivElement>(null);
   const navBarRef = useRef<HTMLElement>(null);
   const hoverTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -119,7 +122,7 @@ export default function Navbar({
   useEscapeKey(() => setIsMobileNavOpen(false), !!isMobileNavOpen);
 
   const formatUserName = (email: string) => {
-    if (!email) return 'User';
+    if (!email) return t('common.user');
     const namePart = email.split('@')[0];
     return namePart
       .split(/[\._-]/)
@@ -240,7 +243,7 @@ export default function Navbar({
                       : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/[0.06]'}
                   `}
                 >
-                  {group.label}
+                  {t(group.labelKey)}
                   <motion.span
                     animate={{ rotate: isOpen ? 180 : 0 }}
                     transition={{ duration: 0.2, ease: 'easeOut' }}
@@ -260,7 +263,7 @@ export default function Navbar({
                       className="absolute top-full left-0 mt-1.5 min-w-[260px] p-1.5 rounded-xl border border-slate-200/60 dark:border-white/[0.08] bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl shadow-2xl shadow-slate-900/10 dark:shadow-black/40 z-50"
                     >
                       <p className="px-3 pt-2 pb-1 text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">
-                        {group.label}
+                        {t(group.labelKey)}
                       </p>
                       {group.items.map(item => {
                         const active = isItemActive(item.path);
@@ -281,9 +284,9 @@ export default function Navbar({
                               <Icon className="w-4 h-4" />
                             </span>
                             <span className="flex-1 text-left min-w-0">
-                              <span className="block text-xs font-bold leading-tight truncate">{item.label}</span>
+                              <span className="block text-xs font-bold leading-tight truncate">{t(item.labelKey)}</span>
                               <span className={`block text-[9px] font-semibold leading-tight truncate ${active ? 'text-red-500/70' : 'text-slate-400 dark:text-slate-500'}`}>
-                                {item.sub}
+                                {t(item.subKey)}
                               </span>
                             </span>
                             {active && (
@@ -332,7 +335,7 @@ export default function Navbar({
             onClick={handleExportPDF}
             disabled={isExporting}
             className="hidden md:flex relative p-2.5 bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 rounded-xl hover:bg-red-200 dark:hover:bg-red-900/50 transition-all shadow-sm outline-none ring-0 disabled:opacity-50"
-            title="Export current page to PDF"
+            title={t('common.exportPdf')}
           >
             {isExporting ? (
               <div className="w-4 h-4 border-2 border-red-600 border-t-transparent rounded-full animate-spin" />
@@ -340,6 +343,9 @@ export default function Navbar({
               <Download className="w-4 h-4" />
             )}
           </motion.button>
+
+          {/* ── Language Switcher ── */}
+          <LanguageSwitcher />
 
           {/* ── Notification Bell ── */}
           <NotificationBell />
@@ -349,7 +355,7 @@ export default function Navbar({
             whileTap={{ scale: 0.9, rotate: 15 }}
             onClick={(e) => { e.preventDefault(); onThemeToggle(); }}
             className="relative p-2.5 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-white rounded-xl hover:bg-slate-200 dark:hover:bg-slate-700 transition-all shadow-sm outline-none ring-0"
-            title={`Switch to ${theme === 'light' ? 'dark' : 'light'} mode`}
+            title={t(theme === 'light' ? 'common.switchToDark' : 'common.switchToLight')}
           >
             <AnimatePresence mode="wait" initial={false}>
               {theme === 'light' ? (
@@ -371,10 +377,10 @@ export default function Navbar({
                 whileTap={{ scale: 0.95 }}
                 onClick={() => { setIsProfileOpen(o => !o); setOpenGroup(null); }}
                 className="p-0.5 rounded-full bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 transition-all shadow-sm outline-none focus:outline-none focus:ring-0 cursor-pointer"
-                title="Profil"
+                title={t('common.profile')}
               >
                 {avatarUrl ? (
-                  <img src={avatarUrl} alt="Profil" className="w-8 h-8 rounded-full object-cover" />
+                  <img src={avatarUrl} alt={t('common.profile')} className="w-8 h-8 rounded-full object-cover" />
                 ) : (
                   <div className="w-8 h-8 rounded-full bg-red-600 text-white flex items-center justify-center font-black text-xs shadow-md shadow-red-600/20">
                     {session.user?.email ? formatUserName(session.user.email).charAt(0).toUpperCase() : 'U'}
@@ -392,9 +398,9 @@ export default function Navbar({
                     className="absolute top-full right-0 mt-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700/60 rounded-2xl shadow-2xl shadow-slate-900/10 dark:shadow-black/40 z-200 min-w-[224px] overflow-hidden"
                   >
                     <div className="p-4 border-b border-slate-100 dark:border-slate-800/80">
-                      <p className="text-[9px] font-black text-red-500 uppercase tracking-widest leading-none">LOGGED IN AS</p>
+                      <p className="text-[9px] font-black text-red-500 uppercase tracking-widest leading-none">{t('common.loggedInAs')}</p>
                       <p className="text-xs font-black text-slate-800 dark:text-white mt-2 uppercase truncate">
-                        {session.user?.email ? formatUserName(session.user.email) : 'User'}
+                        {session.user?.email ? formatUserName(session.user.email) : t('common.user')}
                       </p>
                       <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 mt-1 truncate">
                         {session.user?.email || ''}
@@ -407,7 +413,7 @@ export default function Navbar({
                         className="flex items-center gap-3 px-3 py-2.5 w-full rounded-xl transition-colors text-xs font-black uppercase tracking-wider text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/[0.06] mb-0.5"
                       >
                         <UserRound className="w-4 h-4 shrink-0 text-slate-400" />
-                        Profil Saya
+                        {t('common.myProfile')}
                       </Link>
                       {isOwner && (
                         <Link
@@ -416,7 +422,7 @@ export default function Navbar({
                           className="flex items-center gap-3 px-3 py-2.5 w-full rounded-xl transition-colors text-xs font-black uppercase tracking-wider text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-500/10 mb-0.5"
                         >
                           <Crown className="w-4 h-4 shrink-0 text-amber-500" />
-                          Kelola User
+                          {t('common.manageUsers')}
                         </Link>
                       )}
                       {isAdmin && (
@@ -426,7 +432,7 @@ export default function Navbar({
                           className="flex items-center gap-3 px-3 py-2.5 w-full rounded-xl transition-colors text-xs font-black uppercase tracking-wider text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 mb-0.5"
                         >
                           <Users className="w-4 h-4 shrink-0 text-red-500" />
-                          Admin Foto Driver
+                          {t('common.driverPhotoAdmin')}
                         </Link>
                       )}
                       <motion.button
@@ -439,7 +445,7 @@ export default function Navbar({
                         className="flex items-center gap-3 px-3 py-2.5 text-left w-full rounded-xl transition-colors text-xs font-black uppercase tracking-wider text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10"
                       >
                         <LogOut className="w-4 h-4 shrink-0 text-red-500" />
-                        Sign Out
+                        {t('common.signOut')}
                       </motion.button>
                     </div>
                   </motion.div>

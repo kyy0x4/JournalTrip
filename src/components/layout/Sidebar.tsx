@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import { Driver } from '../../types';
 import Logo from '../../image/Logo.png';
+import { useLanguage } from '../../context/LanguageContext';
 
 interface SidebarProps {
   drivers: Driver[];
@@ -51,6 +52,9 @@ export default function Sidebar({
   onShiftChange,
   selectedArea = 'JBK',
 }: SidebarProps) {
+  const { t } = useLanguage();
+  const currentShift = selectedShift === 'Day' ? t('journal.dayShift') : t('journal.nightShift');
+  const otherShift = selectedShift === 'Day' ? t('journal.nightShift') : t('journal.dayShift');
   const [searchQuery, setSearchQuery] = useState('');
   const [panelOpen, setPanelOpen] = useState(false);
   const hoverTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -111,8 +115,8 @@ export default function Sidebar({
               ? 'bg-red-600 text-white'
               : 'text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-white/[0.06] hover:text-red-500'
           }`}
-          title="Active Drivers"
-          aria-label="Active Drivers"
+          title={t('journal.activeDrivers')}
+          aria-label={t('journal.activeDrivers')}
         >
           <User className="w-5 h-5" />
           {drivers.length > 0 && (
@@ -124,7 +128,7 @@ export default function Sidebar({
         <button
           onClick={onToggleCollapse}
           className="mt-auto w-10 h-10 flex items-center justify-center rounded-xl text-slate-400 dark:text-slate-500 hover:bg-slate-100 dark:hover:bg-white/[0.06] transition-colors"
-          title={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+          title={isCollapsed ? t('journal.expandSidebar') : t('journal.collapseSidebar')}
         >
           {isCollapsed
             ? <PanelLeft className="w-5 h-5" />
@@ -147,12 +151,12 @@ export default function Sidebar({
           >
             {/* Header */}
             <div className="px-4 pt-4 pb-2 shrink-0">
-              <p className="text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-3">Active Drivers</p>
+              <p className="text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-3">{t('journal.activeDrivers')}</p>
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 dark:text-slate-500" />
                 <input
                   type="text"
-                  placeholder="Cari driver..."
+                  placeholder={t('journal.searchDriver')}
                   value={searchQuery}
                   onChange={e => setSearchQuery(e.target.value)}
                   autoFocus
@@ -171,7 +175,7 @@ export default function Sidebar({
               {isLoading ? (
                 <div className="flex flex-col items-center justify-center py-8 gap-3">
                   <div className="w-7 h-7 border-3 border-red-500 border-t-transparent rounded-full animate-spin" />
-                  <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">Memuat...</p>
+                  <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">{t('common.loading')}</p>
                 </div>
               ) : (
                 <>
@@ -220,8 +224,8 @@ export default function Sidebar({
                     <div className="text-center py-8 px-3 space-y-3">
                       <p className="text-[10px] text-slate-400 dark:text-slate-500 font-medium italic">
                         {searchQuery
-                          ? 'Driver tidak ditemukan'
-                          : `Tidak ada trip ${selectedShift} Shift di ${selectedArea}`}
+                          ? t('journal.driverNotFound')
+                          : t('journal.noTrip', { shift: currentShift, area: selectedArea })}
                       </p>
                       {!searchQuery && onShiftChange && (
                         <button
@@ -229,7 +233,7 @@ export default function Sidebar({
                           onClick={() => onShiftChange(selectedShift === 'Day' ? 'Night' : 'Day')}
                           className="text-[10px] font-black uppercase tracking-widest text-red-500 hover:text-red-600 transition-colors"
                         >
-                          Coba {selectedShift === 'Day' ? 'Night' : 'Day'} Shift →
+                          {t('journal.tryShift', { shift: otherShift })}
                         </button>
                       )}
                     </div>
@@ -257,7 +261,7 @@ export default function Sidebar({
               <button
                 onClick={onClose}
                 className="ml-auto p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-lg hover:bg-slate-100 dark:hover:bg-white/[0.06] transition-colors"
-                aria-label="Tutup"
+                aria-label={t('common.close')}
               >
                 <X className="w-5 h-5" />
               </button>
@@ -266,12 +270,12 @@ export default function Sidebar({
             {/* Driver list */}
             <div className="flex-1 overflow-hidden flex flex-col">
               <div className="px-4 pt-4 pb-2 shrink-0">
-                <p className="text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-3">Active Drivers</p>
+                <p className="text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-3">{t('journal.activeDrivers')}</p>
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 dark:text-slate-500" />
                   <input
                     type="text"
-                    placeholder="Cari driver..."
+                    placeholder={t('journal.searchDriver')}
                     value={searchQuery}
                     onChange={e => setSearchQuery(e.target.value)}
                     className="w-full bg-white/60 dark:bg-white/[0.05] border border-slate-200/60 dark:border-white/[0.08] rounded-xl py-2 pl-9 pr-3 text-xs font-medium outline-none focus:ring-2 focus:ring-red-500/15 focus:border-red-400/40 transition-all text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-600"
@@ -288,7 +292,7 @@ export default function Sidebar({
                 {isLoading ? (
                   <div className="flex flex-col items-center justify-center py-8 gap-3">
                     <div className="w-7 h-7 border-3 border-red-500 border-t-transparent rounded-full animate-spin" />
-                    <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">Memuat...</p>
+                    <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">{t('common.loading')}</p>
                   </div>
                 ) : (
                   <>
@@ -334,8 +338,8 @@ export default function Sidebar({
                       <div className="text-center py-8 px-3 space-y-3">
                         <p className="text-[10px] text-slate-400 dark:text-slate-500 font-medium italic">
                           {searchQuery
-                            ? 'Driver tidak ditemukan'
-                            : `Tidak ada trip ${selectedShift} Shift di ${selectedArea}`}
+                            ? t('journal.driverNotFound')
+                            : t('journal.noTrip', { shift: currentShift, area: selectedArea })}
                         </p>
                         {!searchQuery && onShiftChange && (
                           <button
@@ -343,7 +347,7 @@ export default function Sidebar({
                             onClick={() => onShiftChange(selectedShift === 'Day' ? 'Night' : 'Day')}
                             className="text-[10px] font-black uppercase tracking-widest text-red-500 hover:text-red-600 transition-colors"
                           >
-                            Coba {selectedShift === 'Day' ? 'Night' : 'Day'} Shift →
+                            {t('journal.tryShift', { shift: otherShift })}
                           </button>
                         )}
                       </div>

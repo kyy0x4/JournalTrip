@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import { User, ShieldCheck, X, ZoomIn, Calendar, MapPin, CheckCircle2, ChevronDown } from 'lucide-react';
 import { DriverDetails } from '../../types';
+import { useLanguage } from '../../context/LanguageContext';
 
 interface HeaderProps {
   driver: DriverDetails | null;
@@ -17,6 +18,7 @@ const TAM_AREAS = ['JBK', 'SUMATERA', 'NGORO', 'SINGLE CARRIER', 'DOUBLE DECK'];
 const TMMIN_AREA = 'TMMIN';
 
 export default function Header({ driver, selectedDate, onDateChange, selectedArea, onAreaChange, isTAM = false }: HeaderProps) {
+  const { t } = useLanguage();
   const [showSimModal, setShowSimModal] = useState(false);
   const [tamOpen, setTamOpen] = useState(false);
   const tamRef = useRef<HTMLDivElement>(null);
@@ -182,9 +184,9 @@ export default function Header({ driver, selectedDate, onDateChange, selectedAre
 
               <div className="flex items-center gap-4">
                 <div className="text-left md:text-right">
-                  <p className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-1">OPERASIONAL STATUS</p>
+                  <p className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-1">{t('journal.operationalStatus')}</p>
                   <div className="flex items-center md:justify-end gap-2 text-green-600 dark:text-green-500">
-                    <span className="text-2xl font-black">{driver.status === 'online' ? 'ACTIVE' : 'READY'}</span>
+                    <span className="text-2xl font-black">{driver.status === 'online' ? t('journal.active') : t('journal.ready')}</span>
                     <CheckCircle2 className="w-6 h-6" />
                   </div>
                 </div>
@@ -197,7 +199,7 @@ export default function Header({ driver, selectedDate, onDateChange, selectedAre
             <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-white/60 dark:bg-white/[0.06] flex items-center justify-center">
               <User className="w-8 h-8 text-slate-300 dark:text-slate-600" />
             </div>
-            <p className="text-slate-500 dark:text-slate-400 font-bold uppercase tracking-widest text-sm">Pilih Driver untuk melihat detail {selectedArea}</p>
+            <p className="text-slate-500 dark:text-slate-400 font-bold uppercase tracking-widest text-sm">{t('journal.selectDriver', { area: selectedArea })}</p>
         </div>
       )}
 
@@ -226,8 +228,8 @@ export default function Header({ driver, selectedDate, onDateChange, selectedAre
                 
                 <div className="absolute inset-0 flex items-center justify-between px-6 md:px-10">
                   <div className="relative z-10">
-                    <h2 className="text-xl md:text-3xl font-black text-white tracking-tight">Driver Documents</h2>
-                    <p className="text-[10px] md:text-xs text-slate-400 font-bold uppercase tracking-widest mt-1">Verification & License</p>
+                    <h2 className="text-xl md:text-3xl font-black text-white tracking-tight">{t('journal.driverDocuments')}</h2>
+                    <p className="text-[10px] md:text-xs text-slate-400 font-bold uppercase tracking-widest mt-1">{t('journal.verificationLicense')}</p>
                   </div>
                   <button 
                     onClick={() => setShowSimModal(false)}
@@ -259,7 +261,7 @@ export default function Header({ driver, selectedDate, onDateChange, selectedAre
                     ) : (
                       <div className="w-full h-full flex flex-col items-center justify-center text-slate-300 dark:text-slate-700">
                         <MapPin className="w-10 h-10 md:w-12 md:h-12 mb-2" />
-                        <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">Preview Not Available</span>
+                        <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">{t('journal.previewNotAvailable')}</span>
                       </div>
                     )}
                   </div>
@@ -267,13 +269,13 @@ export default function Header({ driver, selectedDate, onDateChange, selectedAre
 
                 <div className="grid grid-cols-2 gap-4 mt-6 md:mt-8">
                   <div className="p-4 md:p-6 bg-slate-50 dark:bg-slate-800/50 rounded-2xl md:rounded-3xl border border-slate-100 dark:border-slate-800">
-                    <p className="text-[9px] md:text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-1.5 leading-tight">License Status</p>
+                    <p className="text-[9px] md:text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-1.5 leading-tight">{t('journal.licenseStatus')}</p>
                     <p className={`text-base md:text-xl font-black ${driver.simStatus === 'Valid' ? 'text-green-600 dark:text-green-400' : 'text-rose-500 dark:text-rose-400'}`}>
                       {(!driver.simStatus || driver.simStatus === '--') ? '--' : driver.simStatus.toUpperCase()}
                     </p>
                   </div>
                   <div className="p-4 md:p-6 bg-slate-50 dark:bg-slate-800/50 rounded-2xl md:rounded-3xl border border-slate-100 dark:border-slate-800">
-                    <p className="text-[9px] md:text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-1.5 leading-tight">Expiry Date</p>
+                    <p className="text-[9px] md:text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-1.5 leading-tight">{t('journal.expiryDate')}</p>
                     <p className="text-base md:text-xl font-black text-slate-900 dark:text-slate-100">
                       {driver.simExpiry || '-- -- ----'}
                     </p>
@@ -286,7 +288,7 @@ export default function Header({ driver, selectedDate, onDateChange, selectedAre
                   onClick={() => setShowSimModal(false)}
                   className="w-full mt-8 md:mt-10 py-4 md:py-5 bg-slate-900 dark:bg-red-600 text-white rounded-2xl md:rounded-3xl font-black text-xs md:text-sm uppercase tracking-widest shadow-xl shadow-slate-900/20 dark:shadow-red-600/30 transition-all"
                 >
-                  Confirm & Close
+                  {t('journal.confirmClose')}
                 </motion.button>
               </div>
             </motion.div>

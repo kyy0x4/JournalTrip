@@ -2,9 +2,11 @@ import { useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Bell, AlertTriangle, X, Trash2, Inbox } from 'lucide-react';
 import { useNotifications } from '../../context/NotificationContext';
+import { useLanguage } from '../../context/LanguageContext';
 
 export default function NotificationBell() {
   const { history, unreadCount, markAllSeen, clearHistory } = useNotifications();
+  const { t, locale } = useLanguage();
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
 
@@ -36,7 +38,7 @@ export default function NotificationBell() {
             ? 'bg-rose-600 text-white shadow-rose-500/30'
             : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
         }`}
-        title="Riwayat Notifikasi"
+        title={t('notif.title')}
       >
         <Bell className="w-4 h-4" />
         {unreadCount > 0 && (
@@ -59,7 +61,7 @@ export default function NotificationBell() {
               {/* Header */}
               <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100 dark:border-slate-800">
                 <p className="text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest">
-                  Riwayat Notifikasi
+                  {t('notif.title')}
                 </p>
                 {history.length > 0 && (
                   <button
@@ -67,7 +69,7 @@ export default function NotificationBell() {
                     className="flex items-center gap-1 px-2 py-1 rounded-lg text-rose-500 text-[9px] font-black uppercase tracking-widest hover:bg-rose-50 dark:hover:bg-rose-500/10 transition-colors"
                   >
                     <Trash2 className="w-3 h-3" />
-                    Hapus
+                    {t('common.delete')}
                   </button>
                 )}
               </div>
@@ -79,8 +81,8 @@ export default function NotificationBell() {
                     <div className="w-12 h-12 rounded-2xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center mb-3">
                       <Inbox className="w-6 h-6 text-slate-400" />
                     </div>
-                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Belum ada notifikasi</p>
-                    <p className="text-[9px] font-bold text-slate-400 mt-1">Armada berpotensi delay akan muncul di sini</p>
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{t('notif.empty')}</p>
+                    <p className="text-[9px] font-bold text-slate-400 mt-1">{t('notif.emptyHint')}</p>
                   </div>
                 ) : (
                   history.map(n => (
@@ -94,11 +96,11 @@ export default function NotificationBell() {
                           {n.nopol} · Rit {n.ritase}{n.area ? ` · ${n.area}` : ''}
                         </p>
                         <p className="text-[9px] font-black text-rose-500 uppercase tracking-widest mt-0.5">
-                          Berpotensi Delay
+                          {t('notif.potentialDelay')}
                         </p>
                       </div>
                       <span className="shrink-0 text-[9px] font-bold text-slate-400 tabular-nums">
-                        {new Date(n.createdAt).toLocaleDateString('id-ID', { day: '2-digit', month: 'short' })} · {n.time}
+                        {new Date(n.createdAt).toLocaleDateString(locale, { day: '2-digit', month: 'short' })} · {n.time}
                       </span>
                     </div>
                   ))

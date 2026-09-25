@@ -12,8 +12,10 @@ import {
 } from 'lucide-react';
 import { fetchAllDrivers } from '../services/dataFetcher';
 import { Driver } from '../types';
+import { useLanguage } from '../context/LanguageContext';
 
 export default function DriversPage() {
+  const { t } = useLanguage();
   const [drivers, setDrivers] = useState<Driver[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [isLoading, setIsLoading] = useState(true);
@@ -40,12 +42,12 @@ export default function DriversPage() {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl md:text-3xl font-black text-slate-900 dark:text-white flex items-center gap-3">
-            Data Driver
+            {t('drivers.title')}
             <span className="text-xs bg-red-100 dark:bg-red-900/40 text-red-600 dark:text-red-400 px-3 py-1 rounded-full border dark:border-red-900/50">
-              {drivers.length} TOTAL
+              {t('drivers.total', { n: drivers.length })}
             </span>
           </h1>
-          <p className="text-sm font-bold text-slate-400 dark:text-slate-500 mt-1 uppercase tracking-widest">Manajemen Data & Dokumen Pengemudi</p>
+          <p className="text-sm font-bold text-slate-400 dark:text-slate-500 mt-1 uppercase tracking-widest">{t('drivers.subtitle')}</p>
         </div>
       </div>
 
@@ -55,7 +57,7 @@ export default function DriversPage() {
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 group-focus-within:text-red-500 transition-colors" />
           <input 
             type="text" 
-            placeholder="Cari nama, NIK, atau no polisi..."
+            placeholder={t('drivers.searchPlaceholder')}
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="w-full bg-white dark:bg-slate-900 rounded-2xl pl-12 pr-4 py-3.5 text-sm font-bold focus:outline-none shadow-sm dark:text-white outline-none ring-0"
@@ -101,7 +103,7 @@ export default function DriversPage() {
               )}
               <div className="flex-1 min-w-0">
                 <h3 className="font-black text-slate-900 dark:text-white truncate group-hover:text-red-600 transition-colors">{driver.name}</h3>
-                <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mt-0.5">{driver.nik || 'NO NIK'}</p>
+                <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mt-0.5">{driver.nik || t('drivers.noNik')}</p>
               </div>
             </div>
 
@@ -109,7 +111,7 @@ export default function DriversPage() {
               <div className="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-100 dark:border-slate-800">
                 <div className="flex items-center gap-2">
                   <Truck className="w-3.5 h-3.5 text-slate-400" />
-                  <span className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase">Unit</span>
+                  <span className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase">{t('drivers.unit')}</span>
                 </div>
                 <span className="text-xs font-black text-slate-800 dark:text-slate-200">{driver.noPolisi || '---'}</span>
               </div>
@@ -117,7 +119,7 @@ export default function DriversPage() {
               <div className="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-100 dark:border-slate-800">
                 <div className="flex items-center gap-2">
                   <Shield className={`w-3.5 h-3.5 ${driver.simStatus === 'Valid' ? 'text-green-500' : 'text-rose-500'}`} />
-                  <span className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase">SIM Status</span>
+                  <span className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase">{t('drivers.simStatus')}</span>
                 </div>
                 <span className={`text-[10px] font-black uppercase ${
                   driver.simStatus === 'Valid' ? 'text-green-600 dark:text-green-400' : 'text-rose-500'
@@ -128,7 +130,7 @@ export default function DriversPage() {
             </div>
 
             <div className="mt-6 flex items-center justify-between text-xs font-black tracking-widest text-red-600 dark:text-red-400 group-hover:gap-2 transition-all">
-              VIEW PROFILE
+              {t('drivers.viewProfile')}
               <ChevronRight className="w-4 h-4 opacity-0 -translate-x-4 group-hover:opacity-100 group-hover:translate-x-0 transition-all" />
             </div>
           </Link>
@@ -140,7 +142,7 @@ export default function DriversPage() {
           <div className="w-16 h-16 bg-slate-50 dark:bg-slate-800 rounded-full flex items-center justify-center mx-auto mb-4">
             <User className="w-8 h-8 text-slate-200" />
           </div>
-          <p className="text-slate-400 dark:text-slate-500 font-bold uppercase tracking-widest text-xs">No drivers found matching your search</p>
+          <p className="text-slate-400 dark:text-slate-500 font-bold uppercase tracking-widest text-xs">{t('drivers.notFound')}</p>
         </div>
       )}
     </div>

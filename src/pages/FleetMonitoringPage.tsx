@@ -20,11 +20,23 @@ import { motion, AnimatePresence } from 'motion/react';
 import { fetchFleetMonitoringData } from '../services/dataFetcher';
 import { supabase } from '../lib/supabase';
 import { useNotifications } from '../context/NotificationContext';
+import { useLanguage } from '../context/LanguageContext';
+import type { TranslationKey } from '../i18n';
 import AuthModal from '../components/auth/AuthModal';
 import { canEdit } from '../constants/roles';
 
 // Status Types for Fleet
 type FleetStatus = 'In Pool' | 'OTW PDC' | 'In PDC' | 'OTW Destination' | 'At Destination' | 'Finished';
+
+// Nilai status dipakai buat logic — yang ditampilin pakai key terjemahan.
+const FLEET_STATUS_KEY: Record<FleetStatus, TranslationKey> = {
+  'In Pool': 'fleet.status.inPool',
+  'OTW PDC': 'fleet.status.otwPdc',
+  'In PDC': 'fleet.status.inPdc',
+  'OTW Destination': 'fleet.status.otwDestination',
+  'At Destination': 'fleet.status.atDestination',
+  'Finished': 'fleet.status.finished',
+};
 
 interface FleetArmada {
   id: string;
@@ -56,6 +68,7 @@ interface CancelEvaluation {
 }
 
 function EvalBadges({ trips, evaluations }: { trips: any[]; evaluations: Record<string, CancelEvaluation> }) {
+  const { t } = useLanguage();
   const items = (trips || []).filter(t => t?.id && evaluations[t.id]);
   if (items.length === 0) return null;
   const allSame = items.length === (trips || []).length && (trips || []).length > 1
@@ -64,16 +77,16 @@ function EvalBadges({ trips, evaluations }: { trips: any[]; evaluations: Record<
     return (
       <div className="flex flex-wrap gap-1 mt-1" onClick={e => e.stopPropagation()}>
         <span className="bg-rose-50 text-rose-600 dark:bg-rose-500/10 dark:text-rose-400 px-1.5 py-0.5 rounded text-[7px] font-black uppercase tracking-tighter">
-          Semua Rit: {evaluations[items[0].id].faktor}
+          {t('fleet.evalAllRits', { faktor: evaluations[items[0].id].faktor })}
         </span>
       </div>
     );
   }
   return (
     <div className="flex flex-wrap gap-1 mt-1" onClick={e => e.stopPropagation()}>
-      {items.map(t => (
-        <span key={t.id} className="bg-rose-50 text-rose-600 dark:bg-rose-500/10 dark:text-rose-400 px-1.5 py-0.5 rounded text-[7px] font-black uppercase tracking-tighter">
-          R{t.ritNo}: {evaluations[t.id].faktor}
+      {items.map(trip => (
+        <span key={trip.id} className="bg-rose-50 text-rose-600 dark:bg-rose-500/10 dark:text-rose-400 px-1.5 py-0.5 rounded text-[7px] font-black uppercase tracking-tighter">
+          R{trip.ritNo}: {evaluations[trip.id].faktor}
         </span>
       ))}
     </div>
@@ -93,10 +106,11 @@ function EvalInlineForm({ bulkKey, trips, evaluations, savingId, savingBulkId, c
   onSave: (target: any | any[], faktor: string, bulkKey: string | null) => void;
 }) {
   const options = trips || [];
+  const { t } = useLanguage();
   if (options.length === 0) return null;
   const chosenId = choiceTripId === EVAL_ALL_TRIPS
     ? EVAL_ALL_TRIPS
-    : (options.find(t => t.id === choiceTripId)?.id || options.find(t => !evaluations[t.id])?.id || options[0].id);
+    : (options.find(trip => trip.id === choiceTripId)?.id || options.find(trip => !evaluations[trip.id])?.id || options[0].id);
   const isAll = chosenId === EVAL_ALL_TRIPS;
   const saving = isAll ? savingBulkId === bulkKey : savingId === chosenId;
   return (
@@ -107,19 +121,19 @@ function EvalInlineForm({ bulkKey, trips, evaluations, savingId, savingBulkId, c
         onClick={e => e.stopPropagation()}
         className="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-[9px] font-black px-1.5 py-1 text-slate-600 dark:text-slate-300 focus:outline-none"
       >
-        <option value={EVAL_ALL_TRIPS}>Semua Rit</option>
-        {options.map(t => (
-          <option key={t.id} value={t.id}>R{t.ritNo}{evaluations[t.id] ? ' ✓' : ''}</option>
+        <option value={EVAL_ALL_TRIPS}>{t('fleet.allRits')}</option>
+        {options.map(trip => (
+          <option key={trip.id} value={trip.id}>R{trip.ritNo}{evaluations[trip.id] ? ' ✓' : ''}</option>
         ))}
       </select>
       <select
         value=""
         disabled={saving}
-        onChange={e => { if (e.target.value) onSave(isAll ? options : options.find(t => t.id === chosenId), e.target.value, isAll ? bulkKey : null); }}
+        onChange={e => { if (e.target.value) onSave(isAll ? options : options.find(trip => trip.id === chosenId), e.target.value, isAll ? bulkKey : null); }}
         onClick={e => e.stopPropagation()}
         className="bg-rose-50/60 dark:bg-rose-500/10 border border-rose-200/60 dark:border-rose-900/40 rounded-lg text-[9px] font-black px-1.5 py-1 text-rose-600 dark:text-rose-400 focus:outline-none disabled:opacity-60"
       >
-        <option value="">{saving ? 'Menyimpan...' : '+ Evaluasi cancel'}</option>
+        <option value="">{saving ? t('common.saving') : t('fleet.addCancelEval')}</option>
         {CANCEL_FAKTOR_OPTIONS.map(f => (
           <option key={f} value={f}>{f}</option>
         ))}
@@ -129,6 +143,7 @@ function EvalInlineForm({ bulkKey, trips, evaluations, savingId, savingBulkId, c
 }
 
 export default function FleetMonitoringPage({ isTAM = false }: { isTAM?: boolean }) {
+  const { t } = useLanguage();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedShift, setSelectedShift] = useState<'ALL' | 'DAY' | 'NIGHT'>('ALL');
   const [selectedArea, setSelectedArea] = useState('ALL');
@@ -232,16 +247,16 @@ export default function FleetMonitoringPage({ isTAM = false }: { isTAM?: boolean
     if (bulkKey) setSavingEvalBulk(null);
     else setSavingEvalId(null);
     if (error) {
-      alert(`Gagal menyimpan evaluasi: ${error.message}`);
+      alert(t('fleet.saveFailed', { msg: error.message }));
       return false;
     }
     setEvaluations(prev => {
       const next = { ...prev };
-      for (const t of list) next[t.id] = { faktor, keterangan: prev[t.id]?.keterangan || null };
+      for (const trip of list) next[trip.id] = { faktor, keterangan: prev[trip.id]?.keterangan || null };
       return next;
     });
     return true;
-  }, [selectedDate]);
+  }, [selectedDate, t]);
 
   const handleEvalSave = useCallback((target: any | any[], faktor: string, bulkKey: string | null) => {
     void (async () => {
@@ -252,12 +267,12 @@ export default function FleetMonitoringPage({ isTAM = false }: { isTAM?: boolean
         return;
       }
       if (!canEdit(session?.user?.email)) {
-        alert('Hanya owner/admin/tenko yang bisa mengisi evaluasi cancel.');
+        alert(t('fleet.onlyAdminEval'));
         return;
       }
       await persistEvals(target, faktor, bulkKey);
     })();
-  }, [persistEvals]);
+  }, [persistEvals, t]);
 
   const handleAuthSuccess = useCallback(() => {
     setIsAuthModalOpen(false);
@@ -267,13 +282,13 @@ export default function FleetMonitoringPage({ isTAM = false }: { isTAM?: boolean
       void (async () => {
         const { data: { session } } = await supabase.auth.getSession();
         if (!canEdit(session?.user?.email)) {
-          alert('Hanya owner/admin/tenko yang bisa mengisi evaluasi cancel.');
+          alert(t('fleet.onlyAdminEval'));
           return;
         }
         await persistEvals(target, faktor, bulkKey);
       })();
     }
-  }, [pendingEval, persistEvals]);
+  }, [pendingEval, persistEvals, t]);
 
   // Deteksi delay baru: hanya notify yang belum pernah dilihat
   useEffect(() => {
@@ -379,10 +394,10 @@ export default function FleetMonitoringPage({ isTAM = false }: { isTAM?: boolean
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
         <div className="shrink-0">
           <h1 className="text-2xl md:text-3xl font-black text-slate-900 dark:text-white flex items-center gap-3">
-            Fleet Monitoring
+            {t('fleet.title')}
             <span className="text-[10px] bg-red-600 text-white px-3 py-1 rounded-full animate-pulse tracking-widest font-black">LIVE</span>
           </h1>
-          <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 mt-1 uppercase tracking-widest">Real-time status armada & jadwal</p>
+          <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 mt-1 uppercase tracking-widest">{t('fleet.subtitle')}</p>
         </div>
         
         <div className="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-3 w-full lg:w-auto">

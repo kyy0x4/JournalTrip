@@ -4,6 +4,7 @@ import { motion } from 'motion/react';
 import { Ritase } from '../../types';
 import { RITASE_DATA } from '../../constants';
 import RitaseItem from './RitaseItem';
+import { useLanguage } from '../../context/LanguageContext';
 
 interface RitaseTrackingProps {
   selectedDate: string;
@@ -22,6 +23,7 @@ const containerVariants = {
 };
 
 export default function RitaseTracking({ selectedDate, ritases, isLoading }: RitaseTrackingProps) {
+  const { t, locale } = useLanguage();
   const [expandedIds, setExpandedIds] = useState<number[]>([]);
 
   // Auto-expand active ritase when data loads
@@ -47,26 +49,26 @@ export default function RitaseTracking({ selectedDate, ritases, isLoading }: Rit
           <div className="w-8 h-8 rounded-xl claude-gradient flex items-center justify-center shadow-[0_6px_16px_-4px_rgba(217,119,87,0.5)]">
             <Route className="w-4 h-4 text-white" />
           </div>
-          <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100 tracking-tight">Ritase Tracking</h3>
+          <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100 tracking-tight">{t('journal.ritaseTracking')}</h3>
         </div>
         <span className="text-[10px] md:text-xs font-medium text-slate-500 dark:text-slate-400 bg-white/50 dark:bg-white/[0.04] backdrop-blur-sm px-3 py-1 rounded-full border border-slate-200/50 dark:border-white/[0.08] italic w-fit">
-          Data: {new Date(selectedDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}
+          {t('journal.dataLabel')}: {new Date(selectedDate).toLocaleDateString(locale, { day: 'numeric', month: 'long', year: 'numeric' })}
         </span>
       </div>
 
       <div className="flex flex-wrap items-center gap-4 mb-6 glass-card p-3 rounded-xl">
-        <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mr-2">Legend:</p>
+        <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mr-2">{t('journal.legend')}</p>
         <div className="flex items-center gap-1.5">
           <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-[0_0_6px_rgba(16,185,129,0.6)]" />
-          <span className="text-[10px] font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider">Selesai</span>
+          <span className="text-[10px] font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider">{t('journal.legend.finished')}</span>
         </div>
         <div className="flex items-center gap-1.5">
           <div className="w-2.5 h-2.5 rounded-full bg-red-500 shadow-[0_0_6px_rgba(217,119,87,0.7)]" />
-          <span className="text-[10px] font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider">Perjalanan</span>
+          <span className="text-[10px] font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider">{t('journal.legend.onTrip')}</span>
         </div>
         <div className="flex items-center gap-1.5">
           <div className="w-2.5 h-2.5 rounded-full bg-slate-300 dark:bg-slate-700" />
-          <span className="text-[10px] font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider">Menunggu</span>
+          <span className="text-[10px] font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider">{t('journal.legend.waiting')}</span>
         </div>
       </div>
 
@@ -77,7 +79,7 @@ export default function RitaseTracking({ selectedDate, ritases, isLoading }: Rit
           className="glass-card rounded-2xl p-8 flex flex-col items-center justify-center gap-3"
         >
           <div className="w-8 h-8 border-4 border-red-500/25 border-t-red-500 rounded-full animate-spin" />
-          <p className="text-sm font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">Loading Data...</p>
+          <p className="text-sm font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">{t('journal.loadingData')}</p>
         </motion.div>
       ) : ritases.length === 0 ? (
         <motion.div 
@@ -85,7 +87,7 @@ export default function RitaseTracking({ selectedDate, ritases, isLoading }: Rit
           animate={{ opacity: 1 }}
           className="glass-card rounded-2xl p-8 text-center"
         >
-          <p className="text-slate-400 dark:text-slate-500 font-medium">Tidak ada data ritase untuk tanggal dan driver ini.</p>
+          <p className="text-slate-400 dark:text-slate-500 font-medium">{t('journal.noRitase')}</p>
         </motion.div>
       ) : (
         <motion.div 

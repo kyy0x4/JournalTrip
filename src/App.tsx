@@ -9,6 +9,7 @@ import RitaseTracking from './components/dashboard/RitaseTracking';
 import LoadingScreen from './components/common/LoadingScreen';
 import DelayNotificationStack from './components/common/DelayNotificationStack';
 import { NotificationProvider } from './context/NotificationContext';
+import { LanguageProvider } from './context/LanguageContext';
 
 const DriversPage = lazy(() => import('./pages/DriversPage'));
 const DriverDetailPage = lazy(() => import('./pages/DriverDetailPage'));
@@ -193,28 +194,24 @@ export default function App() {
     );
   }
 
-  if (!session) {
-    return (
-      <BrowserRouter>
-        <Suspense fallback={
-          <div className="min-h-screen bg-slate-50 dark:bg-slate-900 flex items-center justify-center">
-            <div className="w-10 h-10 border-4 border-red-500/25 border-t-red-500 rounded-full animate-spin" />
-          </div>
-        }>
-          <Routes>
-            <Route path="*" element={<LoginPage />} />
-          </Routes>
-        </Suspense>
-      </BrowserRouter>
-    );
-  }
-
   const toggleTheme = () => {
     setTheme(prev => prev === 'light' ? 'dark' : 'light');
     localStorage.setItem('manual-theme-set', 'true');
   };
 
-  return (
+  const shell = !session ? (
+    <BrowserRouter>
+      <Suspense fallback={
+        <div className="min-h-screen bg-slate-50 dark:bg-slate-900 flex items-center justify-center">
+          <div className="w-10 h-10 border-4 border-red-500/25 border-t-red-500 rounded-full animate-spin" />
+        </div>
+      }>
+        <Routes>
+          <Route path="*" element={<LoginPage />} />
+        </Routes>
+      </Suspense>
+    </BrowserRouter>
+  ) : (
     <NotificationProvider>
       <BrowserRouter>
         <AppShell
@@ -247,6 +244,8 @@ export default function App() {
       </BrowserRouter>
     </NotificationProvider>
   );
+
+  return <LanguageProvider>{shell}</LanguageProvider>;
 }
 
 interface AppShellProps {

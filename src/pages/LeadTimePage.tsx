@@ -23,6 +23,7 @@ import {
 } from 'recharts';
 import { leadtimeService, LeadTimeData } from '../services/leadtimeService';
 import { SUMATERA_THRESHOLDS } from '../constants/standarParameter';
+import { useLanguage } from '../context/LanguageContext';
 
 const STATUS_COLORS = {
   ontime: '#10b981', // Emerald/Green
@@ -244,6 +245,13 @@ const KEY_MAP: Record<string, {actual: string[], plan: string[], stage: string}>
 };
 
 export default function LeadTimePage({ isTAM = false }: { isTAM?: boolean }) {
+  const { t, locale } = useLanguage();
+  const stageLabel = (s: string) =>
+    s === 'outpool' ? t('leadtime.stage.outpool')
+    : s === 'inpdc' ? t('leadtime.stage.inpdc')
+    : s === 'delivery' ? t('leadtime.stage.delivery')
+    : s === 'backtopool' ? t('leadtime.stage.backtopool')
+    : s;
   const [area, setArea] = useState(() => localStorage.getItem('leadtime_area') || 'ALL');
   const [filterMode, setFilterMode] = useState<'month'|'range'>(() => (localStorage.getItem('leadtime_filter_mode') as any) || 'month');
   const [selectedMonth, setSelectedMonth] = useState(() => {
@@ -544,7 +552,7 @@ export default function LeadTimePage({ isTAM = false }: { isTAM?: boolean }) {
       const isArmada = isArmadaStage(area.toUpperCase(), stage);
       const rows = isArmada ? armadaData : baseData;
       rows.forEach(item => {
-        const date = new Date(item.tanggal).toLocaleDateString('id-ID', { day: '2-digit', month: 'short' });
+        const date = new Date(item.tanggal).toLocaleDateString(locale, { day: '2-digit', month: 'short' });
         if (!dailyData[date]) dailyData[date] = { date, OnTime: 0, Delay: 0, Advance: 0, Total: 0 };
         const status = getRowStatus(item, stage);
         if (dailyData[date][status] !== undefined) dailyData[date][status]++;
@@ -564,7 +572,7 @@ export default function LeadTimePage({ isTAM = false }: { isTAM?: boolean }) {
       trend: getTrend(trendStage),
       totalRecords
     };
-  }, [baseData, trendStage, area]);
+  }, [baseData, trendStage, area, locale]);
 
   const prevStats = useMemo(() => {
     if (prevData.length === 0) return null;
@@ -603,9 +611,9 @@ export default function LeadTimePage({ isTAM = false }: { isTAM?: boolean }) {
       prevStart = new Date(prevEnd.getTime() - diff);
     }
     
-    const fmt = (d: Date) => d.toLocaleDateString('id-ID', { day: '2-digit', month: 'short' }).toUpperCase();
+    const fmt = (d: Date) => d.toLocaleDateString(locale, { day: '2-digit', month: 'short' }).toUpperCase();
     return `VS ${fmt(prevStart)} - ${fmt(prevEnd)} ${prevEnd.getFullYear()}`;
-  }, [startDate, endDate, filterMode, selectedMonth]);
+  }, [startDate, endDate, filterMode, selectedMonth, locale]);
 
   const currentPeriodText = useMemo(() => {
     let currentStart, currentEnd;
@@ -618,9 +626,9 @@ export default function LeadTimePage({ isTAM = false }: { isTAM?: boolean }) {
       currentEnd = new Date(endDate);
     }
     
-    const fmt = (d: Date) => d.toLocaleDateString('id-ID', { day: '2-digit', month: 'short' }).toUpperCase();
+    const fmt = (d: Date) => d.toLocaleDateString(locale, { day: '2-digit', month: 'short' }).toUpperCase();
     return `${fmt(currentStart)} - ${fmt(currentEnd)} ${currentEnd.getFullYear()}`;
-  }, [startDate, endDate, filterMode, selectedMonth]);
+  }, [startDate, endDate, filterMode, selectedMonth, locale]);
 
   const filteredData = useMemo(() => {
     let result = baseData;
@@ -806,9 +814,9 @@ const reasonDelay = config.stage !== 'unknown' ? (getReasonDelay(item, config.st
         <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">
           <div className="flex items-center gap-4 sm:gap-5 w-full lg:w-auto">
             <div className="min-w-0 flex-1">
-              <h1 className="text-lg md:text-3xl font-black text-slate-900 dark:text-white tracking-tighter uppercase leading-tight truncate">LeadTime Center</h1>
+              <h1 className="text-lg md:text-3xl font-black text-slate-900 dark:text-white tracking-tighter uppercase leading-tight truncate">{t('leadtime.title')}</h1>
               <p className="text-[10px] md:text-sm text-slate-500 dark:text-slate-400 font-bold flex items-center gap-1 mt-0.5 md:mt-1 uppercase tracking-widest truncate">
-                <Timer className="w-3.5 h-3.5" /> Operational Analytics
+                <Timer className="w-3.5 h-3.5" /> {t('leadtime.subtitle')}
               </p>
             </div>
           </div>
@@ -820,13 +828,13 @@ const reasonDelay = config.stage !== 'unknown' ? (getReasonDelay(item, config.st
                 onClick={() => setFilterMode('month')} 
                 className={`flex-1 sm:w-24 py-2 text-[10px] font-black uppercase tracking-widest rounded-lg transition-all ${filterMode === 'month' ? 'bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-400 shadow-sm' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'}`}
               >
-                Bulan
+                {t('leadtime.month')}
               </button>
               <button 
                 onClick={() => setFilterMode('range')} 
                 className={`flex-1 sm:w-24 py-2 text-[10px] font-black uppercase tracking-widest rounded-lg transition-all ${filterMode === 'range' ? 'bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-400 shadow-sm' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'}`}
               >
-                Tanggal
+                {t('leadtime.date')}
               </button>
             </div>
             
@@ -872,14 +880,14 @@ const reasonDelay = config.stage !== 'unknown' ? (getReasonDelay(item, config.st
             <div className="flex items-center gap-3 px-4 py-3 bg-blue-50 dark:bg-blue-500/10 rounded-2xl border border-blue-200 dark:border-blue-500/30">
               <div className="flex-1 min-w-0">
                 <p className="text-[10px] font-black text-blue-700 dark:text-blue-300 uppercase tracking-widest">
-                  {globalDriverFilter ? `Driver: ${globalDriverFilter}` : activeFilter ? `Filter aktif: ${activeFilter.status} — ${activeFilter.stage.toUpperCase()}` : `Reason filter: ${reasonFilter}`}
+                  {globalDriverFilter ? t('leadtime.filterDriver', { driver: globalDriverFilter }) : activeFilter ? t('leadtime.filterActive', { status: activeFilter.status, stage: stageLabel(activeFilter.stage) }) : t('leadtime.filterReason', { reason: reasonFilter ?? '' })}
                 </p>
               </div>
               <button
                 onClick={() => { setActiveFilter(null); setReasonFilter(null); setGlobalDriverFilter(null); setCurrentPage(1); }}
                 className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 text-white rounded-xl text-[9px] font-black uppercase tracking-widest shrink-0 hover:bg-blue-700 transition-all"
               >
-                <X className="w-3 h-3" /> Reset Filter
+                <X className="w-3 h-3" /> {t('leadtime.resetFilter')}
               </button>
             </div>
           )}
@@ -887,22 +895,22 @@ const reasonDelay = config.stage !== 'unknown' ? (getReasonDelay(item, config.st
           {/* ── STAGE BOXES ── */}
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 sm:gap-6 w-full max-w-full overflow-hidden box-border">
             <StageBox
-              title="OUTPOOL" icon={<Truck />} stats={stats?.outpool} prevStats={prevStats?.outpool}
+              title={t('leadtime.stage.outpool')} icon={<Truck />} stats={stats?.outpool} prevStats={prevStats?.outpool}
               eff={calculateEfficiency('outpool')} stage="outpool" activeFilter={activeFilter} setActiveFilter={(f: any) => { setActiveFilter(f); setCurrentPage(1); }}
               prevPeriod={currentPeriodText}
             />
             <StageBox
-              title="IN-PDC" icon={<Package />} stats={stats?.inpdc} prevStats={prevStats?.inpdc}
+              title={t('leadtime.stage.inpdc')} icon={<Package />} stats={stats?.inpdc} prevStats={prevStats?.inpdc}
               eff={calculateEfficiency('inpdc')} stage="inpdc" activeFilter={activeFilter} setActiveFilter={(f: any) => { setActiveFilter(f); setCurrentPage(1); }}
               prevPeriod={currentPeriodText}
             />
             <StageBox
-              title="DELIVERY" icon={<CheckCircle2 />} stats={stats?.delivery} prevStats={prevStats?.delivery}
+              title={t('leadtime.stage.delivery')} icon={<CheckCircle2 />} stats={stats?.delivery} prevStats={prevStats?.delivery}
               eff={calculateEfficiency('delivery')} stage="delivery" activeFilter={activeFilter} setActiveFilter={(f: any) => { setActiveFilter(f); setCurrentPage(1); }}
               prevPeriod={currentPeriodText}
             />
             <StageBox
-              title="BACK TO POOL" icon={<Home />} stats={stats?.backtopool} prevStats={prevStats?.backtopool}
+              title={t('leadtime.stage.backtopool')} icon={<Home />} stats={stats?.backtopool} prevStats={prevStats?.backtopool}
               eff={calculateEfficiency('backtopool')} stage="backtopool" activeFilter={activeFilter} setActiveFilter={(f: any) => { setActiveFilter(f); setCurrentPage(1); }}
               prevPeriod={currentPeriodText}
             />
@@ -913,26 +921,26 @@ const reasonDelay = config.stage !== 'unknown' ? (getReasonDelay(item, config.st
             <div className="flex flex-col lg:flex-row lg:items-center justify-between mb-8 sm:mb-10 gap-6 overflow-hidden">
               <div className="min-w-0 overflow-hidden">
                 <h3 className="text-base sm:text-2xl font-black text-white uppercase tracking-tight flex items-center gap-2 sm:gap-3 truncate">
-                  <BarChart3 className="w-5 h-5 sm:w-6 sm:h-6 text-blue-500" /> Delay Analysis
+                  <BarChart3 className="w-5 h-5 sm:w-6 sm:h-6 text-blue-500" /> {t('leadtime.delayAnalysis')}
                 </h3>
-                <p className="text-[9px] sm:text-xs text-slate-400 font-bold uppercase tracking-widest mt-1 truncate">Klik DELAY untuk lihat rincian penyebab</p>
+                <p className="text-[9px] sm:text-xs text-slate-400 font-bold uppercase tracking-widest mt-1 truncate">{t('leadtime.delayHint')}</p>
               </div>
             </div>
             <div className={`grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-8 w-full max-w-full overflow-hidden`}>
-              <ReasonSection title="OUTPOOL DELAYS" stageStats={stats?.outpool} color="text-amber-500"
-                onClickDelay={() => setDelayPopup({ title: 'OUTPOOL DELAY REASONS', reasons: (stats?.outpool?.reasons || []).filter((r:any) => { const l=r.name.toLowerCase(); return !l.includes('delay')&&!l.includes('advance')&&!l.includes('ontime')&&l!=='ok'&&l!=='-'&&l!=='tidak ada'; }), delayCount: stats?.outpool?.chartData?.find((d:any)=>d.name==='Delay')?.value||0 })}
+              <ReasonSection title={t('leadtime.reason.outpool')} stageStats={stats?.outpool} color="text-amber-500"
+                onClickDelay={() => setDelayPopup({ title: t('leadtime.reason.outpool'), reasons: (stats?.outpool?.reasons || []).filter((r:any) => { const l=r.name.toLowerCase(); return !l.includes('delay')&&!l.includes('advance')&&!l.includes('ontime')&&l!=='ok'&&l!=='-'&&l!=='tidak ada'; }), delayCount: stats?.outpool?.chartData?.find((d:any)=>d.name==='Delay')?.value||0 })}
                 onSelect={(r: any) => { setReasonFilter(r.name); setCurrentPage(1); }}
               />
-              <ReasonSection title="IN-PDC ANALYSIS" stageStats={stats?.inpdc} color="text-blue-500"
-                onClickDelay={() => setDelayPopup({ title: 'IN-PDC DELAY REASONS', reasons: (stats?.inpdc?.reasons || []).filter((r:any) => { const l=r.name.toLowerCase(); return !l.includes('delay')&&!l.includes('advance')&&!l.includes('ontime')&&l!=='ok'&&l!=='-'&&l!=='tidak ada'; }), delayCount: stats?.inpdc?.chartData?.find((d:any)=>d.name==='Delay')?.value||0 })}
+              <ReasonSection title={t('leadtime.reason.inpdc')} stageStats={stats?.inpdc} color="text-blue-500"
+                onClickDelay={() => setDelayPopup({ title: t('leadtime.reason.inpdc'), reasons: (stats?.inpdc?.reasons || []).filter((r:any) => { const l=r.name.toLowerCase(); return !l.includes('delay')&&!l.includes('advance')&&!l.includes('ontime')&&l!=='ok'&&l!=='-'&&l!=='tidak ada'; }), delayCount: stats?.inpdc?.chartData?.find((d:any)=>d.name==='Delay')?.value||0 })}
                 onSelect={(r: any) => { setReasonFilter(r.name); setCurrentPage(1); }}
               />
-              <ReasonSection title="DELIVERY DELAYS" stageStats={stats?.delivery} color="text-rose-500"
-                onClickDelay={() => setDelayPopup({ title: 'DELIVERY DELAY REASONS', reasons: (stats?.delivery?.reasons || []).filter((r:any) => { const l=r.name.toLowerCase(); return !l.includes('delay')&&!l.includes('advance')&&!l.includes('ontime')&&l!=='ok'&&l!=='-'&&l!=='tidak ada'; }), delayCount: stats?.delivery?.chartData?.find((d:any)=>d.name==='Delay')?.value||0 })}
+              <ReasonSection title={t('leadtime.reason.delivery')} stageStats={stats?.delivery} color="text-rose-500"
+                onClickDelay={() => setDelayPopup({ title: t('leadtime.reason.delivery'), reasons: (stats?.delivery?.reasons || []).filter((r:any) => { const l=r.name.toLowerCase(); return !l.includes('delay')&&!l.includes('advance')&&!l.includes('ontime')&&l!=='ok'&&l!=='-'&&l!=='tidak ada'; }), delayCount: stats?.delivery?.chartData?.find((d:any)=>d.name==='Delay')?.value||0 })}
                 onSelect={(r: any) => { setReasonFilter(r.name); setCurrentPage(1); }}
               />
-              <ReasonSection title="BACK TO POOL DELAYS" stageStats={stats?.backtopool} color="text-purple-400"
-                onClickDelay={() => setDelayPopup({ title: 'BACK TO POOL DELAY REASONS', reasons: (stats?.backtopool?.reasons || []).filter((r:any) => { const l=r.name.toLowerCase(); return !l.includes('delay')&&!l.includes('advance')&&!l.includes('ontime')&&l!=='ok'&&l!=='-'&&l!=='tidak ada'; }), delayCount: stats?.backtopool?.chartData?.find((d:any)=>d.name==='Delay')?.value||0 })}
+              <ReasonSection title={t('leadtime.reason.backtopool')} stageStats={stats?.backtopool} color="text-purple-400"
+                onClickDelay={() => setDelayPopup({ title: t('leadtime.reason.backtopool'), reasons: (stats?.backtopool?.reasons || []).filter((r:any) => { const l=r.name.toLowerCase(); return !l.includes('delay')&&!l.includes('advance')&&!l.includes('ontime')&&l!=='ok'&&l!=='-'&&l!=='tidak ada'; }), delayCount: stats?.backtopool?.chartData?.find((d:any)=>d.name==='Delay')?.value||0 })}
                 onSelect={(r: any) => { setReasonFilter(r.name); setCurrentPage(1); }}
               />
             </div>
@@ -943,8 +951,8 @@ const reasonDelay = config.stage !== 'unknown' ? (getReasonDelay(item, config.st
             <div className="flex flex-col lg:flex-row lg:items-center justify-between mb-6 gap-4 sm:gap-6 overflow-hidden">
               <div className="min-w-0 flex flex-col sm:flex-row sm:items-center gap-3 flex-1 overflow-hidden">
                 <div>
-                  <h3 className="text-base sm:text-xl font-black text-slate-900 dark:text-white uppercase tracking-tight leading-tight truncate">Performance Trend</h3>
-                  <p className="text-[7px] sm:text-xs text-slate-500 dark:text-slate-400 font-bold uppercase tracking-widest mt-1 truncate">Daily Efficiency (OnTime + Advance)</p>
+                  <h3 className="text-base sm:text-xl font-black text-slate-900 dark:text-white uppercase tracking-tight leading-tight truncate">{t('leadtime.performanceTrend')}</h3>
+                  <p className="text-[7px] sm:text-xs text-slate-500 dark:text-slate-400 font-bold uppercase tracking-widest mt-1 truncate">{t('leadtime.dailyEfficiency')}</p>
                 </div>
                 <div className="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-xl border border-slate-200/50 dark:border-slate-700/50 w-fit">
                   {((['outpool', 'inpdc', 'delivery', 'backtopool']) as ('outpool' | 'inpdc' | 'delivery' | 'backtopool')[])
@@ -958,16 +966,16 @@ const reasonDelay = config.stage !== 'unknown' ? (getReasonDelay(item, config.st
                           : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300'
                       }`}
                     >
-                      {s.replace('backtopool', 'back-to-pool')}
+                      {stageLabel(s)}
                     </button>
                   ))}
                 </div>
               </div>
               <div className="flex flex-wrap items-center gap-2 sm:gap-3 shrink-0">
-                <LegendItem color={STATUS_COLORS.ontime} label="OnTime" />
-                <LegendItem color={STATUS_COLORS.advance} label="Advance" />
-                <LegendItem color={STATUS_COLORS.delay} label="Delay" />
-                <LegendItem color={STATUS_COLORS.advance} label="Rate (%)" isLine />
+                <LegendItem color={STATUS_COLORS.ontime} label={t('leadtime.status.ontime')} />
+                <LegendItem color={STATUS_COLORS.advance} label={t('leadtime.status.advance')} />
+                <LegendItem color={STATUS_COLORS.delay} label={t('leadtime.status.delay')} />
+                <LegendItem color={STATUS_COLORS.advance} label={t('leadtime.ratePct')} isLine />
               </div>
             </div>
             <div className="h-50 sm:h-100 w-full min-w-0 overflow-hidden relative">
@@ -991,9 +999,9 @@ const reasonDelay = config.stage !== 'unknown' ? (getReasonDelay(item, config.st
           <div className="bg-white dark:bg-slate-900/60 backdrop-blur-xl rounded-[20px] sm:rounded-[40px] border border-slate-200/60 dark:border-slate-800/60 shadow-2xl shadow-blue-500/5 w-full max-w-full overflow-hidden box-border">
             <div className="p-4 sm:p-8 border-b border-slate-100 dark:border-slate-800 flex flex-col xl:flex-row xl:items-center justify-between gap-4 overflow-hidden">
               <div className="min-w-0 flex-1 overflow-hidden">
-                <h3 className="text-base sm:text-xl font-black text-slate-900 dark:text-white uppercase tracking-tight truncate">LeadTime Details</h3>
+                <h3 className="text-base sm:text-xl font-black text-slate-900 dark:text-white uppercase tracking-tight truncate">{t('leadtime.leadtimeDetails')}</h3>
                 <p className="text-[8px] sm:text-sm text-slate-500 dark:text-slate-400 font-medium mt-1 uppercase tracking-wider truncate">
-                  Showing <span className="font-black text-blue-600">{filteredData.length}</span> records
+                  {t('leadtime.showingRecords', { n: filteredData.length })}
                 </p>
               </div>
               <div className="flex flex-col lg:flex-row items-stretch lg:items-center gap-3 shrink-0">
@@ -1009,13 +1017,13 @@ const reasonDelay = config.stage !== 'unknown' ? (getReasonDelay(item, config.st
                           : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300'
                       }`}
                     >
-                      {s.replace('backtopool', 'back-to-pool')}
+                      {stageLabel(s)}
                     </button>
                   ))}
                 </div>
                 <div className="relative w-full lg:w-62.5 shrink-0">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
-                  <input type="text" placeholder="Quick search..." value={searchQuery} onChange={(e) => { setSearchQuery(e.target.value); setCurrentPage(1); }} className="w-full pl-9 pr-4 py-2 bg-slate-50 dark:bg-slate-800/50 border-none rounded-xl text-[9px] font-bold focus:ring-2 focus:ring-blue-500 shadow-inner uppercase" />
+                  <input type="text" placeholder={t('leadtime.quickSearch')} value={searchQuery} onChange={(e) => { setSearchQuery(e.target.value); setCurrentPage(1); }} className="w-full pl-9 pr-4 py-2 bg-slate-50 dark:bg-slate-800/50 border-none rounded-xl text-[9px] font-bold focus:ring-2 focus:ring-blue-500 shadow-inner uppercase" />
                 </div>
               </div>
             </div>
@@ -1026,7 +1034,7 @@ const reasonDelay = config.stage !== 'unknown' ? (getReasonDelay(item, config.st
               <table className="w-full text-left min-w-150 border-collapse table-fixed">
                 <thead>
                   <tr className="bg-slate-50/50 dark:bg-slate-800/20 text-slate-400 uppercase text-[7px] sm:text-[9px] font-black tracking-widest border-b border-slate-100 dark:border-slate-800">
-                    {[{key:'tanggal',label:'Periode/Area',w:'w-25'},{key:'driver',label:'Driver',w:'w-30'},{key:'',label:'Vehicle',w:'w-25'},{key:'ontime',label:'Total OnTime',w:'w-20'},{key:'advance',label:'Total Advance',w:'w-20'},{key:'delay',label:'Total Delay',w:'w-20'}].map(col => (
+                    {[{key:'tanggal',label:t('leadtime.col.periodArea'),w:'w-25'},{key:'driver',label:t('leadtime.col.driver'),w:'w-30'},{key:'',label:t('leadtime.col.vehicle'),w:'w-25'},{key:'ontime',label:t('leadtime.col.totalOnTime'),w:'w-20'},{key:'advance',label:t('leadtime.col.totalAdvance'),w:'w-20'},{key:'delay',label:t('leadtime.col.totalDelay'),w:'w-20'}].map(col => (
                       <th key={col.key||col.label} className={`px-4 py-5 ${col.w} cursor-pointer select-none`} onClick={() => col.key && handleSort(col.key)}>
                         <div className="flex items-center gap-1">
                           {col.label}
@@ -1050,9 +1058,9 @@ const reasonDelay = config.stage !== 'unknown' ? (getReasonDelay(item, config.st
                               const dates = item.trips.map((t: any) => new Date(t.tanggal).getTime());
                               const min = new Date(Math.min(...dates));
                               const max = new Date(Math.max(...dates));
-                              if (min.getTime() === max.getTime()) return min.toLocaleDateString('id-ID', { day: '2-digit', month: 'short' });
-                              return `${min.toLocaleDateString('id-ID', { day: '2-digit', month: 'short' })} - ${max.toLocaleDateString('id-ID', { day: '2-digit', month: 'short' })}`;
-                            })() : new Date(item.tanggal).toLocaleDateString('id-ID', { day: '2-digit', month: 'short' })}
+                              if (min.getTime() === max.getTime()) return min.toLocaleDateString(locale, { day: '2-digit', month: 'short' });
+                              return `${min.toLocaleDateString(locale, { day: '2-digit', month: 'short' })} - ${max.toLocaleDateString(locale, { day: '2-digit', month: 'short' })}`;
+                            })() : new Date(item.tanggal).toLocaleDateString(locale, { day: '2-digit', month: 'short' })}
                           </div>
                           <div className="text-[7px] sm:text-[8px] text-blue-600 dark:text-blue-400 font-black mt-0.5 tracking-wider uppercase truncate">{item.area}</div>
                         </td>
@@ -1082,7 +1090,7 @@ const reasonDelay = config.stage !== 'unknown' ? (getReasonDelay(item, config.st
             
             <div className="p-4 bg-slate-50/50 dark:bg-slate-800/20 border-t border-slate-100 dark:border-slate-800 flex flex-col xs:flex-row items-center justify-between gap-3 overflow-hidden">
               <p className="text-[7px] sm:text-[10px] text-slate-400 font-black uppercase tracking-widest">
-                Page {currentPage} of {totalPages || 1}
+                {t('leadtime.page', { page: currentPage, total: totalPages || 1 })}
               </p>
               <div className="flex items-center gap-2">
                 <button disabled={currentPage === 1} onClick={(e) => { e.stopPropagation(); setCurrentPage(prev => prev - 1); }} className="p-1 bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700 disabled:opacity-30 transition-all">
@@ -1134,7 +1142,7 @@ const reasonDelay = config.stage !== 'unknown' ? (getReasonDelay(item, config.st
                     </div>
                   ) : (
                      <div className="py-8 text-center text-[10px] font-black text-slate-500 uppercase tracking-widest border border-dashed border-slate-200 dark:border-slate-800 rounded-2xl">
-                       Tidak ada detail delay spesifik
+                       {t('leadtime.noDelayDetail')}
                      </div>
                   )}
                 </div>
@@ -1154,15 +1162,15 @@ const reasonDelay = config.stage !== 'unknown' ? (getReasonDelay(item, config.st
                 <ModalHeader title={selectedReason.title} onClose={() => setSelectedReason(null)} />
                 <div className="space-y-6 sm:space-y-8">
                   <div className="p-4 sm:p-6 bg-slate-50 dark:bg-slate-800/40 rounded-2xl sm:rounded-3xl border border-slate-100 dark:border-slate-700">
-                    <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-2 sm:mb-3">Detailed Analysis</p>
+                    <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-2 sm:mb-3">{t('leadtime.detailedAnalysis')}</p>
                     <p className="text-xs sm:text-base font-bold text-slate-800 dark:text-slate-200 leading-relaxed uppercase tracking-tight">{selectedReason.reason}</p>
                   </div>
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6">
                     <div className="min-w-0 flex-1">
-                      <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-1">Occurrences</p>
-                      <p className="text-xl font-black text-rose-600 tracking-tighter truncate">{selectedReason.count} <span className="text-[9px] text-slate-400 ml-1 uppercase tracking-widest">Trips</span></p>
+                      <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-1">{t('leadtime.occurrences')}</p>
+                      <p className="text-xl font-black text-rose-600 tracking-tighter truncate">{selectedReason.count} <span className="text-[9px] text-slate-400 ml-1 uppercase tracking-widest">{t('leadtime.trips')}</span></p>
                     </div>
-                    <button onClick={() => { setReasonFilter(selectedReason.reason); setSelectedReason(null); setCurrentPage(1); }} className="w-full sm:w-auto px-6 py-3 bg-blue-600 text-white rounded-xl sm:rounded-2xl text-[10px] font-black shadow-lg shadow-blue-600/20 uppercase tracking-widest">View Trips</button>
+                    <button onClick={() => { setReasonFilter(selectedReason.reason); setSelectedReason(null); setCurrentPage(1); }} className="w-full sm:w-auto px-6 py-3 bg-blue-600 text-white rounded-xl sm:rounded-2xl text-[10px] font-black shadow-lg shadow-blue-600/20 uppercase tracking-widest">{t('leadtime.viewTrips')}</button>
                   </div>
                 </div>
               </motion.div>
@@ -1184,6 +1192,7 @@ function ReasonSection({ title, stageStats, color, onClickDelay, onSelect }: {
   onClickDelay: () => void;
   onSelect: (r: { name: string; value: number }) => void;
 }) {
+  const { t } = useLanguage();
   const allReasons: { name: string; value: number }[] = stageStats?.reasons || [];
   const delayCount: number = stageStats?.chartData?.find((d: any) => d.name === 'Delay')?.value || 0;
   const total: number = stageStats?.total || 0;
@@ -1204,7 +1213,7 @@ function ReasonSection({ title, stageStats, color, onClickDelay, onSelect }: {
         </div>
         <div className="flex flex-col items-center justify-center p-8 border border-dashed border-slate-700/50 rounded-2xl bg-slate-800/20">
           <CheckCircle2 className="w-6 h-6 text-emerald-500/50 mb-2" />
-          <span className="text-[9px] font-black text-slate-500 tracking-widest uppercase">No Abnormalities</span>
+          <span className="text-[9px] font-black text-slate-500 tracking-widest uppercase">{t('leadtime.noAbnormalities')}</span>
         </div>
       </div>
     );
@@ -1257,11 +1266,11 @@ function ReasonSection({ title, stageStats, color, onClickDelay, onSelect }: {
           <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-3">
               <div className={`w-2.5 h-2.5 rounded-full bg-current ${color}`} />
-              <div className="text-xs font-black text-slate-300 uppercase tracking-widest">DELAY</div>
+              <div className="text-xs font-black text-slate-300 uppercase tracking-widest">{t('leadtime.delayLabel')}</div>
             </div>
             <div className="text-right">
               <div className="text-lg font-black text-white leading-none">{delayCount}</div>
-              <div className="text-[9px] font-bold text-slate-500 mt-0.5">{delayPct}% dari total</div>
+              <div className="text-[9px] font-bold text-slate-500 mt-0.5">{t('leadtime.ofTotal', { pct: delayPct })}</div>
             </div>
           </div>
           
@@ -1296,7 +1305,7 @@ function ReasonSection({ title, stageStats, color, onClickDelay, onSelect }: {
                             <div className="bg-slate-900/95 backdrop-blur-md p-3 rounded-xl shadow-xl border border-slate-800 max-w-[220px]">
                               <p className="text-[10px] font-black text-white uppercase tracking-widest break-words">{payload[0].name}</p>
                               <div className="flex items-center gap-2 mt-1">
-                                <p className="text-xs font-black text-rose-400">{payload[0].value} Kasus</p>
+                                <p className="text-xs font-black text-rose-400">{t('leadtime.cases', { value: payload[0].value as number })}</p>
                                 <p className="text-[9px] font-bold text-slate-400">({pct}%)</p>
                               </div>
                             </div>
@@ -1330,7 +1339,7 @@ function ReasonSection({ title, stageStats, color, onClickDelay, onSelect }: {
             </div>
           ) : (
             <div className="text-[10px] text-slate-500 font-bold uppercase tracking-widest text-center py-4">
-              Tidak ada data rincian
+              {t('leadtime.noDetailData')}
             </div>
           )}
         </div>
@@ -1340,6 +1349,7 @@ function ReasonSection({ title, stageStats, color, onClickDelay, onSelect }: {
 }
 
 function StageBox({ title, icon, stats, prevStats, eff, stage, activeFilter, setActiveFilter, prevPeriod }: any) {
+  const { t } = useLanguage();
   const onTimeData = stats?.chartData?.find((d: any) => d.name === 'OnTime');
   const delayData = stats?.chartData?.find((d: any) => d.name === 'Delay');
   const advanceData = stats?.chartData?.find((d: any) => d.name === 'Advance');
@@ -1401,7 +1411,7 @@ function StageBox({ title, icon, stats, prevStats, eff, stage, activeFilter, set
           <span className="text-2xl sm:text-3xl font-black text-slate-800 dark:text-white tracking-tighter">{totalRecords}</span>
           <span className="text-[7px] sm:text-[9px] font-bold text-slate-400 mt-0.5 uppercase tracking-widest">{stats?.unitLabel || 'TRIPS'}</span>
           <span className="text-[8px] sm:text-[10px] font-black text-blue-500 mt-1 uppercase tracking-widest">{eff}</span>
-          <span className="text-[7px] sm:text-[9px] font-bold text-slate-400 mt-0.5 uppercase tracking-widest">{entered} masuk stage</span>
+          <span className="text-[7px] sm:text-[9px] font-bold text-slate-400 mt-0.5 uppercase tracking-widest">{t('leadtime.enteredStage', { n: entered })}</span>
         </div>
       </div>
     </div>
@@ -1409,8 +1419,10 @@ function StageBox({ title, icon, stats, prevStats, eff, stage, activeFilter, set
 }
 
 function StatusCard({ onClick, active, type, eff, count, prevCount, prevPeriod }: any) {
+  const { t } = useLanguage();
   const isDelay = type === 'Delay';
   const isAdvance = type === 'Advance';
+  const typeLabel = type === 'OnTime' ? t('leadtime.status.ontime') : isAdvance ? t('leadtime.status.advance') : t('leadtime.status.delay');
   const delta = (count || 0) - (prevCount || 0);
   const isUp = delta > 0;
   const isGood = isDelay ? delta < 0 : delta > 0;
@@ -1426,7 +1438,7 @@ function StatusCard({ onClick, active, type, eff, count, prevCount, prevPeriod }
       <div className="flex items-center justify-between mb-1">
         <span className={`block text-[6px] sm:text-[8px] font-black uppercase tracking-widest truncate ${
           active ? 'opacity-90' : (isDelay ? 'text-rose-500' : isAdvance ? 'text-amber-500' : 'text-emerald-600')
-        }`}>{type}</span>
+        }`}>{typeLabel}</span>
         {prevCount !== undefined && (
           <div className={`flex items-center gap-0.5 text-[7px] font-black ${
             active ? 'text-white/80' : (isGood ? 'text-emerald-500' : isBad ? 'text-rose-500' : 'text-slate-400')
@@ -1443,7 +1455,7 @@ function StatusCard({ onClick, active, type, eff, count, prevCount, prevPeriod }
         active ? 'opacity-80' : (isDelay ? 'text-rose-400' : isAdvance ? 'text-amber-400' : 'text-emerald-500')
       }`}>{eff || '0%'}</div>
       {prevCount !== undefined && (
-        <div className="text-[6px] opacity-40 font-black uppercase tracking-tighter mt-1 truncate shrink-0">{prevPeriod || 'vs prev'}</div>
+        <div className="text-[6px] opacity-40 font-black uppercase tracking-tighter mt-1 truncate shrink-0">{prevPeriod || t('leadtime.vsPrev')}</div>
       )}
     </button>
   );
@@ -1507,6 +1519,7 @@ function CustomTrendTooltip({ active, payload, label }: any) {
 }
 
 function AreaDropdown({ areas, selected, onChange }: { areas: string[]; selected: string; onChange: (v: string) => void }) {
+  const { t } = useLanguage();
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState('');
   const [dropPos, setDropPos] = useState({ top: 0, left: 0, width: 0 });
@@ -1562,7 +1575,7 @@ function AreaDropdown({ areas, selected, onChange }: { areas: string[]; selected
     >
       <div className={`w-2.5 h-2.5 rounded-full shrink-0 ${getColor(a)}`} />
       <span style={{ fontSize: 11, fontWeight: 900, textTransform: 'uppercase', flex: 1, color: selected === a ? (isDark ? '#93c5fd' : '#2563eb') : (isDark ? '#cbd5e1' : '#374151'), letterSpacing: '0.05em' }}>
-        {label || (a === 'ALL' ? '✦ ALL AREA' : a)}
+        {label || (a === 'ALL' ? t('leadtime.allAreaStar') : a)}
       </span>
       {selected === a && <CheckCircle2 style={{ width: 14, height: 14, color: '#3b82f6', flexShrink: 0 }} />}
     </button>
@@ -1573,7 +1586,7 @@ function AreaDropdown({ areas, selected, onChange }: { areas: string[]; selected
       <button ref={btnRef} onClick={handleOpen} type="button"
         className="flex items-center gap-2 pl-3 pr-3 py-2.5 h-[42px] bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-[10px] font-black uppercase transition-all shadow-sm hover:border-blue-400 focus:ring-2 focus:ring-blue-500/30 min-w-[150px]">
         <div className={`w-2 h-2 rounded-full shrink-0 ${getColor(selected)}`} />
-        <span className="flex-1 text-left text-slate-700 dark:text-slate-200">{selected === 'ALL' ? 'ALL AREA' : selected}</span>
+        <span className="flex-1 text-left text-slate-700 dark:text-slate-200">{selected === 'ALL' ? t('leadtime.allArea') : selected}</span>
         <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform ${open ? 'rotate-180' : ''}`} />
       </button>
 
@@ -1603,7 +1616,7 @@ function AreaDropdown({ areas, selected, onChange }: { areas: string[]; selected
                 <div style={{ position: 'relative' }}>
                   <Search style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', width: 14, height: 14, color: '#94a3b8' }} />
                   <input
-                    autoFocus value={search} onChange={e => setSearch(e.target.value)} placeholder="Cari area..."
+                    autoFocus value={search} onChange={e => setSearch(e.target.value)} placeholder={t('leadtime.searchArea')}
                     style={{ width: '100%', paddingLeft: 32, paddingRight: 12, paddingTop: 8, paddingBottom: 8, backgroundColor: isDark ? '#1e293b' : '#f8fafc', border: 'none', borderRadius: 10, fontSize: 11, fontWeight: 700, outline: 'none', color: isDark ? '#e2e8f0' : '#1e293b' }}
                   />
                 </div>
@@ -1615,7 +1628,7 @@ function AreaDropdown({ areas, selected, onChange }: { areas: string[]; selected
                     TAM ▾
                   </div>
                 )}
-                {showTamGroup && renderOption('TAM', 'Semua TAM')}
+                {showTamGroup && renderOption('TAM', t('leadtime.allTam'))}
                 {showTamGroup && filteredTamSubs.map(a => renderOption(a))}
               </div>
             </motion.div>

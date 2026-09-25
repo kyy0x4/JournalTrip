@@ -1,6 +1,8 @@
 import { motion } from 'motion/react';
+import { useLanguage } from '../../context/LanguageContext';
 
 export default function LoadingScreen() {
+  const { t } = useLanguage();
   return (
     <div className="flex items-center justify-center min-h-[40vh]">
       <motion.div
@@ -15,7 +17,7 @@ export default function LoadingScreen() {
           transition={{ duration: 1.4, repeat: Infinity, ease: 'easeInOut' }}
           className="text-[10px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-500"
         >
-          Memuat...
+          {t('common.loading')}
         </motion.p>
       </motion.div>
     </div>

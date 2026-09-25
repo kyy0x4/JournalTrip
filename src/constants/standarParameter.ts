@@ -3,9 +3,10 @@ import {
   Activity, BatteryLow, Droplets, HeartPulse, ParkingCircle, RotateCcw,
   Thermometer, TrendingDown, Wind, Wine, Zap,
 } from 'lucide-react';
+import type { TranslationKey, TranslationVars } from '../i18n';
 
 // Satu sumber angka standar (leadtime + tenko + eco driving).
-// Dipakai halaman /standar-parameter, LeadTimePage, TenkoPage, dan P2H & Gatepass.
+// Teksnya (label/desc/threshold) ada di kamus i18n — di sini cuma angka + key.
 
 export const TENSI_STANDARD = {
   hipertensi: { sistolik: 160, diastolik: 100 },
@@ -29,9 +30,11 @@ export interface ParameterDef {
   icon: LucideIcon;
   color: string;
   code: string;
-  label: string;
-  desc: string;
-  threshold: string;
+  labelKey: TranslationKey;
+  descKey: TranslationKey;
+  thresholdKey: TranslationKey;
+  /** Nilai yang disuntik ke placeholder {..} di thresholdKey */
+  thresholdVars?: TranslationVars;
   /** Ikon dibalik 180° (dipakai Harsh Acceleration) */
   flipIcon?: boolean;
 }
@@ -41,50 +44,50 @@ export const ECO_DRIVING_STANDARDS: ParameterDef[] = [
     icon: Zap,
     color: 'red',
     code: 'OverSpeed',
-    label: 'Over Speed',
-    desc: 'Kecepatan Melebihi 80 KM/jam',
-    threshold: '> 80 km/jam',
+    labelKey: 'standar.eco.overspeed.label',
+    descKey: 'standar.eco.overspeed.desc',
+    thresholdKey: 'standar.eco.overspeed.threshold',
   },
   {
     icon: TrendingDown,
     color: 'blue',
     code: 'HA',
-    label: 'Harsh Acceleration',
-    desc: 'Kenaikan Kecepatan 2.5 m/s atau 10 km/jam dalam 1 detik',
-    threshold: '≥ 2.5 m/s² dalam 1 detik',
+    labelKey: 'standar.eco.ha.label',
+    descKey: 'standar.eco.ha.desc',
+    thresholdKey: 'standar.eco.ha.threshold',
     flipIcon: true,
   },
   {
     icon: TrendingDown,
     color: 'amber',
     code: 'HB',
-    label: 'Harsh Braking',
-    desc: 'Penurunan Kecepatan 2.5 m/s atau 10 km/jam dalam 1 detik',
-    threshold: '≥ 2.5 m/s² dalam 1 detik',
+    labelKey: 'standar.eco.hb.label',
+    descKey: 'standar.eco.hb.desc',
+    thresholdKey: 'standar.eco.hb.threshold',
   },
   {
     icon: RotateCcw,
     color: 'purple',
     code: 'HC',
-    label: 'Hot Cornering',
-    desc: 'Bila kendaraan berbelok lebih dari 20 derajat dalam 1 detik',
-    threshold: '> 20° dalam 1 detik',
+    labelKey: 'standar.eco.hc.label',
+    descKey: 'standar.eco.hc.desc',
+    thresholdKey: 'standar.eco.hc.threshold',
   },
   {
     icon: ParkingCircle,
     color: 'orange',
     code: 'IS',
-    label: 'Illegal Stop',
-    desc: 'Berhenti lebih dari 15 menit di tempat yang bukan Rest Point',
-    threshold: '> 15 menit di non-RP',
+    labelKey: 'standar.eco.is.label',
+    descKey: 'standar.eco.is.desc',
+    thresholdKey: 'standar.eco.is.threshold',
   },
   {
     icon: Wind,
     color: 'slate',
     code: 'IT',
-    label: 'Idle Time',
-    desc: 'Mesin menyala lebih dari 30 menit tanpa pergerakan',
-    threshold: '> 30 menit tanpa gerak',
+    labelKey: 'standar.eco.it.label',
+    descKey: 'standar.eco.it.desc',
+    thresholdKey: 'standar.eco.it.threshold',
   },
 ];
 
@@ -93,58 +96,67 @@ export const TENKO_STANDARDS: ParameterDef[] = [
     icon: HeartPulse,
     color: 'red',
     code: 'TENSI',
-    label: 'Tensi Darah',
-    desc: 'Ambang klasifikasi tekanan darah hasil tenko driver',
-    threshold:
-      `≥ ${TENSI_STANDARD.hipertensi.sistolik}/${TENSI_STANDARD.hipertensi.diastolik} Hipertensi · ` +
-      `< ${TENSI_STANDARD.hipotensi.sistolik}/${TENSI_STANDARD.hipotensi.diastolik} Hipotensi`,
+    labelKey: 'standar.tenko.tensi.label',
+    descKey: 'standar.tenko.tensi.desc',
+    thresholdKey: 'standar.tenko.tensi.threshold',
+    thresholdVars: {
+      sys: TENSI_STANDARD.hipertensi.sistolik,
+      dia: TENSI_STANDARD.hipertensi.diastolik,
+      sysLow: TENSI_STANDARD.hipotensi.sistolik,
+      diaLow: TENSI_STANDARD.hipotensi.diastolik,
+    },
   },
   {
     icon: Thermometer,
     color: 'orange',
     code: 'SUHU',
-    label: 'Suhu Tubuh',
-    desc: 'Suhu tubuh di atas ambang dianggap demam',
-    threshold: `≥ ${SUHU_DEMAM_C}°C Demam`,
+    labelKey: 'standar.tenko.suhu.label',
+    descKey: 'standar.tenko.suhu.desc',
+    thresholdKey: 'standar.tenko.suhu.threshold',
+    thresholdVars: { val: SUHU_DEMAM_C },
   },
   {
     icon: Activity,
     color: 'blue',
     code: 'NADI',
-    label: 'Denyut Nadi',
-    desc: 'Rentang denyut nadi per menit yang dianggap normal',
-    threshold: `${NADI_NORMAL.min}–${NADI_NORMAL.max} BPM Normal`,
+    labelKey: 'standar.tenko.nadi.label',
+    descKey: 'standar.tenko.nadi.desc',
+    thresholdKey: 'standar.tenko.nadi.threshold',
+    thresholdVars: { min: NADI_NORMAL.min, max: NADI_NORMAL.max },
   },
   {
     icon: Wine,
     color: 'purple',
     code: 'ALKOHOL',
-    label: 'Alkohol',
-    desc: 'Hasil tes alkohol sebelum driver berangkat',
-    threshold: `${ALKOHOL_NEGATIF} = Negatif`,
+    labelKey: 'standar.tenko.alkohol.label',
+    descKey: 'standar.tenko.alkohol.desc',
+    thresholdKey: 'standar.tenko.alkohol.threshold',
+    thresholdVars: { val: ALKOHOL_NEGATIF },
   },
   {
     icon: Droplets,
     color: 'amber',
     code: 'SPO2',
-    label: 'Saturasi Oksigen',
-    desc: 'Kadar oksigen darah minimum driver',
-    threshold: `< ${SPO2_MIN}% Rendah`,
+    labelKey: 'standar.tenko.spo2.label',
+    descKey: 'standar.tenko.spo2.desc',
+    thresholdKey: 'standar.tenko.spo2.threshold',
+    thresholdVars: { val: SPO2_MIN },
   },
   {
     icon: BatteryLow,
     color: 'emerald',
     code: 'FATIGUE',
-    label: 'Tingkat Kelelahan',
-    desc: 'Kondisi fatigue driver saat pemeriksaan',
-    threshold: 'LELAH = Tidak Fit',
+    labelKey: 'standar.tenko.fatigue.label',
+    descKey: 'standar.tenko.fatigue.desc',
+    thresholdKey: 'standar.tenko.fatigue.threshold',
   },
   {
     icon: BatteryLow,
     color: 'slate',
     code: 'REST',
-    label: 'Waktu Tidur',
-    desc: 'Durasi istirahat driver sebelum shift',
-    threshold: `< ${REST_CUKUP_JAM} Jam Kurang`,
+    labelKey: 'standar.tenko.rest.label',
+    descKey: 'standar.tenko.rest.desc',
+    thresholdKey: 'standar.tenko.rest.threshold',
+    thresholdVars: { val: REST_CUKUP_JAM },
   },
 ];

@@ -2,6 +2,7 @@ import React from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { ChevronDown, ChevronUp, Lock, MapPin, Truck, CheckCircle2, Clock } from 'lucide-react';
 import { Ritase } from '../../types';
+import { useLanguage } from '../../context/LanguageContext';
 
 interface RitaseItemProps {
   ritase: Ritase;
@@ -25,7 +26,13 @@ const timelineItemVariants = {
 };
 
 const RitaseItem: React.FC<RitaseItemProps> = ({ ritase, isExpanded, onToggle }) => {
+  const { t } = useLanguage();
   const isLocked = ritase.type === 'locked';
+  const statusLabel = ritase.status === 'finished'
+    ? t('journal.status.finished')
+    : ritase.status === 'active'
+      ? t('journal.status.active')
+      : t('journal.status.locked');
 
   return (
     <motion.div 
@@ -59,7 +66,7 @@ const RitaseItem: React.FC<RitaseItemProps> = ({ ritase, isExpanded, onToggle })
               <Truck className="w-4 h-4 md:w-5 md:h-5" />
             </div>
             <div className="overflow-hidden">
-              <p className={`text-xs md:text-sm font-bold truncate ${ritase.type === 'active' ? 'text-red-600 dark:text-red-400' : 'text-slate-700 dark:text-slate-200'}`}>Ritase {ritase.ritaseNo}</p>
+              <p className={`text-xs md:text-sm font-bold truncate ${ritase.type === 'active' ? 'text-red-600 dark:text-red-400' : 'text-slate-700 dark:text-slate-200'}`}>{t('journal.ritaseNo', { n: ritase.ritaseNo })}</p>
               <p className="text-[10px] md:text-xs text-slate-500 dark:text-slate-400 font-medium truncate">{ritase.route}</p>
             </div>
           </div>
@@ -72,7 +79,7 @@ const RitaseItem: React.FC<RitaseItemProps> = ({ ritase, isExpanded, onToggle })
               <span className={`w-1.5 h-1.5 rounded-full ${
                 ritase.status === 'active' ? 'bg-red-500 animate-pulse' : ritase.status === 'finished' ? 'bg-emerald-500' : 'bg-slate-400'
               }`} />
-              {ritase.status}
+              {statusLabel}
             </span>
             {isLocked ? (
               <Lock className="w-4 h-4 text-slate-300 dark:text-slate-700" />
@@ -98,10 +105,10 @@ const RitaseItem: React.FC<RitaseItemProps> = ({ ritase, isExpanded, onToggle })
               <div className="flex flex-col md:flex-row justify-between md:items-end gap-3">
                 <div className="flex items-center gap-2 text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-900/20 px-3 py-1.5 rounded-lg w-fit border dark:border-rose-900/30">
                   <MapPin className="w-4 h-4" />
-                  <span className="text-[10px] md:text-xs font-bold tracking-tight">Rute: {ritase.route}</span>
+                  <span className="text-[10px] md:text-xs font-bold tracking-tight">{t('journal.route', { route: ritase.route })}</span>
                 </div>
                 <div className="text-left md:text-right">
-                  <p className="text-[9px] font-bold text-slate-400 dark:text-slate-500 tracking-widest uppercase mb-1">TOTAL DURASI</p>
+                  <p className="text-[9px] font-bold text-slate-400 dark:text-slate-500 tracking-widest uppercase mb-1">{t('journal.totalDuration')}</p>
                   <p className="text-xl md:text-2xl font-black text-slate-900 dark:text-slate-100 leading-none">{ritase.duration}</p>
                 </div>
               </div>

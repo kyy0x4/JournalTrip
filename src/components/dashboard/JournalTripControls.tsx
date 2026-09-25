@@ -4,6 +4,7 @@ import {
   Calendar as CalendarIcon, Sun, Moon, ChevronDown,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import { useLanguage } from '../../context/LanguageContext';
 
 interface JournalTripControlsProps {
   selectedDate: string;
@@ -20,6 +21,7 @@ export default function JournalTripControls({
   onShiftChange,
   compact = false,
 }: JournalTripControlsProps) {
+  const { t } = useLanguage();
   const dateInputRef = useRef<HTMLInputElement>(null);
   const shiftRef = useRef<HTMLDivElement>(null);
   const [isShiftOpen, setIsShiftOpen] = useState(false);
@@ -59,7 +61,7 @@ export default function JournalTripControls({
           <motion.span key={selectedShift} initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.15 }}>
             {isDay ? <Sun className="w-3.5 h-3.5" /> : <Moon className="w-3.5 h-3.5" />}
           </motion.span>
-          {!compact && <span>{selectedShift} Shift</span>}
+          {!compact && <span>{isDay ? t('journal.dayShift') : t('journal.nightShift')}</span>}
           <motion.span animate={{ rotate: isShiftOpen ? 180 : 0 }} transition={{ duration: 0.2, ease: 'easeOut' }}>
             <ChevronDown className="w-3 h-3" />
           </motion.span>
@@ -90,7 +92,7 @@ export default function JournalTripControls({
                   }`}
                 >
                   <Sun className={`w-4 h-4 ${selectedShift === 'Day' ? 'text-orange-500' : 'text-slate-400 dark:text-slate-500'}`} />
-                  Day Shift
+                  {t('journal.dayShift')}
                   {selectedShift === 'Day' && (
                     <motion.div layoutId="shiftIndicator" className="ml-auto w-1.5 h-1.5 rounded-full bg-orange-500" />
                   )}
@@ -107,7 +109,7 @@ export default function JournalTripControls({
                   }`}
                 >
                   <Moon className={`w-4 h-4 ${selectedShift === 'Night' ? 'text-blue-500' : 'text-slate-400 dark:text-slate-500'}`} />
-                  Night Shift
+                  {t('journal.nightShift')}
                   {selectedShift === 'Night' && (
                     <motion.div layoutId="shiftIndicator" className="ml-auto w-1.5 h-1.5 rounded-full bg-blue-500" />
                   )}
