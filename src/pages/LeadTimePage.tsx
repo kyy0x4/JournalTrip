@@ -133,13 +133,15 @@ const hasInPdcActual = (areaName: string, points: Record<string, any>): boolean 
   return hasCheckpointValue(points, keys);
 };
 
-// TMMIN: OUTPOOL & BACK TO POOL dihitung per ARMADA — satu unit cuma sekali keluar
-// dan sekali balik ke pool walau ritase-nya dua (RIT 1 & RIT 2 jam exit/balik-nya sama).
+// TMMIN / SINGLE CARRIER / DOUBLE DECK: OUTPOOL & BACK TO POOL dihitung per ARMADA —
+// satu unit cuma sekali keluar dan sekali balik ke pool walau ritase-nya 2-3
+// (RIT 1/2/3 jam exit/balik-nya sama; rit berikutnya muat lagi tanpa balik ke pool).
 // IN-PDC & DELIVERY tetap per rit, karena tiap rit memang tiba dan bongkar sendiri.
 const ARMADA_STAGES = ['outpool', 'backtopool'];
+const ARMADA_AREAS = ['TMMIN', 'SINGLE CARRIER', 'DOUBLE DECK'];
 
 const isArmadaStage = (areaName: string, stage: string): boolean =>
-  areaName === 'TMMIN' && ARMADA_STAGES.includes(stage);
+  ARMADA_AREAS.includes(areaName) && ARMADA_STAGES.includes(stage);
 
 const dedupeByArmada = (rows: LeadTimeData[]): LeadTimeData[] => {
   const seen = new Map<string, LeadTimeData>();
@@ -507,7 +509,7 @@ export default function LeadTimePage({ isTAM = false }: { isTAM?: boolean }) {
   const stats = useMemo(() => {
     if (baseData.length === 0) return null;
     const totalRecords = baseData.length;
-    const armadaData = area.toUpperCase() === 'TMMIN' ? dedupeByArmada(baseData) : [];
+    const armadaData = ARMADA_AREAS.includes(area.toUpperCase()) ? dedupeByArmada(baseData) : [];
 
     const getStageStats = (stage: string, reasonKeywords: string[]) => {
       const counts: Record<string, number> = { 'OnTime': 0, 'Delay': 0, 'Advance': 0 };
@@ -576,7 +578,7 @@ export default function LeadTimePage({ isTAM = false }: { isTAM?: boolean }) {
 
   const prevStats = useMemo(() => {
     if (prevData.length === 0) return null;
-    const prevArmadaData = area.toUpperCase() === 'TMMIN' ? dedupeByArmada(prevData) : [];
+    const prevArmadaData = ARMADA_AREAS.includes(area.toUpperCase()) ? dedupeByArmada(prevData) : [];
     const getStageStats = (stage: string) => {
       const counts: Record<string, number> = { 'OnTime': 0, 'Delay': 0, 'Advance': 0 };
       (isArmadaStage(area.toUpperCase(), stage) ? prevArmadaData : prevData).forEach(item => {
